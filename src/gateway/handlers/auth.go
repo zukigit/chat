@@ -7,17 +7,6 @@ import (
 	"github.com/zukigit/chat/src/gateway/lib"
 )
 
-type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type Response struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-	Data    any    `json:"data,omitempty"`
-}
-
 // POST /login
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
@@ -46,7 +35,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib.WriteJSON(w, http.StatusOK, Response{
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
 		Success: true,
 		Message: "login successful",
 		Data:    map[string]string{"token": "your-jwt-token-here"},
