@@ -81,18 +81,18 @@ func setupTestDB(t *testing.T) *sql.DB {
 }
 
 func TestLoginHandler(t *testing.T) {
-	sqlDB := setupTestDB(t)
-	q := db.New(sqlDB)
+	q := db.New(setupTestDB(t))
 
 	// Seed a test user with a known bcrypt-hashed password.
 	hash, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	if err != nil {
 		t.Fatalf("failed to hash password: %v", err)
 	}
-	_, err = sqlDB.Exec(
-		`INSERT INTO users (user_name, hashed_passwd, signup_type) VALUES ($1, $2, $3)`,
-		"testuser", string(hash), "email",
-	)
+	_, err = q.CreateUser(context.Background(), db.CreateUserParams{
+		UserName:     "testuser",
+		HashedPasswd: string(hash),
+		SignupType:   db.SignupTypeEmail,
+	})
 	if err != nil {
 		t.Fatalf("failed to seed test user: %v", err)
 	}
