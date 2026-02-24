@@ -11,8 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// LoginHandler returns an http.HandlerFunc that uses the provided db.Queries
-// to verify credentials against the database.
+// /login
 func LoginHandler(q *db.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req loginRequest

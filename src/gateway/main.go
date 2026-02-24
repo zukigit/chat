@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,11 +20,27 @@ func newRouter(q *db.Queries) *mux.Router {
 	return r
 }
 
-func main() {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://chat:changeme@localhost:5432/chat?sslmode=disable"
+func getenv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
+	return fallback
+}
+
+func main() {
+	host := getenv("DB_HOST", "localhost")
+	port := getenv("DB_PORT", "5432")
+	user := getenv("DB_USER", "chat")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := getenv("DB_NAME", "chat")
+	sslmode := getenv("DB_SSLMODE", "disable")
+
+	if password == "" {
+		log.Fatal("DB_PASSWORD env variable is required but not set")
+	}
+
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		user, password, host, port, dbname, sslmode)
 
 	sqlDB, err := sql.Open("postgres", dsn)
 	if err != nil {
