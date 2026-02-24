@@ -62,3 +62,101 @@ func LoginHandler(q *db.Queries) http.HandlerFunc {
 		})
 	}
 }
+
+// /signup
+func SignupHandler(q *db.Queries) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req signupRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+				Success: false,
+				Message: "invalid request body",
+			})
+			return
+		}
+
+		if req.Username == "" {
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+				Success: false,
+				Message: "username is required",
+			})
+			return
+		}
+
+		if req.Type == db.SignupTypeEmail {
+			if req.Password == "" {
+				lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+					Success: false,
+					Message: "password is required for email signup",
+				})
+				return
+			}
+
+			// Hash password
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			if err != nil {
+				lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+					Success: false,
+					Message: "internal server error",
+				})
+				return
+			}
+
+			// Create user in database with hashed password
+			_, err = q.CreateUser(r.Context(), db.CreateUserParams{
+				UserName:     req.Username,
+				HashedPasswd: string(hashedPassword),
+				SignupType:   db.SignupTypeEmail,
+			})
+			if err != nil {
+				lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+					Success: false,
+					Message: "failed to create user",
+				})
+				return
+			}
+
+			lib.WriteJSON(w, http.StatusCreated, lib.Response{
+				Success: true,
+				Message: "user registered successfully",
+			})
+			return
+		}
+
+		if req.Type == db.SignupTypeGoogle {
+			if req.Code == "" {
+				lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+					Success: false,
+					Message: "code is required for google signup",
+				})
+				return
+			}
+
+			// TODO: Verify google code with Google OAuth
+			// For now, creating user with empty password since Google handles authentication
+			_, err := q.CreateUser(r.Context(), db.CreateUserParams{
+				UserName:     req.Username,
+				HashedPasswd: "", // Google OAuth doesn't use passwords
+				SignupType:   db.SignupTypeGoogle,
+			})
+			if err != nil {
+				lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+					Success: false,
+					Message: "failed to create user",
+				})
+				return
+			}
+
+			lib.WriteJSON(w, http.StatusCreated, lib.Response{
+				Success: true,
+				Message: "user registered via google successfully",
+			})
+			return
+		}
+
+		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+			Success: false,
+			Message: "invalid signup type.",
+		})
+	}
+}

@@ -17,6 +17,7 @@ import (
 func newRouter(q *db.Queries) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/login", handlers.LoginHandler(q)).Methods(http.MethodPost)
+	r.HandleFunc("/signup", handlers.SignupHandler(q)).Methods(http.MethodPost)
 	return r
 }
 
