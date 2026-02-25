@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "proto/auth/";
+
+message LoginRequest {
+  string userName = 1;
+  string passwd = 2;
+}
+
+message LoginResponse {
+  string token = 1;
+}
+
+message SignupRequest {
+  string userName = 1;
+  string passwd = 2;
+}
+
+message SignupResponse {}
+
+service Auth {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Signup(SignupRequest) returns (SignupResponse);
+}
