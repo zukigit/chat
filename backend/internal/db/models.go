@@ -54,7 +54,6 @@ func (ns NullSignupType) Value() (driver.Value, error) {
 }
 
 type User struct {
-	ID           int32      `json:"id"`
 	UserName     string     `json:"user_name"`
 	HashedPasswd string     `json:"hashed_passwd"`
 	SignupType   SignupType `json:"signup_type"`
