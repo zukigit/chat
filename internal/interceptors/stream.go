@@ -3,7 +3,7 @@ package interceptors
 import (
 	"google.golang.org/grpc"
 
-	"github.com/zukigit/chat/backend/internal/lib"
+	"github.com/zukigit/chat/internal/lib"
 )
 
 // StreamRecoveryInterceptor recovers from panics in stream handlers

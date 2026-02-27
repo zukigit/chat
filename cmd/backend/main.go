@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
-	"github.com/zukigit/chat/backend/internal/interceptors"
-	"github.com/zukigit/chat/backend/internal/lib"
-	"github.com/zukigit/chat/backend/internal/services"
+	"github.com/zukigit/chat/internal/interceptors"
+	"github.com/zukigit/chat/internal/lib"
+	"github.com/zukigit/chat/internal/services"
 	"github.com/zukigit/chat/proto/auth"
 	"google.golang.org/grpc"
 )

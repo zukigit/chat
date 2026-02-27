@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/zukigit/chat/backend/internal/db"
-	"github.com/zukigit/chat/backend/internal/lib"
+	"github.com/zukigit/chat/internal/db"
+	"github.com/zukigit/chat/internal/lib"
 	"github.com/zukigit/chat/proto/auth"
 	"golang.org/x/crypto/bcrypt"
 )

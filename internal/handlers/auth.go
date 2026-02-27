@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/zukigit/chat/gateway/internal/lib"
+	"github.com/zukigit/chat/internal/lib"
 )
 
 // /login
