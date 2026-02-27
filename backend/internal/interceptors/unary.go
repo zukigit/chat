@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/zukigit/chat/internal/lib"
+	"github.com/zukigit/chat/backend/internal/lib"
 )
 
 // UnaryRecoveryInterceptor recovers from panics in RPC handlers

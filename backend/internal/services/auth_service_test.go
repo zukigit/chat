@@ -11,9 +11,9 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/zukigit/chat/internal/db"
-	"github.com/zukigit/chat/internal/services"
-	"github.com/zukigit/chat/proto/auth"
+	"github.com/zukigit/chat/backend/internal/db"
+	"github.com/zukigit/chat/backend/internal/services"
+	"github.com/zukigit/chat/backend/proto/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
