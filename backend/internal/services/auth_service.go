@@ -26,9 +26,35 @@ func NewAuthServer(sqlDB *sql.DB) *AuthServer {
 
 // Login handles user login
 func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.LoginResponse, error) {
-	// TODO: Implement actual authentication logic
-	// For now, just return a dummy token
-	token := "dummy_token_" + req.UserName
+	if req.UserName == "" {
+		return nil, fmt.Errorf("username is required")
+	}
+
+	if req.Passwd == "" {
+		return nil, fmt.Errorf("password is required")
+	}
+
+	// Get queries
+	queries := db.New(s.sqlDB)
+
+	// Get user from database
+	user, err := queries.GetUserByUsername(ctx, req.UserName)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("invalid username or password")
+	}
+	if err != nil {
+		lib.ErrorLog.Printf("Failed to get user: %v", err)
+		return nil, err
+	}
+
+	// Verify password
+	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPasswd), []byte(req.Passwd))
+	if err != nil {
+		return nil, fmt.Errorf("invalid username or password")
+	}
+
+	// TODO: Generate JWT token
+	token := "token_" + req.UserName
 
 	return &auth.LoginResponse{
 		Token: token,

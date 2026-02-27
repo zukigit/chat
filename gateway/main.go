@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/zukigit/chat/gateway/internal/handlers"
+	"github.com/zukigit/chat/gateway/handlers"
 	"github.com/zukigit/chat/gateway/internal/lib"
 )
 

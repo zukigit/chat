@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    schema: "backend/sqls/schema.sql"
+    schema: "backend/sqls/init/schema.sql"
     queries: "backend/sqls/queries"
     gen:
       go:
