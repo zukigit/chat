@@ -120,3 +120,35 @@ func TestLogin(t *testing.T) {
 		})
 	}
 }
+
+func TestSignup(t *testing.T) {
+	sqlDb := setupTestDB(t)
+
+	tests := []struct {
+		name     string
+		username string
+		password string
+		wantErr  bool
+	}{
+		{"user1", "user1", "password", false},
+		{"user2", "user2", "password", false},
+		{"empty username", "", "password", true},
+		{"empty password", "test", "", true},
+		{"duplicate username", "user1", "password", true},
+	}
+
+	authServer := services.NewAuthServer(sqlDb)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := authServer.Signup(t.Context(), &auth.SignupRequest{
+				UserName: tt.username,
+				Passwd:   tt.password,
+			})
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
