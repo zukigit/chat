@@ -1,22 +1,29 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// authClientInterface is the minimal interface AuthHandler needs.
+// The concrete *clients.AuthClient satisfies it automatically.
+type authClientInterface interface {
+	Login(ctx context.Context, username, password string) (string, error)
+	Signup(ctx context.Context, username, password string) error
+}
+
 // AuthHandler holds dependencies for auth-related HTTP handlers.
 type AuthHandler struct {
-	authClient *clients.AuthClient
+	authClient authClientInterface
 }
 
 // NewAuthHandler creates an AuthHandler with the given gRPC auth client.
-func NewAuthHandler(authClient *clients.AuthClient) *AuthHandler {
+func NewAuthHandler(authClient authClientInterface) *AuthHandler {
 	return &AuthHandler{authClient: authClient}
 }
 
@@ -24,6 +31,14 @@ func NewAuthHandler(authClient *clients.AuthClient) *AuthHandler {
 // Decodes credentials from the request body, forwards them to the backend via gRPC,
 // and returns a JWT token on success.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if h.authClient == nil {
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: "authClient is nil",
+		})
+		return
+	}
+
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
@@ -61,6 +76,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // Signup handles POST /signup
 // Decodes signup details from the request body and forwards them to the backend via gRPC.
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
+	if h.authClient == nil {
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: "authClient is nil",
+		})
+		return
+	}
+
 	var req signupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
