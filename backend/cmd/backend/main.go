@@ -3,6 +3,7 @@ package backend
 import (
 	"database/sql"
 	"fmt"
+	"net"
 
 	_ "github.com/lib/pq"
 	"github.com/zukigit/chat/backend/internal/interceptors"
@@ -29,4 +30,13 @@ func main() {
 	)
 
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))
+
+	listener, err := net.Listen("tcp", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to listen on %s: %v", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"), err)
+	}
+
+	if err := srv.Serve(listener); err != nil {
+		lib.ErrorLog.Fatalf("Failed to serve: %v", err)
+	}
 }
