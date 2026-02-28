@@ -1,4 +1,4 @@
-package backend
+package main
 
 import (
 	"database/sql"
@@ -31,6 +31,7 @@ func main() {
 
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))
 
+	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 	listener, err := net.Listen("tcp", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to listen on %s: %v", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"), err)
