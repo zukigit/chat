@@ -6,8 +6,8 @@ I have updated the `.github/workflows/backend.yml` to split the process into two
 
 ### 1. Workflow Split
 The single job was split into two separate jobs to enable environment-based approvals:
-- **`build` job**: Tests the code, builds the `backend` and `gateway` binaries, and uploads them as artifacts.
-- **`deploy` job**: Depends on the `build` job. It downloads the binaries and performs the Docker build and push.
+- **`build` job**: Tests the code, builds the `backend` and `gateway` binaries on every push to `main`.
+- **`deploy` job**: Strictly manual. You must navigate to the Actions tab and click **"Run workflow"** to trigger this job. It downloads the binaries and performs the Docker build and push.
 
 ### 2. Manual Approval with Environments
 The `deploy` job is now associated with a GitHub `environment` called `production`.
