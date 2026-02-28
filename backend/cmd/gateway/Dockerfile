@@ -8,4 +8,6 @@ COPY dist/gateway /app/gateway
 
 EXPOSE 8080
 
+RUN chmod +x /app/gateway
+
 ENTRYPOINT ["/app/gateway"]

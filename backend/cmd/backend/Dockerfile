@@ -8,4 +8,6 @@ COPY dist/backend /app/backend
 
 EXPOSE 50051
 
+RUN chmod +x /app/backend
+
 ENTRYPOINT ["/app/backend"]
