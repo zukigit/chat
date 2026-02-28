@@ -5,6 +5,12 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag'
+        required: true
+        default: 'latest'
 
 jobs:
   build-and-push:
@@ -40,19 +46,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # ── Step 4: Build and push Docker images (Alpine-based) ─────────────────
+      # ── Step 4: Build and push Docker images ─────────────────
       - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./backend/cmd/backend/Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: zukidocker/chat:backend-latest
+          push: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+          tags: zukidocker/chat-backend:${{ inputs.tag || 'latest' }}
 
       - name: Build and push gateway image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./backend/cmd/gateway/Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: zukidocker/chat:gateway-latest
+          push: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+          tags: zukidocker/chat-gateway:${{ inputs.tag || 'latest' }}
