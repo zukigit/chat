@@ -1,6 +1,6 @@
-FROM alpine:3.22
+FROM debian:13
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apt-get update && apt-get install -y ca-certificates tzdata
 
 WORKDIR /app
 

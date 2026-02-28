@@ -18,11 +18,11 @@ jobs:
       # ── Step 2: Build binaries ──────────────────────────────────────────────
       - name: Build backend binary
         run: |
-          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3-alpine3.22 sh -c "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./dist/chat_backend ./backend/cmd/backend/main.go"
+          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3 sh -c "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./dist/chat_backend ./backend/cmd/backend/main.go"
 
       - name: Build gateway binary
         run: |
-          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3-alpine3.22 sh -c "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./dist/chat_gateway ./backend/cmd/gateway/main.go"
+          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3 sh -c "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./dist/chat_gateway ./backend/cmd/gateway/main.go"
 
 
       # ── Step 3: Archive binaries ────────────────────────────────────────────
