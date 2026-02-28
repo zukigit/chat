@@ -1,7 +1,4 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: Backend CI/CD
 
 on:
   push:
@@ -10,22 +7,52 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.25.3'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.3'
 
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v3
+      # ── Step 1: Test ────────────────────────────────────────────────────────
+      - name: Test
+        run: go test -v ./backend/...
 
-    - name: Build
-      run: go build -v ./backend/...
+      # ── Step 2: Build binaries ──────────────────────────────────────────────
+      - name: Build backend binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="-s -w" -o ./dist/backend ./backend/cmd/backend/main.go
 
-    - name: Test
-      run: go test -v ./backend/...
+      - name: Build gateway binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="-s -w" -o ./dist/gateway ./backend/cmd/gateway/main.go
+
+      # ── Step 3: Log in to Docker Hub ────────────────────────────────────────
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWD }}
+
+      # ── Step 4: Build and push Docker images (Alpine-based) ─────────────────
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend/cmd/backend/Dockerfile
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: zukidocker/chat:backend-latest
+
+      - name: Build and push gateway image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend/cmd/gateway/Dockerfile
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: zukidocker/chat:gateway-latest
