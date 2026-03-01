@@ -94,6 +94,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authClient.Signup(r.Context(), req.Username, req.Password); err != nil {
+		lib.ErrorLog.Printf("Signup failed: %v", err)
 		grpcStatus, _ := status.FromError(err)
 		switch grpcStatus.Code() {
 		case codes.AlreadyExists:
