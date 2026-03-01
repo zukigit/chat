@@ -27,4 +27,4 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - BACKEND_LISTEN_ADDRESS=backend:1234
+      - BACKEND_LISTEN_ADDRESS=18.143.94.159:1234

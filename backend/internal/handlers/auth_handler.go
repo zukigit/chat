@@ -100,12 +100,12 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		case codes.AlreadyExists:
 			lib.WriteJSON(w, http.StatusConflict, lib.Response{
 				Success: false,
-				Message: "username already taken",
+				Message: grpcStatus.Message(),
 			})
 		default:
 			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
 				Success: false,
-				Message: "internal server error",
+				Message: grpcStatus.Message(),
 			})
 		}
 		return

@@ -1,0 +1,69 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "chat-backend",
+            "image": "zukidocker/chat-backend:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "chat-backend-1234-tcp",
+                    "containerPort": 1234,
+                    "hostPort": 1234,
+                    "protocol": "tcp",
+                    "appProtocol": "grpc"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "BACKEND_LISTEN_ADDRESS",
+                    "value": ":1234"
+                },
+                {
+                    "name": "DB_HOST",
+                    "value": "3.0.102.71"
+                },
+                {
+                    "name": "DB_SSLMODE",
+                    "value": "disable"
+                },
+                {
+                    "name": "DB_PASSWORD",
+                    "value": "zabbix"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/chat-backend",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "ap-southeast-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "chat-backend",
+    "taskRoleArn": "arn:aws:iam::474852689092:role/service-role/ecsTaskExecutionRole",
+    "executionRoleArn": "arn:aws:iam::474852689092:role/service-role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "2048",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false,
+    "tags": []
+}
