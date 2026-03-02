@@ -7,6 +7,7 @@ import (
 
 	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -48,10 +49,22 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authClient.Login(r.Context(), req.Username, req.Password)
+	// Forward the HTTP Authorization header as gRPC outgoing metadata so the
+	// backend JWT interceptor can detect already-logged-in clients.
+	ctx := r.Context()
+	if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", authHeader)
+	}
+
+	token, err := h.authClient.Login(ctx, req.Username, req.Password)
 	if err != nil {
 		grpcStatus, _ := status.FromError(err)
 		switch grpcStatus.Code() {
+		case codes.AlreadyExists:
+			lib.WriteJSON(w, http.StatusConflict, lib.Response{
+				Success: false,
+				Message: grpcStatus.Message(),
+			})
 		case codes.NotFound, codes.Unauthenticated:
 			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
 				Success: false,
@@ -93,7 +106,14 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.authClient.Signup(r.Context(), req.Username, req.Password); err != nil {
+	// Forward the HTTP Authorization header so the backend can detect
+	// already-logged-in clients attempting to sign up.
+	ctx := r.Context()
+	if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", authHeader)
+	}
+
+	if err := h.authClient.Signup(ctx, req.Username, req.Password); err != nil {
 		lib.ErrorLog.Printf("Signup failed: %v", err)
 		grpcStatus, _ := status.FromError(err)
 		switch grpcStatus.Code() {
