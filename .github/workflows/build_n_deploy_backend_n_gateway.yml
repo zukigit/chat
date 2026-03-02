@@ -1,0 +1,22 @@
+name: Build and Deploy Backend and Gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag'
+        required: true
+        default: 'latest'
+
+jobs:
+  backend:
+    uses: ./.github/workflows/build_n_deploy_backend.yml
+    with:
+      tag: ${{ inputs.tag || 'latest' }}
+    secrets: inherit
+
+  gateway:
+    uses: ./.github/workflows/build_n_deploy_gateway.yml
+    with:
+      tag: ${{ inputs.tag || 'latest' }}
+    secrets: inherit
