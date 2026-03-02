@@ -1,0 +1,211 @@
+{
+    "services": [
+        {
+            "serviceArn": "arn:aws:ecs:ap-southeast-1:474852689092:service/chat/chat-gateway",
+            "serviceName": "chat-gateway",
+            "clusterArn": "arn:aws:ecs:ap-southeast-1:474852689092:cluster/chat",
+            "loadBalancers": [],
+            "serviceRegistries": [],
+            "status": "ACTIVE",
+            "desiredCount": 1,
+            "runningCount": 1,
+            "pendingCount": 0,
+            "capacityProviderStrategy": [
+                {
+                    "capacityProvider": "FARGATE",
+                    "weight": 1,
+                    "base": 0
+                }
+            ],
+            "platformVersion": "LATEST",
+            "platformFamily": "Linux",
+            "taskDefinition": "arn:aws:ecs:ap-southeast-1:474852689092:task-definition/chat-gateway:2",
+            "deploymentConfiguration": {
+                "deploymentCircuitBreaker": {
+                    "enable": true,
+                    "rollback": true
+                },
+                "maximumPercent": 200,
+                "minimumHealthyPercent": 100,
+                "strategy": "ROLLING",
+                "bakeTimeInMinutes": 0
+            },
+            "deployments": [
+                {
+                    "id": "ecs-svc/1180267453709964178",
+                    "status": "PRIMARY",
+                    "taskDefinition": "arn:aws:ecs:ap-southeast-1:474852689092:task-definition/chat-gateway:2",
+                    "desiredCount": 1,
+                    "pendingCount": 0,
+                    "runningCount": 1,
+                    "failedTasks": 0,
+                    "createdAt": "2026-03-02T13:18:18.307000+07:00",
+                    "updatedAt": "2026-03-02T13:22:51.871000+07:00",
+                    "capacityProviderStrategy": [
+                        {
+                            "capacityProvider": "FARGATE",
+                            "weight": 1,
+                            "base": 0
+                        }
+                    ],
+                    "platformVersion": "1.4.0",
+                    "platformFamily": "Linux",
+                    "networkConfiguration": {
+                        "awsvpcConfiguration": {
+                            "subnets": [
+                                "subnet-06e7a55e417d15fe1",
+                                "subnet-0bd32bb43407ef15d",
+                                "subnet-0d1b5efeebada7d5f"
+                            ],
+                            "securityGroups": [
+                                "sg-0ded86bbd1cd422ef"
+                            ],
+                            "assignPublicIp": "ENABLED"
+                        }
+                    },
+                    "rolloutState": "COMPLETED",
+                    "rolloutStateReason": "ECS deployment ecs-svc/1180267453709964178 completed.",
+                    "serviceConnectConfiguration": {
+                        "enabled": true,
+                        "namespace": "arn:aws:servicediscovery:ap-southeast-1:474852689092:namespace/ns-w5yaqnajscyuvw5s",
+                        "services": [
+                            {
+                                "portName": "chat-gateway-8080-tcp",
+                                "discoveryName": "chat-gateway-8080-tcp",
+                                "clientAliases": [
+                                    {
+                                        "port": 8080,
+                                        "dnsName": "chat-gateway"
+                                    }
+                                ],
+                                "timeout": {
+                                    "perRequestTimeoutSeconds": 30
+                                }
+                            }
+                        ],
+                        "logConfiguration": {
+                            "logDriver": "awslogs",
+                            "options": {
+                                "awslogs-group": "/ecs/chat-gateway",
+                                "awslogs-create-group": "true",
+                                "awslogs-region": "ap-southeast-1",
+                                "awslogs-stream-prefix": "ecs"
+                            },
+                            "secretOptions": []
+                        }
+                    },
+                    "serviceConnectResources": [
+                        {
+                            "discoveryName": "chat-gateway-8080-tcp",
+                            "discoveryArn": "arn:aws:servicediscovery:ap-southeast-1:474852689092:service/srv-vzgdbzr56ajvpost"
+                        }
+                    ]
+                }
+            ],
+            "roleArn": "arn:aws:iam::474852689092:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "events": [
+                {
+                    "id": "85b74cd0-90a6-4632-a733-fdeccd73e5bb",
+                    "createdAt": "2026-03-02T13:22:51.878000+07:00",
+                    "message": "(service chat-gateway) has reached a steady state."
+                },
+                {
+                    "id": "6790280e-d8b5-4854-8e0a-bbd7a52617c1",
+                    "createdAt": "2026-03-02T13:22:51.877000+07:00",
+                    "message": "(service chat-gateway) (deployment ecs-svc/1180267453709964178) deployment completed."
+                },
+                {
+                    "id": "efda7482-5879-41f7-b763-e0331685fa76",
+                    "createdAt": "2026-03-02T13:20:21.474000+07:00",
+                    "message": "(service chat-gateway) has stopped 1 running tasks: (task be8eeaaf5ad54e61a6986e147c1fb367)."
+                },
+                {
+                    "id": "84d03915-a163-4aa4-835b-a15c285c38a2",
+                    "createdAt": "2026-03-02T13:19:30.239000+07:00",
+                    "message": "(service chat-gateway) has started 1 tasks: (task 016b1db76a234ce088bba5e21a6f0fbf)."
+                },
+                {
+                    "id": "3235d40d-29bf-48f2-909d-68ba2af05a0e",
+                    "createdAt": "2026-03-02T13:13:45.578000+07:00",
+                    "message": "(service chat-gateway) has reached a steady state."
+                },
+                {
+                    "id": "670d9c4d-ca4a-48c3-a249-eaa708dcaa3d",
+                    "createdAt": "2026-03-02T07:13:24.233000+07:00",
+                    "message": "(service chat-gateway) has reached a steady state."
+                },
+                {
+                    "id": "54340048-221e-4b82-9d3c-c9e54ca742ac",
+                    "createdAt": "2026-03-02T01:15:36.410000+07:00",
+                    "message": "(service chat-gateway) has reached a steady state."
+                },
+                {
+                    "id": "103c4545-17a8-4ddc-a4d2-a678c8800be9",
+                    "createdAt": "2026-03-02T01:15:36.409000+07:00",
+                    "message": "(service chat-gateway) (deployment ecs-svc/7099300256510617634) deployment completed."
+                },
+                {
+                    "id": "9c0f1e6e-4d57-43d7-81a0-b36906a4feca",
+                    "createdAt": "2026-03-02T01:13:10.014000+07:00",
+                    "message": "(service chat-gateway) has stopped 1 running tasks: (task 59b6d08f84cf47fd81d8b40c925cd206)."
+                },
+                {
+                    "id": "0e180a1b-ca08-4082-b878-ee29c14126e8",
+                    "createdAt": "2026-03-02T01:12:08.025000+07:00",
+                    "message": "(service chat-gateway) has started 1 tasks: (task be8eeaaf5ad54e61a6986e147c1fb367)."
+                },
+                {
+                    "id": "a69bf749-0638-4ecd-b755-e883f14b122a",
+                    "createdAt": "2026-03-01T23:31:14.767000+07:00",
+                    "message": "(service chat-gateway) has reached a steady state."
+                },
+                {
+                    "id": "65ab521c-4040-4c4d-9951-2fcb35dba0f1",
+                    "createdAt": "2026-03-01T23:31:14.766000+07:00",
+                    "message": "(service chat-gateway) (deployment ecs-svc/1770685809836654546) deployment completed."
+                },
+                {
+                    "id": "e0ce1475-f02b-4fff-83c6-ecacdee4468b",
+                    "createdAt": "2026-03-01T23:30:01.787000+07:00",
+                    "message": "(service chat-gateway) has started 1 tasks: (task 59b6d08f84cf47fd81d8b40c925cd206)."
+                }
+            ],
+            "createdAt": "2026-03-01T23:29:39.076000+07:00",
+            "currentServiceRevisions": [
+                {
+                    "arn": "arn:aws:ecs:ap-southeast-1:474852689092:service-revision/chat/chat-gateway/1180267453709964178",
+                    "requestedTaskCount": 1,
+                    "runningTaskCount": 1,
+                    "pendingTaskCount": 0
+                }
+            ],
+            "placementConstraints": [],
+            "placementStrategy": [],
+            "networkConfiguration": {
+                "awsvpcConfiguration": {
+                    "subnets": [
+                        "subnet-06e7a55e417d15fe1",
+                        "subnet-0bd32bb43407ef15d",
+                        "subnet-0d1b5efeebada7d5f"
+                    ],
+                    "securityGroups": [
+                        "sg-0ded86bbd1cd422ef"
+                    ],
+                    "assignPublicIp": "ENABLED"
+                }
+            },
+            "healthCheckGracePeriodSeconds": 0,
+            "schedulingStrategy": "REPLICA",
+            "deploymentController": {
+                "type": "ECS"
+            },
+            "createdBy": "arn:aws:iam::474852689092:root",
+            "enableECSManagedTags": true,
+            "propagateTags": "NONE",
+            "enableExecuteCommand": false,
+            "availabilityZoneRebalancing": "DISABLED",
+            "resourceManagementType": "CUSTOMER"
+        }
+    ],
+    "failures": []
+}

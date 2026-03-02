@@ -1,35 +1,23 @@
 {
     "containerDefinitions": [
         {
-            "name": "chat-backend",
-            "image": "zukidocker/chat-backend:latest",
+            "name": "chat-gateway",
+            "image": "zukidocker/chat-gateway:latest",
             "cpu": 0,
             "portMappings": [
                 {
-                    "name": "chat-backend-1234-tcp",
-                    "containerPort": 1234,
-                    "hostPort": 1234,
+                    "name": "chat-gateway-8080-tcp",
+                    "containerPort": 8080,
+                    "hostPort": 8080,
                     "protocol": "tcp",
-                    "appProtocol": "grpc"
+                    "appProtocol": "http"
                 }
             ],
             "essential": true,
             "environment": [
                 {
                     "name": "BACKEND_LISTEN_ADDRESS",
-                    "value": ":1234"
-                },
-                {
-                    "name": "DB_HOST",
-                    "value": "3.0.102.71"
-                },
-                {
-                    "name": "DB_SSLMODE",
-                    "value": "disable"
-                },
-                {
-                    "name": "DB_PASSWORD",
-                    "value": "zabbix"
+                    "value": "chat-backend:1234"
                 }
             ],
             "environmentFiles": [],
@@ -39,7 +27,7 @@
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
-                    "awslogs-group": "/ecs/chat-backend",
+                    "awslogs-group": "/ecs/chat-gateway",
                     "awslogs-create-group": "true",
                     "awslogs-region": "ap-southeast-1",
                     "awslogs-stream-prefix": "ecs"
@@ -49,7 +37,7 @@
             "systemControls": []
         }
     ],
-    "family": "chat-backend",
+    "family": "chat-gateway",
     "taskRoleArn": "arn:aws:iam::474852689092:role/service-role/ecsTaskExecutionRole",
     "executionRoleArn": "arn:aws:iam::474852689092:role/service-role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",

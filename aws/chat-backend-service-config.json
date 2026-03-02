@@ -1,0 +1,171 @@
+{
+    "services": [
+        {
+            "serviceArn": "arn:aws:ecs:ap-southeast-1:474852689092:service/chat/chat-backend",
+            "serviceName": "chat-backend",
+            "clusterArn": "arn:aws:ecs:ap-southeast-1:474852689092:cluster/chat",
+            "loadBalancers": [],
+            "serviceRegistries": [],
+            "status": "ACTIVE",
+            "desiredCount": 1,
+            "runningCount": 1,
+            "pendingCount": 0,
+            "capacityProviderStrategy": [
+                {
+                    "capacityProvider": "FARGATE",
+                    "weight": 1,
+                    "base": 0
+                }
+            ],
+            "platformVersion": "LATEST",
+            "platformFamily": "Linux",
+            "taskDefinition": "arn:aws:ecs:ap-southeast-1:474852689092:task-definition/chat-backend:4",
+            "deploymentConfiguration": {
+                "deploymentCircuitBreaker": {
+                    "enable": true,
+                    "rollback": true
+                },
+                "maximumPercent": 200,
+                "minimumHealthyPercent": 100,
+                "strategy": "ROLLING",
+                "bakeTimeInMinutes": 0
+            },
+            "deployments": [
+                {
+                    "id": "ecs-svc/8113417262085889376",
+                    "status": "PRIMARY",
+                    "taskDefinition": "arn:aws:ecs:ap-southeast-1:474852689092:task-definition/chat-backend:4",
+                    "desiredCount": 1,
+                    "pendingCount": 0,
+                    "runningCount": 1,
+                    "failedTasks": 0,
+                    "createdAt": "2026-03-02T01:13:31.904000+07:00",
+                    "updatedAt": "2026-03-02T13:19:57.726000+07:00",
+                    "capacityProviderStrategy": [
+                        {
+                            "capacityProvider": "FARGATE",
+                            "weight": 1,
+                            "base": 0
+                        }
+                    ],
+                    "platformVersion": "1.4.0",
+                    "platformFamily": "Linux",
+                    "networkConfiguration": {
+                        "awsvpcConfiguration": {
+                            "subnets": [
+                                "subnet-06e7a55e417d15fe1",
+                                "subnet-0bd32bb43407ef15d",
+                                "subnet-0d1b5efeebada7d5f"
+                            ],
+                            "securityGroups": [
+                                "sg-0ded86bbd1cd422ef"
+                            ],
+                            "assignPublicIp": "ENABLED"
+                        }
+                    },
+                    "rolloutState": "COMPLETED",
+                    "rolloutStateReason": "ECS deployment ecs-svc/8113417262085889376 completed.",
+                    "serviceConnectConfiguration": {
+                        "enabled": true,
+                        "namespace": "arn:aws:servicediscovery:ap-southeast-1:474852689092:namespace/ns-w5yaqnajscyuvw5s",
+                        "services": [
+                            {
+                                "portName": "chat-backend-1234-tcp",
+                                "discoveryName": "chat-backend-1234-tcp",
+                                "clientAliases": [
+                                    {
+                                        "port": 1234,
+                                        "dnsName": "chat-backend"
+                                    }
+                                ],
+                                "timeout": {
+                                    "perRequestTimeoutSeconds": 60
+                                }
+                            }
+                        ],
+                        "logConfiguration": {
+                            "logDriver": "awslogs",
+                            "options": {
+                                "awslogs-group": "/ecs/chat-backend",
+                                "awslogs-create-group": "true",
+                                "awslogs-region": "ap-southeast-1",
+                                "awslogs-stream-prefix": "ecs"
+                            },
+                            "secretOptions": []
+                        }
+                    },
+                    "serviceConnectResources": [
+                        {
+                            "discoveryName": "chat-backend-1234-tcp",
+                            "discoveryArn": "arn:aws:servicediscovery:ap-southeast-1:474852689092:service/srv-ubxrriyc5pxxjxef"
+                        }
+                    ]
+                }
+            ],
+            "roleArn": "arn:aws:iam::474852689092:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "events": [
+                {
+                    "id": "394f26a5-50e3-4a50-97bc-9745f7080e56",
+                    "createdAt": "2026-03-02T13:16:22.258000+07:00",
+                    "message": "(service chat-backend) has reached a steady state."
+                },
+                {
+                    "id": "49c09233-d100-486f-82b3-e12e36f75ddb",
+                    "createdAt": "2026-03-02T07:16:03.567000+07:00",
+                    "message": "(service chat-backend) has reached a steady state."
+                },
+                {
+                    "id": "10022a19-d3b7-41f3-9f3a-aea115bcd7b3",
+                    "createdAt": "2026-03-02T01:15:50.029000+07:00",
+                    "message": "(service chat-backend) has reached a steady state."
+                },
+                {
+                    "id": "7f08a0ef-c272-4e22-ad38-23064a42c361",
+                    "createdAt": "2026-03-02T01:15:50.028000+07:00",
+                    "message": "(service chat-backend) (deployment ecs-svc/8113417262085889376) deployment completed."
+                },
+                {
+                    "id": "4dfeda0c-61b8-4831-a178-e7bbde31bc00",
+                    "createdAt": "2026-03-02T01:14:37.288000+07:00",
+                    "message": "(service chat-backend) has started 1 tasks: (task 477ae35c898d4da581706ea6fdaf4489)."
+                }
+            ],
+            "createdAt": "2026-03-02T01:13:31.904000+07:00",
+            "currentServiceRevisions": [
+                {
+                    "arn": "arn:aws:ecs:ap-southeast-1:474852689092:service-revision/chat/chat-backend/8113417262085889376",
+                    "requestedTaskCount": 1,
+                    "runningTaskCount": 1,
+                    "pendingTaskCount": 0
+                }
+            ],
+            "placementConstraints": [],
+            "placementStrategy": [],
+            "networkConfiguration": {
+                "awsvpcConfiguration": {
+                    "subnets": [
+                        "subnet-06e7a55e417d15fe1",
+                        "subnet-0bd32bb43407ef15d",
+                        "subnet-0d1b5efeebada7d5f"
+                    ],
+                    "securityGroups": [
+                        "sg-0ded86bbd1cd422ef"
+                    ],
+                    "assignPublicIp": "ENABLED"
+                }
+            },
+            "healthCheckGracePeriodSeconds": 0,
+            "schedulingStrategy": "REPLICA",
+            "deploymentController": {
+                "type": "ECS"
+            },
+            "createdBy": "arn:aws:iam::474852689092:root",
+            "enableECSManagedTags": true,
+            "propagateTags": "NONE",
+            "enableExecuteCommand": false,
+            "availabilityZoneRebalancing": "DISABLED",
+            "resourceManagementType": "CUSTOMER"
+        }
+    ],
+    "failures": []
+}
