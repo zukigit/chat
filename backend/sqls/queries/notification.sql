@@ -4,12 +4,11 @@ VALUES ($1, $2, $3)
 RETURNING id, user_username, type, message_id, is_read, created_at;
 
 -- name: GetNotificationsForUser :many
--- Returns notifications for a user, newest first, with pagination.
+-- Returns all notifications for a user, newest first.
 SELECT id, user_username, type, message_id, is_read, created_at
 FROM notifications
 WHERE user_username = $1
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+ORDER BY created_at DESC;
 
 -- name: GetUnreadNotificationCount :one
 SELECT COUNT(*) AS unread_count
