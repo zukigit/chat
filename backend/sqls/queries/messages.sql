@@ -1,29 +1,29 @@
 -- name: SendMessage :one
-INSERT INTO messages (sender_username, receiver_username, content)
-VALUES ($1, $2, $3)
-RETURNING id, sender_username, receiver_username, content, is_read, created_at;
+INSERT INTO messages (conversation_id, sender_username, content, message_type, media_url)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;
 
--- name: GetConversation :many
--- Returns messages between two users, oldest first, with pagination.
-SELECT id, sender_username, receiver_username, content, is_read, created_at
+-- name: GetConversationMessages :many
+-- Returns non-deleted messages in a conversation, oldest first, with pagination.
+SELECT id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 FROM messages
-WHERE
-    (sender_username = $1 AND receiver_username = $2)
-    OR
-    (sender_username = $2 AND receiver_username = $1)
+WHERE conversation_id = $1
+  AND deleted_at IS NULL
 ORDER BY created_at ASC
-LIMIT $3 OFFSET $4;
-
--- name: GetInboxMessages :many
--- Returns messages received by a user, newest first, with pagination.
-SELECT id, sender_username, receiver_username, content, is_read, created_at
-FROM messages
-WHERE receiver_username = $1
-ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
--- name: MarkMessageAsRead :one
+-- name: EditMessage :one
 UPDATE messages
-SET is_read = TRUE
+SET content    = $2,
+    is_edited  = TRUE,
+    updated_at = NOW()
 WHERE id = $1
-RETURNING id, sender_username, receiver_username, content, is_read, created_at;
+  AND deleted_at IS NULL
+RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;
+
+-- name: SoftDeleteMessage :one
+UPDATE messages
+SET deleted_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;

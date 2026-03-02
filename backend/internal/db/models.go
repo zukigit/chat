@@ -54,6 +54,50 @@ func (ns NullFriendshipStatus) Value() (driver.Value, error) {
 	return string(ns.FriendshipStatus), nil
 }
 
+type MessageType string
+
+const (
+	MessageTypeText  MessageType = "text"
+	MessageTypeImage MessageType = "image"
+	MessageTypeFile  MessageType = "file"
+	MessageTypeAudio MessageType = "audio"
+)
+
+func (e *MessageType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageType(s)
+	case string:
+		*e = MessageType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageType: %T", src)
+	}
+	return nil
+}
+
+type NullMessageType struct {
+	MessageType MessageType `json:"message_type"`
+	Valid       bool        `json:"valid"` // Valid is true if MessageType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageType), nil
+}
+
 type NotificationType string
 
 const (
@@ -139,8 +183,21 @@ func (ns NullSignupType) Value() (driver.Value, error) {
 	return string(ns.SignupType), nil
 }
 
+type Conversation struct {
+	ID        int64          `json:"id"`
+	IsGroup   bool           `json:"is_group"`
+	Name      sql.NullString `json:"name"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}
+
+type ConversationMember struct {
+	ConversationID int64     `json:"conversation_id"`
+	UserUsername   string    `json:"user_username"`
+	JoinedAt       time.Time `json:"joined_at"`
+}
+
 type Friendship struct {
-	ID                int64            `json:"id"`
 	RequesterUsername string           `json:"requester_username"`
 	AddresseeUsername string           `json:"addressee_username"`
 	Status            FriendshipStatus `json:"status"`
@@ -149,12 +206,22 @@ type Friendship struct {
 }
 
 type Message struct {
-	ID               int64     `json:"id"`
-	SenderUsername   string    `json:"sender_username"`
-	ReceiverUsername string    `json:"receiver_username"`
-	Content          string    `json:"content"`
-	IsRead           bool      `json:"is_read"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID             int64          `json:"id"`
+	ConversationID int64          `json:"conversation_id"`
+	SenderUsername string         `json:"sender_username"`
+	Content        string         `json:"content"`
+	MessageType    MessageType    `json:"message_type"`
+	MediaUrl       sql.NullString `json:"media_url"`
+	IsEdited       bool           `json:"is_edited"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type MessageRead struct {
+	MessageID    int64     `json:"message_id"`
+	UserUsername string    `json:"user_username"`
+	ReadAt       time.Time `json:"read_at"`
 }
 
 type Notification struct {
@@ -167,9 +234,12 @@ type Notification struct {
 }
 
 type User struct {
-	UserName     string     `json:"user_name"`
-	HashedPasswd string     `json:"hashed_passwd"`
-	SignupType   SignupType `json:"signup_type"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	UserName     string         `json:"user_name"`
+	HashedPasswd string         `json:"hashed_passwd"`
+	SignupType   SignupType     `json:"signup_type"`
+	DisplayName  sql.NullString `json:"display_name"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	LastSeenAt   sql.NullTime   `json:"last_seen_at"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
 }

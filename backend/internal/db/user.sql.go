@@ -7,12 +7,13 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (user_name, hashed_passwd, signup_type)
 VALUES ($1, $2, $3)
-RETURNING user_name, hashed_passwd, signup_type, created_at, updated_at
+RETURNING user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -28,6 +29,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UserName,
 		&i.HashedPasswd,
 		&i.SignupType,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -35,7 +39,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT user_name, hashed_passwd, signup_type, created_at, updated_at
+SELECT user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
 FROM users
 WHERE user_name = $1
 LIMIT 1
@@ -48,6 +52,51 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User,
 		&i.UserName,
 		&i.HashedPasswd,
 		&i.SignupType,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateLastSeen = `-- name: UpdateLastSeen :exec
+UPDATE users
+SET last_seen_at = NOW()
+WHERE user_name = $1
+`
+
+func (q *Queries) UpdateLastSeen(ctx context.Context, userName string) error {
+	_, err := q.db.ExecContext(ctx, updateLastSeen, userName)
+	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+UPDATE users
+SET display_name = $2,
+    avatar_url   = $3,
+    updated_at   = NOW()
+WHERE user_name = $1
+RETURNING user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+`
+
+type UpdateUserProfileParams struct {
+	UserName    string         `json:"user_name"`
+	DisplayName sql.NullString `json:"display_name"`
+	AvatarUrl   sql.NullString `json:"avatar_url"`
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserProfile, arg.UserName, arg.DisplayName, arg.AvatarUrl)
+	var i User
+	err := row.Scan(
+		&i.UserName,
+		&i.HashedPasswd,
+		&i.SignupType,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

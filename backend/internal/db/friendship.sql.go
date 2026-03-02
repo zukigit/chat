@@ -61,10 +61,10 @@ func (q *Queries) GetFriends(ctx context.Context, requesterUsername string) ([]G
 }
 
 const getFriendship = `-- name: GetFriendship :one
-SELECT id, requester_username, addressee_username, status, created_at, updated_at
+SELECT requester_username, addressee_username, status, created_at, updated_at
 FROM friendships
-WHERE (requester_username = $1 AND addressee_username = $2)
-   OR (requester_username = $2 AND addressee_username = $1)
+WHERE requester_username = $1
+  AND addressee_username = $2
 LIMIT 1
 `
 
@@ -73,12 +73,11 @@ type GetFriendshipParams struct {
 	AddresseeUsername string `json:"addressee_username"`
 }
 
-// Lookup friendship in either direction.
+// Always query with the lexicographically smaller username as $1.
 func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (Friendship, error) {
 	row := q.db.QueryRowContext(ctx, getFriendship, arg.RequesterUsername, arg.AddresseeUsername)
 	var i Friendship
 	err := row.Scan(
-		&i.ID,
 		&i.RequesterUsername,
 		&i.AddresseeUsername,
 		&i.Status,
@@ -89,7 +88,7 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 }
 
 const getPendingRequests = `-- name: GetPendingRequests :many
-SELECT id, requester_username, addressee_username, status, created_at, updated_at
+SELECT requester_username, addressee_username, status, created_at, updated_at
 FROM friendships
 WHERE addressee_username = $1
   AND status = 'pending'
@@ -107,7 +106,6 @@ func (q *Queries) GetPendingRequests(ctx context.Context, addresseeUsername stri
 	for rows.Next() {
 		var i Friendship
 		if err := rows.Scan(
-			&i.ID,
 			&i.RequesterUsername,
 			&i.AddresseeUsername,
 			&i.Status,
@@ -130,7 +128,7 @@ func (q *Queries) GetPendingRequests(ctx context.Context, addresseeUsername stri
 const sendFriendRequest = `-- name: SendFriendRequest :one
 INSERT INTO friendships (requester_username, addressee_username)
 VALUES ($1, $2)
-RETURNING id, requester_username, addressee_username, status, created_at, updated_at
+RETURNING requester_username, addressee_username, status, created_at, updated_at
 `
 
 type SendFriendRequestParams struct {
@@ -138,11 +136,12 @@ type SendFriendRequestParams struct {
 	AddresseeUsername string `json:"addressee_username"`
 }
 
+// Note: always pass usernames in lexicographic order (smaller first) to satisfy
+// the CHECK (requester_username < addressee_username) constraint.
 func (q *Queries) SendFriendRequest(ctx context.Context, arg SendFriendRequestParams) (Friendship, error) {
 	row := q.db.QueryRowContext(ctx, sendFriendRequest, arg.RequesterUsername, arg.AddresseeUsername)
 	var i Friendship
 	err := row.Scan(
-		&i.ID,
 		&i.RequesterUsername,
 		&i.AddresseeUsername,
 		&i.Status,
@@ -158,7 +157,7 @@ SET    status     = $3,
        updated_at = NOW()
 WHERE  requester_username = $1
   AND  addressee_username = $2
-RETURNING id, requester_username, addressee_username, status, created_at, updated_at
+RETURNING requester_username, addressee_username, status, created_at, updated_at
 `
 
 type UpdateFriendshipStatusParams struct {
@@ -171,7 +170,6 @@ func (q *Queries) UpdateFriendshipStatus(ctx context.Context, arg UpdateFriendsh
 	row := q.db.QueryRowContext(ctx, updateFriendshipStatus, arg.RequesterUsername, arg.AddresseeUsername, arg.Status)
 	var i Friendship
 	err := row.Scan(
-		&i.ID,
 		&i.RequesterUsername,
 		&i.AddresseeUsername,
 		&i.Status,

@@ -7,150 +7,152 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
-const getConversation = `-- name: GetConversation :many
-SELECT id, sender_username, receiver_username, content, is_read, created_at
-FROM messages
-WHERE
-    (sender_username = $1 AND receiver_username = $2)
-    OR
-    (sender_username = $2 AND receiver_username = $1)
-ORDER BY created_at ASC
-LIMIT $3 OFFSET $4
-`
-
-type GetConversationParams struct {
-	SenderUsername   string `json:"sender_username"`
-	ReceiverUsername string `json:"receiver_username"`
-	Limit            int32  `json:"limit"`
-	Offset           int32  `json:"offset"`
-}
-
-// Returns messages between two users, oldest first, with pagination.
-func (q *Queries) GetConversation(ctx context.Context, arg GetConversationParams) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, getConversation,
-		arg.SenderUsername,
-		arg.ReceiverUsername,
-		arg.Limit,
-		arg.Offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Message
-	for rows.Next() {
-		var i Message
-		if err := rows.Scan(
-			&i.ID,
-			&i.SenderUsername,
-			&i.ReceiverUsername,
-			&i.Content,
-			&i.IsRead,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getInboxMessages = `-- name: GetInboxMessages :many
-SELECT id, sender_username, receiver_username, content, is_read, created_at
-FROM messages
-WHERE receiver_username = $1
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type GetInboxMessagesParams struct {
-	ReceiverUsername string `json:"receiver_username"`
-	Limit            int32  `json:"limit"`
-	Offset           int32  `json:"offset"`
-}
-
-// Returns messages received by a user, newest first, with pagination.
-func (q *Queries) GetInboxMessages(ctx context.Context, arg GetInboxMessagesParams) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, getInboxMessages, arg.ReceiverUsername, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Message
-	for rows.Next() {
-		var i Message
-		if err := rows.Scan(
-			&i.ID,
-			&i.SenderUsername,
-			&i.ReceiverUsername,
-			&i.Content,
-			&i.IsRead,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const markMessageAsRead = `-- name: MarkMessageAsRead :one
+const editMessage = `-- name: EditMessage :one
 UPDATE messages
-SET is_read = TRUE
+SET content    = $2,
+    is_edited  = TRUE,
+    updated_at = NOW()
 WHERE id = $1
-RETURNING id, sender_username, receiver_username, content, is_read, created_at
+  AND deleted_at IS NULL
+RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 `
 
-func (q *Queries) MarkMessageAsRead(ctx context.Context, id int64) (Message, error) {
-	row := q.db.QueryRowContext(ctx, markMessageAsRead, id)
+type EditMessageParams struct {
+	ID      int64  `json:"id"`
+	Content string `json:"content"`
+}
+
+func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Message, error) {
+	row := q.db.QueryRowContext(ctx, editMessage, arg.ID, arg.Content)
 	var i Message
 	err := row.Scan(
 		&i.ID,
+		&i.ConversationID,
 		&i.SenderUsername,
-		&i.ReceiverUsername,
 		&i.Content,
-		&i.IsRead,
+		&i.MessageType,
+		&i.MediaUrl,
+		&i.IsEdited,
+		&i.DeletedAt,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const getConversationMessages = `-- name: GetConversationMessages :many
+SELECT id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+FROM messages
+WHERE conversation_id = $1
+  AND deleted_at IS NULL
+ORDER BY created_at ASC
+LIMIT $2 OFFSET $3
+`
+
+type GetConversationMessagesParams struct {
+	ConversationID int64 `json:"conversation_id"`
+	Limit          int32 `json:"limit"`
+	Offset         int32 `json:"offset"`
+}
+
+// Returns non-deleted messages in a conversation, oldest first, with pagination.
+func (q *Queries) GetConversationMessages(ctx context.Context, arg GetConversationMessagesParams) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, getConversationMessages, arg.ConversationID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConversationID,
+			&i.SenderUsername,
+			&i.Content,
+			&i.MessageType,
+			&i.MediaUrl,
+			&i.IsEdited,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sendMessage = `-- name: SendMessage :one
-INSERT INTO messages (sender_username, receiver_username, content)
-VALUES ($1, $2, $3)
-RETURNING id, sender_username, receiver_username, content, is_read, created_at
+INSERT INTO messages (conversation_id, sender_username, content, message_type, media_url)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 `
 
 type SendMessageParams struct {
-	SenderUsername   string `json:"sender_username"`
-	ReceiverUsername string `json:"receiver_username"`
-	Content          string `json:"content"`
+	ConversationID int64          `json:"conversation_id"`
+	SenderUsername string         `json:"sender_username"`
+	Content        string         `json:"content"`
+	MessageType    MessageType    `json:"message_type"`
+	MediaUrl       sql.NullString `json:"media_url"`
 }
 
 func (q *Queries) SendMessage(ctx context.Context, arg SendMessageParams) (Message, error) {
-	row := q.db.QueryRowContext(ctx, sendMessage, arg.SenderUsername, arg.ReceiverUsername, arg.Content)
+	row := q.db.QueryRowContext(ctx, sendMessage,
+		arg.ConversationID,
+		arg.SenderUsername,
+		arg.Content,
+		arg.MessageType,
+		arg.MediaUrl,
+	)
 	var i Message
 	err := row.Scan(
 		&i.ID,
+		&i.ConversationID,
 		&i.SenderUsername,
-		&i.ReceiverUsername,
 		&i.Content,
-		&i.IsRead,
+		&i.MessageType,
+		&i.MediaUrl,
+		&i.IsEdited,
+		&i.DeletedAt,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const softDeleteMessage = `-- name: SoftDeleteMessage :one
+UPDATE messages
+SET deleted_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+`
+
+func (q *Queries) SoftDeleteMessage(ctx context.Context, id int64) (Message, error) {
+	row := q.db.QueryRowContext(ctx, softDeleteMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ConversationID,
+		&i.SenderUsername,
+		&i.Content,
+		&i.MessageType,
+		&i.MediaUrl,
+		&i.IsEdited,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

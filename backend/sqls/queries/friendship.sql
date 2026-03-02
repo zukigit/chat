@@ -1,7 +1,9 @@
 -- name: SendFriendRequest :one
+-- Note: always pass usernames in lexicographic order (smaller first) to satisfy
+-- the CHECK (requester_username < addressee_username) constraint.
 INSERT INTO friendships (requester_username, addressee_username)
 VALUES ($1, $2)
-RETURNING id, requester_username, addressee_username, status, created_at, updated_at;
+RETURNING requester_username, addressee_username, status, created_at, updated_at;
 
 -- name: UpdateFriendshipStatus :one
 UPDATE friendships
@@ -9,14 +11,14 @@ SET    status     = $3,
        updated_at = NOW()
 WHERE  requester_username = $1
   AND  addressee_username = $2
-RETURNING id, requester_username, addressee_username, status, created_at, updated_at;
+RETURNING requester_username, addressee_username, status, created_at, updated_at;
 
 -- name: GetFriendship :one
--- Lookup friendship in either direction.
-SELECT id, requester_username, addressee_username, status, created_at, updated_at
+-- Always query with the lexicographically smaller username as $1.
+SELECT requester_username, addressee_username, status, created_at, updated_at
 FROM friendships
-WHERE (requester_username = $1 AND addressee_username = $2)
-   OR (requester_username = $2 AND addressee_username = $1)
+WHERE requester_username = $1
+  AND addressee_username = $2
 LIMIT 1;
 
 -- name: GetFriends :many
@@ -35,7 +37,7 @@ WHERE (requester_username = $1 OR addressee_username = $1)
 
 -- name: GetPendingRequests :many
 -- Returns incoming friend requests pending for a user.
-SELECT id, requester_username, addressee_username, status, created_at, updated_at
+SELECT requester_username, addressee_username, status, created_at, updated_at
 FROM friendships
 WHERE addressee_username = $1
   AND status = 'pending'
