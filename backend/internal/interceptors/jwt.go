@@ -40,12 +40,8 @@ func extractBearerToken(ctx context.Context) (string, bool) {
 }
 
 // UnaryJWTInterceptor validates JWT tokens for every incoming unary RPC.
-//
 //   - Public methods (Login / Signup):
-//     · No token → proceed normally.
-//     · Valid token → reject with AlreadyExists ("already logged in").
-//     · Invalid token → proceed normally (treat as unauthenticated visitor).
-//
+//     · No need token.
 //   - All other methods:
 //     · No token or invalid token → reject with Unauthenticated.
 //     · Valid token → proceed, username injected into context.
@@ -53,13 +49,6 @@ func UnaryJWTInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryS
 	tokenStr, hasToken := extractBearerToken(ctx)
 
 	if publicMethods[info.FullMethod] {
-		if hasToken {
-			if _, err := lib.ValidateToken(tokenStr); err == nil {
-				// Token is valid — user is already logged in.
-				return nil, status.Error(codes.AlreadyExists, "already logged in")
-			}
-		}
-		// No token (or invalid token) — let Login/Signup proceed.
 		return handler(ctx, req)
 	}
 
@@ -70,7 +59,6 @@ func UnaryJWTInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryS
 
 	claims, err := lib.ValidateToken(tokenStr)
 	if err != nil {
-		lib.WarnLog.Printf("JWT validation failed for %s: %v", info.FullMethod, err)
 		return nil, status.Error(codes.Unauthenticated, "invalid or expired token")
 	}
 
@@ -84,11 +72,6 @@ func StreamJWTInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.Stre
 	tokenStr, hasToken := extractBearerToken(ctx)
 
 	if publicMethods[info.FullMethod] {
-		if hasToken {
-			if _, err := lib.ValidateToken(tokenStr); err == nil {
-				return status.Error(codes.AlreadyExists, "already logged in")
-			}
-		}
 		return handler(srv, ss)
 	}
 
@@ -98,7 +81,6 @@ func StreamJWTInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.Stre
 
 	claims, err := lib.ValidateToken(tokenStr)
 	if err != nil {
-		lib.WarnLog.Printf("JWT stream validation failed for %s: %v", info.FullMethod, err)
 		return status.Error(codes.Unauthenticated, "invalid or expired token")
 	}
 
