@@ -25,8 +25,14 @@ func main() {
 	}
 
 	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptors.UnaryRecoveryInterceptor),
-		grpc.StreamInterceptor(interceptors.StreamRecoveryInterceptor),
+		grpc.ChainUnaryInterceptor(
+			interceptors.UnaryRecoveryInterceptor,
+			interceptors.UnaryJWTInterceptor,
+		),
+		grpc.ChainStreamInterceptor(
+			interceptors.StreamRecoveryInterceptor,
+			interceptors.StreamJWTInterceptor,
+		),
 	)
 
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))

@@ -55,12 +55,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		case codes.NotFound, codes.Unauthenticated:
 			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
 				Success: false,
-				Message: "invalid credentials",
+				Message: grpcStatus.Message(),
 			})
 		default:
 			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
 				Success: false,
-				Message: "internal server error",
+				Message: grpcStatus.Message(),
 			})
 		}
 		return
