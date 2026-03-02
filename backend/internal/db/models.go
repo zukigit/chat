@@ -5,10 +5,96 @@
 package db
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"time"
 )
+
+type FriendshipStatus string
+
+const (
+	FriendshipStatusPending  FriendshipStatus = "pending"
+	FriendshipStatusAccepted FriendshipStatus = "accepted"
+	FriendshipStatusRejected FriendshipStatus = "rejected"
+)
+
+func (e *FriendshipStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FriendshipStatus(s)
+	case string:
+		*e = FriendshipStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FriendshipStatus: %T", src)
+	}
+	return nil
+}
+
+type NullFriendshipStatus struct {
+	FriendshipStatus FriendshipStatus `json:"friendship_status"`
+	Valid            bool             `json:"valid"` // Valid is true if FriendshipStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFriendshipStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.FriendshipStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FriendshipStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFriendshipStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FriendshipStatus), nil
+}
+
+type NotificationType string
+
+const (
+	NotificationTypeMessage       NotificationType = "message"
+	NotificationTypeFriendRequest NotificationType = "friend_request"
+)
+
+func (e *NotificationType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NotificationType(s)
+	case string:
+		*e = NotificationType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NotificationType: %T", src)
+	}
+	return nil
+}
+
+type NullNotificationType struct {
+	NotificationType NotificationType `json:"notification_type"`
+	Valid            bool             `json:"valid"` // Valid is true if NotificationType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNotificationType) Scan(value interface{}) error {
+	if value == nil {
+		ns.NotificationType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NotificationType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNotificationType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NotificationType), nil
+}
 
 type SignupType string
 
@@ -51,6 +137,33 @@ func (ns NullSignupType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.SignupType), nil
+}
+
+type Friendship struct {
+	ID                int64            `json:"id"`
+	RequesterUsername string           `json:"requester_username"`
+	AddresseeUsername string           `json:"addressee_username"`
+	Status            FriendshipStatus `json:"status"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at"`
+}
+
+type Message struct {
+	ID               int64     `json:"id"`
+	SenderUsername   string    `json:"sender_username"`
+	ReceiverUsername string    `json:"receiver_username"`
+	Content          string    `json:"content"`
+	IsRead           bool      `json:"is_read"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+type Notification struct {
+	ID           int64            `json:"id"`
+	UserUsername string           `json:"user_username"`
+	Type         NotificationType `json:"type"`
+	MessageID    sql.NullInt64    `json:"message_id"`
+	IsRead       bool             `json:"is_read"`
+	CreatedAt    time.Time        `json:"created_at"`
 }
 
 type User struct {
