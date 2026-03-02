@@ -1,4 +1,4 @@
-name: Build and Deploy Backend
+name: Build and Deploy Gateway
 
 on:
   workflow_dispatch:
@@ -15,15 +15,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build backend binary
+      - name: Build gateway binary
         run: |
-          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3-alpine3.22 sh -c "go build -o ./dist/chat_backend ./backend/cmd/backend/main.go"
+          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3-alpine3.22 sh -c "go build -o ./dist/chat_gateway ./backend/cmd/gateway/main.go"
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: backend-binary
-          path: dist/chat_backend
+          name: gateway-binary
+          path: dist/chat_gateway
 
   deploy:
     needs: build
@@ -37,7 +37,7 @@ jobs:
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
-          name: backend-binary
+          name: gateway-binary
           path: dist/
 
       - name: Log in to Docker Hub
@@ -46,10 +46,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push backend image
+      - name: Build and push gateway image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./backend/cmd/backend/Dockerfile
+          file: ./backend/cmd/gateway/Dockerfile
           push: true
-          tags: zukidocker/chat-backend:${{ inputs.tag || 'latest' }}
+          tags: zukidocker/chat-gateway:${{ inputs.tag || 'latest' }}

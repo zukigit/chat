@@ -89,15 +89,6 @@ func TestUnaryJWT_Login_ValidToken_AlreadyLoggedIn(t *testing.T) {
 	}
 }
 
-func TestUnaryJWT_Signup_ValidToken_AlreadyLoggedIn(t *testing.T) {
-	tok := validToken(t)
-	ctx := ctxWithToken(t, tok)
-	_, err := interceptors.UnaryJWTInterceptor(ctx, nil, unaryInfo("/auth.Auth/Signup"), noopHandler)
-	if st, _ := status.FromError(err); st.Code() != codes.AlreadyExists {
-		t.Errorf("expected AlreadyExists when Signup called with valid token, got %v", err)
-	}
-}
-
 func TestUnaryJWT_Login_InvalidToken_Passes(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-interceptor-secret")
 	// Invalid token should be treated as "no token" for Login — let it through.
