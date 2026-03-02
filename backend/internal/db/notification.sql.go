@@ -41,18 +41,11 @@ SELECT id, user_username, type, message_id, is_read, created_at
 FROM notifications
 WHERE user_username = $1
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
 `
 
-type GetNotificationsForUserParams struct {
-	UserUsername string `json:"user_username"`
-	Limit        int32  `json:"limit"`
-	Offset       int32  `json:"offset"`
-}
-
-// Returns notifications for a user, newest first, with pagination.
-func (q *Queries) GetNotificationsForUser(ctx context.Context, arg GetNotificationsForUserParams) ([]Notification, error) {
-	rows, err := q.db.QueryContext(ctx, getNotificationsForUser, arg.UserUsername, arg.Limit, arg.Offset)
+// Returns all notifications for a user, newest first.
+func (q *Queries) GetNotificationsForUser(ctx context.Context, userUsername string) ([]Notification, error) {
+	rows, err := q.db.QueryContext(ctx, getNotificationsForUser, userUsername)
 	if err != nil {
 		return nil, err
 	}
