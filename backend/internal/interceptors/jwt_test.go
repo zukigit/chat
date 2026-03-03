@@ -12,6 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const testSecret = "test-interceptor-secret"
+
 // noopHandler is a gRPC unary handler that always succeeds.
 var noopHandler grpc.UnaryHandler = func(ctx context.Context, req interface{}) (interface{}, error) {
 	return "ok", nil
@@ -21,15 +23,17 @@ func unaryInfo(method string) *grpc.UnaryServerInfo {
 	return &grpc.UnaryServerInfo{FullMethod: method}
 }
 
+// ctxWithToken returns a context carrying the given token as a Bearer credential.
 func ctxWithToken(t *testing.T, token string) context.Context {
 	t.Helper()
 	md := metadata.Pairs("authorization", "Bearer "+token)
 	return metadata.NewIncomingContext(context.Background(), md)
 }
 
+// validToken sets JWT_SECRET and generates a token for "testuser".
 func validToken(t *testing.T) string {
 	t.Helper()
-	t.Setenv("JWT_SECRET", "test-interceptor-secret")
+	t.Setenv("JWT_SECRET", testSecret)
 	tok, err := lib.GenerateToken("testuser")
 	if err != nil {
 		t.Fatalf("GenerateToken: %v", err)
@@ -39,54 +43,65 @@ func validToken(t *testing.T) string {
 
 // ---- Protected method tests ----
 
-func TestUnaryJWT_ProtectedMethod_NoToken(t *testing.T) {
-	t.Setenv("JWT_SECRET", "test-interceptor-secret")
-	ctx := context.Background()
-	_, err := interceptors.UnaryJWTInterceptor(ctx, nil, unaryInfo("/some.Service/Method"), noopHandler)
-	if st, _ := status.FromError(err); st.Code() != codes.Unauthenticated {
-		t.Errorf("expected Unauthenticated, got %v", err)
-	}
-}
+func TestUnaryJWT_ProtectedMethod(t *testing.T) {
+	tok := validToken(t) // also sets JWT_SECRET
 
-func TestUnaryJWT_ProtectedMethod_InvalidToken(t *testing.T) {
-	t.Setenv("JWT_SECRET", "test-interceptor-secret")
-	ctx := ctxWithToken(t, "garbage-token")
-	_, err := interceptors.UnaryJWTInterceptor(ctx, nil, unaryInfo("/some.Service/Method"), noopHandler)
-	if st, _ := status.FromError(err); st.Code() != codes.Unauthenticated {
-		t.Errorf("expected Unauthenticated, got %v", err)
+	cases := []struct {
+		name    string
+		ctx     context.Context
+		wantErr codes.Code
+	}{
+		{
+			name:    "no_token",
+			ctx:     context.Background(),
+			wantErr: codes.Unauthenticated,
+		},
+		{
+			name:    "invalid_token",
+			ctx:     ctxWithToken(t, "garbage-token"),
+			wantErr: codes.Unauthenticated,
+		},
+		{
+			name:    "valid_token",
+			ctx:     ctxWithToken(t, tok),
+			wantErr: codes.OK,
+		},
 	}
-}
 
-func TestUnaryJWT_ProtectedMethod_ValidToken(t *testing.T) {
-	tok := validToken(t)
-	ctx := ctxWithToken(t, tok)
-	resp, err := interceptors.UnaryJWTInterceptor(ctx, nil, unaryInfo("/some.Service/Method"), noopHandler)
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if resp != "ok" {
-		t.Errorf("unexpected response: %v", resp)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := interceptors.UnaryJWTInterceptor(tc.ctx, nil, unaryInfo("/some.Service/Method"), noopHandler)
+			st, _ := status.FromError(err)
+			if st.Code() != tc.wantErr {
+				t.Errorf("got gRPC code %v, want %v (err: %v)", st.Code(), tc.wantErr, err)
+			}
+		})
 	}
 }
 
 // ---- Public method (Login/Signup) tests ----
 
-func TestUnaryJWT_Login_NoToken_Passes(t *testing.T) {
-	t.Setenv("JWT_SECRET", "test-interceptor-secret")
-	ctx := context.Background()
-	_, err := interceptors.UnaryJWTInterceptor(ctx, nil, unaryInfo("/auth.Auth/Login"), noopHandler)
-	if err != nil {
-		t.Errorf("expected Login without token to pass, got %v", err)
-	}
-}
+func TestUnaryJWT_PublicMethods_AlwaysPass(t *testing.T) {
+	tok := validToken(t) // also sets JWT_SECRET
 
-func TestUnaryJWT_Login_InvalidToken_Passes(t *testing.T) {
-	t.Setenv("JWT_SECRET", "test-interceptor-secret")
-	// Invalid token should be treated as "no token" for Login — let it through.
-	ctx := ctxWithToken(t, "bad-token")
-	_, err := interceptors.UnaryJWTInterceptor(ctx, nil, unaryInfo("/auth.Auth/Login"), noopHandler)
-	if err != nil {
-		t.Errorf("expected Login with invalid token to pass through, got %v", err)
+	cases := []struct {
+		name   string
+		method string
+		ctx    context.Context
+	}{
+		{"login_no_token", "/auth.Auth/Login", context.Background()},
+		{"login_invalid_token", "/auth.Auth/Login", ctxWithToken(t, "bad-token")},
+		{"login_valid_token", "/auth.Auth/Login", ctxWithToken(t, tok)},
+		{"signup_no_token", "/auth.Auth/Signup", context.Background()},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := interceptors.UnaryJWTInterceptor(tc.ctx, nil, unaryInfo(tc.method), noopHandler)
+			if err != nil {
+				t.Errorf("expected public method %q to pass through, got %v", tc.method, err)
+			}
+		})
 	}
 }
 
