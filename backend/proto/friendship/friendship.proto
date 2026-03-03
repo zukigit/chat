@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package friendship;
+
+option go_package = "proto/friendship/";
+
+message FriendRequest {
+  string target_username = 1;
+}
+
+message FriendResponse {
+  string status = 1;
+}
+
+service Friendship {
+  rpc SendFriendRequest(FriendRequest) returns (FriendResponse);
+  rpc AcceptFriendRequest(FriendRequest) returns (FriendResponse);
+  rpc RejectFriendRequest(FriendRequest) returns (FriendResponse);
+}
