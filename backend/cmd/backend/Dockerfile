@@ -4,7 +4,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-COPY dist/chat_backend /app/chat_backend
+COPY bin/chat_backend /app/chat_backend
 
 EXPOSE 1234
 
