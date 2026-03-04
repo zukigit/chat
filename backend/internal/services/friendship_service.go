@@ -51,9 +51,6 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		return nil, status.Error(codes.InvalidArgument, "cannot send a friend request to yourself")
 	}
 
-	lib.InfoLog.Printf("caller: %s\n", caller)
-	lib.InfoLog.Printf("target: %s\n", target)
-
 	first, second := orderedPair(caller, target)
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
