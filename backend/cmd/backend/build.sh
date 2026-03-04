@@ -7,3 +7,6 @@ docker run --rm \
     -c "go build -o chat_backend github.com/zukigit/chat/backend/cmd/backend"
 echo "Backend binary built successfully."
 
+echo "Building backend image..."
+docker build -t zukidocker/chat-backend:latest -f ./backend/cmd/backend/Dockerfile .
+echo "Backend image built successfully."
