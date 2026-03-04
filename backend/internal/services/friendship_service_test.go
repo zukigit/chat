@@ -136,3 +136,29 @@ func TestAcceptFriendRequest_NotFound(t *testing.T) {
 		t.Errorf("got %v, want NotFound", got)
 	}
 }
+
+func TestSendFriendRequest_AfterRejection(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	friendshipServer := services.NewFriendshipServer(sqlDB)
+
+	createTestUsers(t, sqlDB, "alice", "bob")
+
+	// alice sends bob a friend request.
+	if _, err := friendshipServer.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"}); err != nil {
+		t.Fatalf("initial SendFriendRequest: %v", err)
+	}
+
+	// bob rejects it.
+	if _, err := friendshipServer.RejectFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"}); err != nil {
+		t.Fatalf("RejectFriendRequest: %v", err)
+	}
+
+	// alice re-sends — should succeed now that it was rejected.
+	resp, err := friendshipServer.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"})
+	if got := grpcCode(err); got != codes.OK {
+		t.Fatalf("re-send after rejection: got %v, want OK (err: %v)", got, err)
+	}
+	if resp.Status != "pending" {
+		t.Errorf("expected status 'pending' after re-send, got %q", resp.Status)
+	}
+}

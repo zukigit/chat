@@ -46,32 +46,54 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 
 	q := db.New(tx)
 
-	_, err = q.GetUserByUsername(ctx, caller)
-	if err != nil {
+	if _, err = q.GetUserByUsername(ctx, caller); err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: get user caller: %v", err)
 		return nil, status.Errorf(codes.InvalidArgument, "caller %s not found: %v", caller, err)
 	}
-
-	_, err = q.GetUserByUsername(ctx, target)
-	if err != nil {
+	if _, err = q.GetUserByUsername(ctx, target); err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: get user target: %v", err)
 		return nil, status.Errorf(codes.InvalidArgument, "target %s not found: %v", target, err)
 	}
 
-	friendship, err := q.SendFriendRequest(ctx, db.SendFriendRequestParams{
+	// Read the existing row (if any) to decide which write to perform.
+	// Using a closure keeps the single transaction, single notification, single commit pattern.
+	var doWrite func(*db.Queries) (db.Friendship, error)
+
+	existing, err := q.GetFriendship(ctx, db.GetFriendshipParams{
 		RequesterUsername: first,
 		AddresseeUsername: second,
 	})
-	if err != nil {
-		// Unique-constraint violation → request already exists.
-		if lib.IsPgUniqueViolation(err) {
-			return nil, status.Errorf(codes.AlreadyExists, "friend request already exists: %v", err)
+	switch {
+	case err == sql.ErrNoRows:
+		// No prior relationship — INSERT a fresh request.
+		doWrite = func(qt *db.Queries) (db.Friendship, error) {
+			return qt.SendFriendRequest(ctx, db.SendFriendRequestParams{
+				RequesterUsername: first,
+				AddresseeUsername: second,
+			})
 		}
-		lib.ErrorLog.Printf("SendFriendRequest: insert: %v", err)
+	case err != nil:
+		lib.ErrorLog.Printf("SendFriendRequest: get friendship: %v", err)
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	case existing.Status == db.FriendshipStatusRejected:
+		// Previous request was rejected — allow re-sending by resetting to pending.
+		doWrite = func(qt *db.Queries) (db.Friendship, error) {
+			return qt.UpdateFriendshipStatus(ctx, db.UpdateFriendshipStatusParams{
+				RequesterUsername: first,
+				AddresseeUsername: second,
+				Status:            db.FriendshipStatusPending,
+			})
+		}
+	default:
+		return nil, status.Errorf(codes.AlreadyExists, "friend request already exists with status: %s", existing.Status)
+	}
+
+	friendship, err := doWrite(q)
+	if err != nil {
+		lib.ErrorLog.Printf("SendFriendRequest: write: %v", err)
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
-	// Notify the target user about the incoming friend request.
 	if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
 		UserUsername: target,
 		Type:         db.NotificationTypeFriendRequest,
