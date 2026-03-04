@@ -27,11 +27,6 @@ func NewFriendshipHandler(client friendshipClientInterface) *FriendshipHandler {
 	return &FriendshipHandler{client: client}
 }
 
-// friendshipRequest is the shared request body for all friendship endpoints.
-type friendshipRequest struct {
-	Username string `json:"username"`
-}
-
 // handleFriendshipAction is shared logic for Send / Accept / Reject.
 func (h *FriendshipHandler) handleFriendshipAction(
 	w http.ResponseWriter,

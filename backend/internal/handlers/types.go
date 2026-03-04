@@ -13,3 +13,8 @@ type signupRequest struct {
 	Password string `json:"passwd,omitempty"` // required for email signup
 	Code     string `json:"code,omitempty"`   // required for google signup
 }
+
+// friendshipRequest is the shared request body for all friendship endpoints.
+type friendshipRequest struct {
+	Username string `json:"username"`
+}
