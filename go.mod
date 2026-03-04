@@ -4,6 +4,7 @@ go 1.25.3
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.11.2
 	github.com/testcontainers/testcontainers-go v0.40.0

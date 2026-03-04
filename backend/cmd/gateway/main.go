@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	gorhandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/handlers"
@@ -35,9 +36,15 @@ func main() {
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
 
+	cors := gorhandlers.CORS(
+		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "http://localhost:5173")}),
+		gorhandlers.AllowedMethods([]string{"GET", "POST"}),
+		gorhandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)
+
 	listenAddr := lib.Getenv("GATEWAY_LISTEN_ADDRESS", ":8080")
 	lib.InfoLog.Printf("Gateway listening on %s", listenAddr)
-	if err := http.ListenAndServe(listenAddr, r); err != nil {
+	if err := http.ListenAndServe(listenAddr, cors(r)); err != nil {
 		lib.ErrorLog.Fatalf("Gateway failed: %v", err)
 	}
 }
