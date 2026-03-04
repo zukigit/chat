@@ -225,12 +225,13 @@ type MessageRead struct {
 }
 
 type Notification struct {
-	ID           int64            `json:"id"`
-	UserUsername string           `json:"user_username"`
-	Type         NotificationType `json:"type"`
-	MessageID    sql.NullInt64    `json:"message_id"`
-	IsRead       bool             `json:"is_read"`
-	CreatedAt    time.Time        `json:"created_at"`
+	ID             int64            `json:"id"`
+	UserUsername   string           `json:"user_username"`
+	SenderUsername string           `json:"sender_username"`
+	Type           NotificationType `json:"type"`
+	Message        string           `json:"message"`
+	IsRead         bool             `json:"is_read"`
+	CreatedAt      time.Time        `json:"created_at"`
 }
 
 type User struct {

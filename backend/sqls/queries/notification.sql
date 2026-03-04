@@ -1,11 +1,11 @@
 -- name: CreateNotification :one
-INSERT INTO notifications (user_username, type, message_id)
-VALUES ($1, $2, $3)
-RETURNING id, user_username, type, message_id, is_read, created_at;
+INSERT INTO notifications (user_username, sender_username, type, message)
+VALUES ($1, $2, $3, $4)
+RETURNING id, user_username, sender_username, type, message, is_read, created_at;
 
 -- name: GetNotificationsForUser :many
 -- Returns all notifications for a user, newest first.
-SELECT id, user_username, type, message_id, is_read, created_at
+SELECT id, user_username, sender_username, type, message, is_read, created_at
 FROM notifications
 WHERE user_username = $1
 ORDER BY created_at DESC;
@@ -20,7 +20,7 @@ WHERE user_username = $1
 UPDATE notifications
 SET is_read = TRUE
 WHERE id = $1
-RETURNING id, user_username, type, message_id, is_read, created_at;
+RETURNING id, user_username, sender_username, type, message, is_read, created_at;
 
 -- name: MarkAllNotificationsAsRead :exec
 UPDATE notifications

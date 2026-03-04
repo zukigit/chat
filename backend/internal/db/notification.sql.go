@@ -7,29 +7,35 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createNotification = `-- name: CreateNotification :one
-INSERT INTO notifications (user_username, type, message_id)
-VALUES ($1, $2, $3)
-RETURNING id, user_username, type, message_id, is_read, created_at
+INSERT INTO notifications (user_username, sender_username, type, message)
+VALUES ($1, $2, $3, $4)
+RETURNING id, user_username, sender_username, type, message, is_read, created_at
 `
 
 type CreateNotificationParams struct {
-	UserUsername string           `json:"user_username"`
-	Type         NotificationType `json:"type"`
-	MessageID    sql.NullInt64    `json:"message_id"`
+	UserUsername   string           `json:"user_username"`
+	SenderUsername string           `json:"sender_username"`
+	Type           NotificationType `json:"type"`
+	Message        string           `json:"message"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
-	row := q.db.QueryRowContext(ctx, createNotification, arg.UserUsername, arg.Type, arg.MessageID)
+	row := q.db.QueryRowContext(ctx, createNotification,
+		arg.UserUsername,
+		arg.SenderUsername,
+		arg.Type,
+		arg.Message,
+	)
 	var i Notification
 	err := row.Scan(
 		&i.ID,
 		&i.UserUsername,
+		&i.SenderUsername,
 		&i.Type,
-		&i.MessageID,
+		&i.Message,
 		&i.IsRead,
 		&i.CreatedAt,
 	)
@@ -37,7 +43,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 }
 
 const getNotificationsForUser = `-- name: GetNotificationsForUser :many
-SELECT id, user_username, type, message_id, is_read, created_at
+SELECT id, user_username, sender_username, type, message, is_read, created_at
 FROM notifications
 WHERE user_username = $1
 ORDER BY created_at DESC
@@ -56,8 +62,9 @@ func (q *Queries) GetNotificationsForUser(ctx context.Context, userUsername stri
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserUsername,
+			&i.SenderUsername,
 			&i.Type,
-			&i.MessageID,
+			&i.Message,
 			&i.IsRead,
 			&i.CreatedAt,
 		); err != nil {
@@ -104,7 +111,7 @@ const markNotificationAsRead = `-- name: MarkNotificationAsRead :one
 UPDATE notifications
 SET is_read = TRUE
 WHERE id = $1
-RETURNING id, user_username, type, message_id, is_read, created_at
+RETURNING id, user_username, sender_username, type, message, is_read, created_at
 `
 
 func (q *Queries) MarkNotificationAsRead(ctx context.Context, id int64) (Notification, error) {
@@ -113,8 +120,9 @@ func (q *Queries) MarkNotificationAsRead(ctx context.Context, id int64) (Notific
 	err := row.Scan(
 		&i.ID,
 		&i.UserUsername,
+		&i.SenderUsername,
 		&i.Type,
-		&i.MessageID,
+		&i.Message,
 		&i.IsRead,
 		&i.CreatedAt,
 	)

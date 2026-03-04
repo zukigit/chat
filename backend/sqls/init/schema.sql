@@ -69,12 +69,13 @@ CREATE TABLE IF NOT EXISTS message_reads (
 CREATE TYPE notification_type AS ENUM ('message', 'friend_request');
 
 CREATE TABLE IF NOT EXISTS notifications (
-    id              BIGSERIAL         PRIMARY KEY,
-    user_username   VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
-    type            notification_type NOT NULL,
-    message_id      BIGINT            REFERENCES messages(id) ON DELETE SET NULL,
-    is_read         BOOLEAN           NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ       NOT NULL DEFAULT NOW()
+    id               BIGSERIAL         PRIMARY KEY,
+    user_username    VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
+    sender_username  VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
+    type             notification_type NOT NULL,
+    message          TEXT              NOT NULL,
+    is_read          BOOLEAN           NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );
 
 -- ── Indexes ────────────────────────────────────────────────────────────────────
