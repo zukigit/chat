@@ -3,10 +3,10 @@ package clients
 import (
 	"context"
 
+	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 // FriendshipClient wraps the gRPC Friendship client.
@@ -33,14 +33,9 @@ func (c *FriendshipClient) Close() {
 	c.conn.Close()
 }
 
-// withToken attaches the Bearer token to the outgoing gRPC context.
-func withToken(ctx context.Context, token string) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
-}
-
 // SendFriendRequest forwards a friend request to the backend via gRPC.
 func (c *FriendshipClient) SendFriendRequest(ctx context.Context, token, targetUsername string) error {
-	_, err := c.client.SendFriendRequest(withToken(ctx, token), &pb.FriendRequest{
+	_, err := c.client.SendFriendRequest(lib.WithToken(ctx, token), &pb.FriendRequest{
 		TargetUsername: targetUsername,
 	})
 	return err
@@ -48,7 +43,7 @@ func (c *FriendshipClient) SendFriendRequest(ctx context.Context, token, targetU
 
 // AcceptFriendRequest accepts a pending friend request via gRPC.
 func (c *FriendshipClient) AcceptFriendRequest(ctx context.Context, token, targetUsername string) error {
-	_, err := c.client.AcceptFriendRequest(withToken(ctx, token), &pb.FriendRequest{
+	_, err := c.client.AcceptFriendRequest(lib.WithToken(ctx, token), &pb.FriendRequest{
 		TargetUsername: targetUsername,
 	})
 	return err
@@ -56,7 +51,7 @@ func (c *FriendshipClient) AcceptFriendRequest(ctx context.Context, token, targe
 
 // RejectFriendRequest rejects a pending friend request via gRPC.
 func (c *FriendshipClient) RejectFriendRequest(ctx context.Context, token, targetUsername string) error {
-	_, err := c.client.RejectFriendRequest(withToken(ctx, token), &pb.FriendRequest{
+	_, err := c.client.RejectFriendRequest(lib.WithToken(ctx, token), &pb.FriendRequest{
 		TargetUsername: targetUsername,
 	})
 	return err
