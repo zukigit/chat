@@ -1,2 +1,4 @@
 # Environment variables - never commit real secrets
 .env
+chat_backend
+chat_gateway

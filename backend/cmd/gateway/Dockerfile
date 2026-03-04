@@ -4,7 +4,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-COPY bin/chat_gateway /app/chat_gateway
+COPY chat_gateway /app/chat_gateway
 
 EXPOSE 8080
 
