@@ -56,7 +56,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: begin tx: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 	defer tx.Rollback()
 
@@ -65,13 +65,13 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	_, err = q.GetUserByUsername(ctx, caller)
 	if err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: get user caller: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.InvalidArgument, "caller %s not found: %v", caller, err)
 	}
 
 	_, err = q.GetUserByUsername(ctx, target)
 	if err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: get user target: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.InvalidArgument, "target %s not found: %v", target, err)
 	}
 
 	friendship, err := q.SendFriendRequest(ctx, db.SendFriendRequestParams{
@@ -81,10 +81,10 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	if err != nil {
 		// Unique-constraint violation → request already exists.
 		if isPgUniqueViolation(err) {
-			return nil, status.Error(codes.AlreadyExists, "friend request already exists")
+			return nil, status.Errorf(codes.AlreadyExists, "friend request already exists: %v", err)
 		}
 		lib.ErrorLog.Printf("SendFriendRequest: insert: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
 	// Notify the target user about the incoming friend request.
@@ -94,12 +94,12 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		MessageID:    sql.NullInt64{Valid: false},
 	}); err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: create notification: %v", err)
-		// Non-fatal — don't fail the whole operation.
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: commit: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
 	return &pb.FriendResponse{Status: string(friendship.Status)}, nil
