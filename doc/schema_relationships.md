@@ -59,8 +59,9 @@ erDiagram
     notifications {
         bigserial id PK
         varchar user_username FK
+        varchar sender_username FK
         notification_type type
-        bigint message_id FK
+        text message
         boolean is_read
         timestamptz created_at
     }
@@ -74,7 +75,7 @@ erDiagram
     messages ||--o{ message_reads : "read receipts"
     users ||--o{ message_reads : "reads (user_username)"
     users ||--o{ notifications : "notified (user_username)"
-    messages ||--o{ notifications : "triggers (message_id)"
+    users ||--o{ notifications : "sends (sender_username)"
 ```
 
 ---
@@ -164,14 +165,15 @@ Per-user read receipts. One row per `(message, user)` pair.
 ---
 
 ### `notifications`
-Notifies a user of an event. Optionally linked to a specific message.
+Notifies a user of an event.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` | **PK** |
 | `user_username` | `VARCHAR(50)` | **FK** → `users.user_name` (CASCADE) |
+| `sender_username` | `VARCHAR(50)` | **FK** → `users.user_name` (CASCADE) |
 | `type` | `notification_type` | `message`, `friend_request` |
-| `message_id` | `BIGINT` | **FK** → `messages.id` (nullable, `SET NULL` on delete) |
+| `message` | `TEXT` | |
 | `is_read` | `BOOLEAN` | default `false` |
 | `created_at` | `TIMESTAMPTZ` | |
 
@@ -190,7 +192,7 @@ Notifies a user of an event. Optionally linked to a specific message.
 | `messages` | `message_reads` | `message_id` | one-to-many |
 | `users` | `message_reads` | `user_username` | one-to-many |
 | `users` | `notifications` | `user_username` | one-to-many |
-| `messages` | `notifications` | `message_id` | one-to-many (nullable) |
+| `users` | `notifications` | `sender_username` | one-to-many |
 
 ---
 
