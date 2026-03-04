@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
@@ -33,17 +32,6 @@ type friendshipRequest struct {
 	Username string `json:"username"`
 }
 
-// bearerToken extracts the raw JWT from the HTTP Authorization header.
-// Returns ("", false) if absent or malformed.
-func bearerToken(r *http.Request) (string, bool) {
-	raw := r.Header.Get("Authorization")
-	token, found := strings.CutPrefix(raw, "Bearer ")
-	if !found || token == "" {
-		return "", false
-	}
-	return token, true
-}
-
 // handleFriendshipAction is shared logic for Send / Accept / Reject.
 func (h *FriendshipHandler) handleFriendshipAction(
 	w http.ResponseWriter,
@@ -51,7 +39,7 @@ func (h *FriendshipHandler) handleFriendshipAction(
 	action func(ctx context.Context, token, target string) error,
 	successMsg string,
 ) {
-	token, ok := bearerToken(r)
+	token, ok := lib.BearerToken(r)
 	if !ok {
 		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
 			Success: false,
