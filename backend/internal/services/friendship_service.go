@@ -22,26 +22,10 @@ func NewFriendshipServer(sqlDB *sql.DB) *FriendshipServer {
 	return &FriendshipServer{sqlDB: sqlDB}
 }
 
-// callerFrom extracts the authenticated username from the request context.
-// Returns "" if not present (should not happen for protected methods).
-func callerFrom(ctx context.Context) string {
-	username, _ := ctx.Value(lib.ContextKeyUsername).(string)
-	return username
-}
-
-// orderedPair returns (a, b) sorted lexicographically so that a < b,
-// satisfying the DB CHECK (requester_username < addressee_username) constraint.
-func orderedPair(x, y string) (first, second string) {
-	if x < y {
-		return x, y
-	}
-	return y, x
-}
-
 // SendFriendRequest handles a friend request from the caller to target_username.
 // It creates the friendship row and notifies the target user.
 func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.FriendRequest) (*pb.FriendResponse, error) {
-	caller := callerFrom(ctx)
+	caller := lib.CallerFrom(ctx)
 	target := req.GetTargetUsername()
 
 	if target == "" {
@@ -51,7 +35,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		return nil, status.Error(codes.InvalidArgument, "cannot send a friend request to yourself")
 	}
 
-	first, second := orderedPair(caller, target)
+	first, second := lib.OrderedPair(caller, target)
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
@@ -80,7 +64,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	})
 	if err != nil {
 		// Unique-constraint violation → request already exists.
-		if isPgUniqueViolation(err) {
+		if lib.IsPgUniqueViolation(err) {
 			return nil, status.Errorf(codes.AlreadyExists, "friend request already exists: %v", err)
 		}
 		lib.ErrorLog.Printf("SendFriendRequest: insert: %v", err)
@@ -122,14 +106,14 @@ func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.Frie
 // friendship, verifies that the caller is the addressee, updates the status,
 // and (on accept) notifies the original requester.
 func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendRequest, newStatus db.FriendshipStatus) (*pb.FriendResponse, error) {
-	caller := callerFrom(ctx)
+	caller := lib.CallerFrom(ctx)
 	target := req.GetTargetUsername()
 
 	if target == "" {
 		return nil, status.Error(codes.InvalidArgument, "target_username is required")
 	}
 
-	first, second := orderedPair(caller, target)
+	first, second := lib.OrderedPair(caller, target)
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {

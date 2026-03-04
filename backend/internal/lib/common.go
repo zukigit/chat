@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"context"
 	"log"
 	"os"
 )
@@ -25,3 +26,19 @@ type contextKey string
 // ContextKeyUsername is the context key used to store the authenticated username
 // after JWT validation by the interceptor.
 const ContextKeyUsername contextKey = "username"
+
+// callerFrom extracts the authenticated username from the request context.
+// Returns "" if not present (should not happen for protected methods).
+func CallerFrom(ctx context.Context) string {
+	username, _ := ctx.Value(ContextKeyUsername).(string)
+	return username
+}
+
+// orderedPair returns (a, b) sorted lexicographically so that a < b,
+// satisfying the DB CHECK (requester_username < addressee_username) constraint.
+func OrderedPair(x, y string) (first, second string) {
+	if x < y {
+		return x, y
+	}
+	return y, x
+}
