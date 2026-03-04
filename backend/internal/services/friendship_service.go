@@ -62,6 +62,18 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 
 	q := db.New(tx)
 
+	_, err = q.GetUserByUsername(ctx, caller)
+	if err != nil {
+		lib.ErrorLog.Printf("SendFriendRequest: get user caller: %v", err)
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
+	_, err = q.GetUserByUsername(ctx, target)
+	if err != nil {
+		lib.ErrorLog.Printf("SendFriendRequest: get user target: %v", err)
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
 	friendship, err := q.SendFriendRequest(ctx, db.SendFriendRequestParams{
 		RequesterUsername: first,
 		AddresseeUsername: second,
