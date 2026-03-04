@@ -1,4 +1,4 @@
-name: Build and Deploy Backend and Gateway
+name: Build and Deploy All
 
 on:
   workflow_dispatch:
