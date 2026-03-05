@@ -17,17 +17,23 @@ sequenceDiagram
     participant DB as Database
     actor F2 as Frontend (User B)
 
-    note over F1, F2: Immediate Message Delivery
+    note over F1, DB: Client Message Submission
     F1->>GW: Send Message (WebSocket frame)
-    GW->>F2: Forward message to User B
-    
-    note over GW, DB: Asynchronous Persistence
     GW->>NQ: Publish message to subject (e.g. `chat.incoming`)
-    NQ->>BE: Deliver message to backend subscriber
-    BE->>DB: Save to `messages` table
     
-    note over BE, F1: Delivery Confirmation
+    note over NQ, DB: Message Processing & Persistence
+    NQ->>BE: Deliver message to backend subscriber
+    BE->>BE: Validate & Sanitize payload
+    BE->>DB: Save to `messages` table
+    DB-->>BE: Acknowledge save success
+    
+    note over BE, F2: Message Fan-out & Delivery
+    BE->>NQ: Publish event to recipient's subject (e.g. `chat.user.<UserB_ID>`)
+    NQ->>GW: Deliver to Gateway holding User B's connection
+    GW->>F2: Push message (WebSocket frame)
+    
+    note right of BE: Optional Delivery Ack back to User A
     BE->>NQ: Publish ack to sender's subject (e.g. `chat.user.<UserA_ID>`)
-    NQ->>GW: Deliver ack to Gateway holding User A's connection
+    NQ->>GW: Deliver to Gateway holding User A's connection
     GW->>F1: Push 'Message Sent' confirmation
 ```
