@@ -29,4 +29,13 @@ services:
       - "8080:8080"
     environment:
       - BACKEND_LISTEN_ADDRESS=backend:1234
-      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_URL=web
+
+  web:
+    image: zukidocker/chat-web:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+    environment:
+      - API_BASE_URL=gateway:8080
