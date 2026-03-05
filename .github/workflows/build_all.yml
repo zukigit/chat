@@ -10,13 +10,20 @@ on:
 
 jobs:
   backend:
-    uses: ./.github/workflows/build_n_deploy_backend.yml
+    uses: ./.github/workflows/build_backend.yml
     with:
       tag: ${{ inputs.tag || 'latest' }}
     secrets: inherit
 
   gateway:
-    uses: ./.github/workflows/build_n_deploy_gateway.yml
+    uses: ./.github/workflows/build_gateway.yml
     with:
       tag: ${{ inputs.tag || 'latest' }}
     secrets: inherit
+
+  web:
+    uses: ./.github/workflows/build_web.yml
+    with:
+      tag: ${{ inputs.tag || 'latest' }}
+    secrets: inherit
+
