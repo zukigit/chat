@@ -27,6 +27,8 @@ services:
     image: zukidocker/chat-gateway:latest
     ports:
       - "8080:8080"
+    depends_on:
+      - backend
     environment:
       - BACKEND_LISTEN_ADDRESS=backend:1234
       - FRONTEND_URL=web
