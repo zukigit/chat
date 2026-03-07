@@ -1,54 +1,12 @@
 package services_test
 
 import (
-	"context"
-	"database/sql"
 	"testing"
 
-	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/services"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
-	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/zukigit/chat/backend/internal/lib"
 )
-
-// ctxWithUser returns a context carrying the given username as the JWT claim,
-// mimicking what the JWT interceptor does for authenticated requests.
-func ctxWithUser(username string) context.Context {
-	return context.WithValue(context.Background(), lib.ContextKeyUsername, username)
-}
-
-// grpcCode extracts the gRPC status code from an error (OK if err == nil).
-func grpcCode(err error) codes.Code {
-	if err == nil {
-		return codes.OK
-	}
-	st, _ := status.FromError(err)
-	return st.Code()
-}
-
-// createTestUsers creates test users in the database for use in tests.
-// It fails the test immediately if any user cannot be created.
-func createTestUsers(t *testing.T, sqlDB *sql.DB, usernames ...string) {
-	t.Helper()
-	q := db.New(sqlDB)
-	hashed, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost)
-	if err != nil {
-		t.Fatalf("createTestUsers: hash password: %v", err)
-	}
-	for _, username := range usernames {
-		if _, err := q.CreateUser(t.Context(), db.CreateUserParams{
-			UserName:     username,
-			HashedPasswd: string(hashed),
-			SignupType:   db.SignupTypeEmail,
-		}); err != nil {
-			t.Fatalf("createTestUsers: create %q: %v", username, err)
-		}
-	}
-}
 
 func TestSendFriendRequest(t *testing.T) {
 	sqlDB := setupTestDB(t)
@@ -65,6 +23,7 @@ func TestSendFriendRequest(t *testing.T) {
 	}{
 		{"valid", "alice", "bob", codes.OK},
 		{"duplicate", "alice", "bob", codes.AlreadyExists},
+		{"reverse duplicate", "bob", "alice", codes.AlreadyExists},
 		{"self request", "alice", "alice", codes.InvalidArgument},
 		{"empty target", "alice", "", codes.InvalidArgument},
 	}
@@ -183,5 +142,105 @@ func TestSendFriendRequest_AfterRejection(t *testing.T) {
 	}
 	if resp.Status != "pending" {
 		t.Errorf("expected status 'pending' after re-send, got %q", resp.Status)
+	}
+}
+
+func TestAcceptFriendRequest_AfterRejection(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	fs := services.NewFriendshipServer(sqlDB)
+	createTestUsers(t, sqlDB, "alice", "bob")
+
+	// alice → bob, bob rejects
+	if _, err := fs.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"}); err != nil {
+		t.Fatalf("setup SendFriendRequest: %v", err)
+	}
+	if _, err := fs.RejectFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"}); err != nil {
+		t.Fatalf("setup RejectFriendRequest: %v", err)
+	}
+
+	// bob tries to accept the (now rejected) request — should fail
+	_, err := fs.AcceptFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"})
+	if got := grpcCode(err); got != codes.FailedPrecondition {
+		t.Errorf("accept after rejection: got %v, want FailedPrecondition", got)
+	}
+}
+
+func TestAcceptFriendRequest_AfterAcception(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	fs := services.NewFriendshipServer(sqlDB)
+	createTestUsers(t, sqlDB, "alice", "bob")
+
+	// alice → bob, bob accepts
+	if _, err := fs.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"}); err != nil {
+		t.Fatalf("setup SendFriendRequest: %v", err)
+	}
+	if _, err := fs.AcceptFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"}); err != nil {
+		t.Fatalf("setup AcceptFriendRequest: %v", err)
+	}
+
+	// bob tries to accept again — should fail
+	_, err := fs.AcceptFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"})
+	if got := grpcCode(err); got != codes.FailedPrecondition {
+		t.Errorf("accept after acceptance: got %v, want FailedPrecondition", got)
+	}
+}
+
+func TestRejectFriendRequest_AfterRejection(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	fs := services.NewFriendshipServer(sqlDB)
+	createTestUsers(t, sqlDB, "alice", "bob")
+
+	// alice → bob, bob rejects
+	if _, err := fs.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"}); err != nil {
+		t.Fatalf("setup SendFriendRequest: %v", err)
+	}
+	if _, err := fs.RejectFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"}); err != nil {
+		t.Fatalf("setup RejectFriendRequest: %v", err)
+	}
+
+	// bob tries to reject again — should fail
+	_, err := fs.RejectFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"})
+	if got := grpcCode(err); got != codes.FailedPrecondition {
+		t.Errorf("reject after rejection: got %v, want FailedPrecondition", got)
+	}
+}
+
+func TestRejectFriendRequest_AfterAcception(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	fs := services.NewFriendshipServer(sqlDB)
+	createTestUsers(t, sqlDB, "alice", "bob")
+
+	// alice → bob, bob accepts
+	if _, err := fs.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"}); err != nil {
+		t.Fatalf("setup SendFriendRequest: %v", err)
+	}
+	if _, err := fs.AcceptFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"}); err != nil {
+		t.Fatalf("setup AcceptFriendRequest: %v", err)
+	}
+
+	// bob tries to reject an already-accepted friendship — should fail
+	_, err := fs.RejectFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"})
+	if got := grpcCode(err); got != codes.FailedPrecondition {
+		t.Errorf("reject after acceptance: got %v, want FailedPrecondition", got)
+	}
+}
+
+func TestSendFriendRequest_AfterAcception(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	fs := services.NewFriendshipServer(sqlDB)
+	createTestUsers(t, sqlDB, "alice", "bob")
+
+	// alice → bob, bob accepts
+	if _, err := fs.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"}); err != nil {
+		t.Fatalf("setup SendFriendRequest: %v", err)
+	}
+	if _, err := fs.AcceptFriendRequest(ctxWithUser("bob"), &pb.FriendRequest{TargetUsername: "alice"}); err != nil {
+		t.Fatalf("setup AcceptFriendRequest: %v", err)
+	}
+
+	// alice tries to send another request to an existing friend — should fail
+	_, err := fs.SendFriendRequest(ctxWithUser("alice"), &pb.FriendRequest{TargetUsername: "bob"})
+	if got := grpcCode(err); got != codes.AlreadyExists {
+		t.Errorf("send after acceptance: got %v, want AlreadyExists", got)
 	}
 }

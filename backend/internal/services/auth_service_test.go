@@ -1,77 +1,13 @@
 package services_test
 
 import (
-	"context"
-	"database/sql"
-	"fmt"
-	"path/filepath"
-	"runtime"
 	"testing"
 
-	_ "github.com/lib/pq"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/services"
 	"github.com/zukigit/chat/backend/proto/auth"
 	"golang.org/x/crypto/bcrypt"
 )
-
-func schemaPath() string {
-	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..", "sqls", "init", "schema.sql")
-}
-
-func setupTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-	ctx := context.Background()
-
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres:16-alpine",
-		ExposedPorts: []string{"5432/tcp"},
-		Env: map[string]string{
-			"POSTGRES_USER":     "chat",
-			"POSTGRES_PASSWORD": "test",
-			"POSTGRES_DB":       "chat",
-		},
-		Files: []testcontainers.ContainerFile{
-			{
-				HostFilePath:      schemaPath(),
-				ContainerFilePath: "/docker-entrypoint-initdb.d/schema.sql",
-				FileMode:          0755,
-			},
-		},
-		// Postgres logs the ready message twice during initialisation.
-		WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-	}
-
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatalf("failed to start postgres container: %v", err)
-	}
-	t.Cleanup(func() { _ = container.Terminate(ctx) })
-
-	host, err := container.Host(ctx)
-	if err != nil {
-		t.Fatalf("failed to get container host: %v", err)
-	}
-	port, err := container.MappedPort(ctx, "5432")
-	if err != nil {
-		t.Fatalf("failed to get container port: %v", err)
-	}
-
-	dsn := fmt.Sprintf("postgres://chat:test@%s:%s/chat?sslmode=disable", host, port.Port())
-	sqlDB, err := sql.Open("postgres", dsn)
-	if err != nil {
-		t.Fatalf("failed to open db: %v", err)
-	}
-	t.Cleanup(func() { _ = sqlDB.Close() })
-
-	return sqlDB
-}
 
 func TestLogin(t *testing.T) {
 	sqlDb := setupTestDB(t)
