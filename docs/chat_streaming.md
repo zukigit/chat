@@ -32,7 +32,7 @@ sequenceDiagram
     NQ->>GW: Deliver to Gateway holding User B's connection
     GW->>F2: Push message (WebSocket frame)
     
-    note right of GW: Delivery Ack back to User A
+    note over GW, DB: Delivery Ack back to User A
     GW->>NQ: Publish message to subject (e.g. `chat.sent.<UserA_ID>`)
     NQ->>BE: Deliver to backend subscriber
     BE->>BE: Validate & Sanitize payload
