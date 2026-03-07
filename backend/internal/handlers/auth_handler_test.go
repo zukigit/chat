@@ -3,13 +3,11 @@ package handlers_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/zukigit/chat/backend/internal/handlers"
-	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,28 +24,6 @@ func (m *mockAuthClient) Login(ctx context.Context, username, password string) (
 
 func (m *mockAuthClient) Signup(ctx context.Context, username, password string) error {
 	return m.signupFn(ctx, username, password)
-}
-
-// postRequest builds a POST request with a JSON body.
-func postRequest(t *testing.T, path string, body any) *http.Request {
-	t.Helper()
-	b, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("failed to marshal request body: %v", err)
-	}
-	r := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(b))
-	r.Header.Set("Content-Type", "application/json")
-	return r
-}
-
-// decodeResponse unmarshals the recorder body into lib.Response.
-func decodeResponse(t *testing.T, rec *httptest.ResponseRecorder) lib.Response {
-	t.Helper()
-	var resp lib.Response
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-	return resp
 }
 
 // ---- Login tests ----
