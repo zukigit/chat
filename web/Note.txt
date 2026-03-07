@@ -1,0 +1,71 @@
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. docker run -e API_BASE_URL=http://hello:8080 ...                         │
+│    └─> Docker sets API_BASE_URL as an OS environment variable              │
+│        inside the container (like export API_BASE_URL=...)                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. Container starts → nginx entrypoint runs                                 │
+│    └─> Executes all scripts in /docker-entrypoint.d/                        │
+│    └─> Including env.sh                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. env.sh runs (shell script inside the container)                          │
+│                                                                             │
+│    #!/bin/sh                                                                │
+│    cat <<EOF > /usr/share/nginx/html/env-config.js                          │
+│    window.ENV = {                                                           │
+│      API_BASE_URL: "${API_BASE_URL:-http://localhost:8080}"                 │
+│    };                     ▲                                                 │
+│    EOF                    │                                                 │
+│                           │                                                 │
+│    Shell substitutes $API_BASE_URL with the OS env variable value           │
+│    Result: Creates a .js file with the hardcoded string (http://hello:8080) │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. Generated file: /usr/share/nginx/html/env-config.js                      │
+│                                                                             │
+│    window.ENV = {                                                           │
+│      API_BASE_URL: "http://hello:8080"   ← Now a plain string!              │
+│    };                                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. nginx starts serving files                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 6. Browser requests http://localhost                                        │
+│    └─> nginx serves index.html                                              │
+│                                                                             │
+│    <html>                                                                   │
+│      <head>                                                                 │
+│        <script src="/env-config.js"></script>  ← Loads first!               │
+│      </head>                                                                │
+│      ...                                                                    │
+│    </html>                                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 7. Browser executes env-config.js                                           │
+│    └─> window.ENV = { API_BASE_URL: "http://hello:8080" }               │
+│    └─> Now window.ENV exists as a global JavaScript object                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8. React app loads and reads it                                             │
+│                                                                             │
+│    // api.ts                                                                │
+│    const GATE_BASE_URL = window.ENV?.API_BASE_URL || "http://localhost:8080"│
+│                          ▲                                                  │
+│                          └─ Gets "http://hello:8080" from window.ENV    │
+└─────────────────────────────────────────────────────────────────────────────┘
