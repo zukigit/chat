@@ -5,8 +5,8 @@
 
 cat <<EOF > /usr/share/nginx/html/env-config.js
 window.ENV = {
-  API_URL: "${API_URL:-http://localhost:8080}"
+  API_BASE_URL: "${API_BASE_URL:-http://localhost:8080}"
 };
 EOF
 
-echo "Runtime config generated with API_URL=${API_URL:-http://localhost:8080}"
+echo "Runtime config generated with API_BASE_URL=${API_BASE_URL:-http://localhost:8080}"

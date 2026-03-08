@@ -26,7 +26,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy env script for runtime config injection
 COPY ./web/env.sh /docker-entrypoint.d/env.sh
-RUN chmod +x /docker-entrypoint.d/env.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.d/env.sh && chmod +x /docker-entrypoint.d/env.sh
 
 # Expose port 80
 EXPOSE 80
