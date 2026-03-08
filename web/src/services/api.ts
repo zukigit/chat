@@ -1,6 +1,8 @@
 // Base API configuration and client
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { getToken, removeToken } from "../utils/cookies";
+
+const GATE_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 interface ApiResponse<T> {
   data?: T;
@@ -20,7 +22,7 @@ class ApiClient {
     };
 
     // Add auth token if available
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -30,7 +32,7 @@ class ApiClient {
 
   // Handle 401 Unauthorized (token expired or invalid)
   private handleUnauthorized() {
-    localStorage.removeItem("token");
+    removeToken();
     // Redirect to login with expired flag if not already there
     if (window.location.pathname !== "/login") {
       window.location.href = "/login?expired=true";
@@ -144,5 +146,5 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_BASE_URL);
+export const apiClient = new ApiClient(GATE_BASE_URL);
 export type { ApiResponse };

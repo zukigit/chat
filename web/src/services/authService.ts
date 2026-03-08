@@ -1,4 +1,5 @@
 import { apiClient } from "./api";
+import { getToken, setToken, removeToken } from "../utils/cookies";
 
 // Request/Response types
 export interface LoginRequest {
@@ -33,7 +34,7 @@ export const authService = {
     );
 
     if (response.data?.success && response.data?.data?.token) {
-      localStorage.setItem("token", response.data.data.token);
+      setToken(response.data.data.token);
     }
 
     // Return error message from backend if not successful
@@ -51,7 +52,7 @@ export const authService = {
     );
 
     if (response.data?.success && response.data?.data?.token) {
-      localStorage.setItem("token", response.data.data.token);
+      setToken(response.data.data.token);
     }
 
     // Return error message from backend if not successful
@@ -63,11 +64,11 @@ export const authService = {
   },
 
   logout() {
-    localStorage.removeItem("token");
+    removeToken();
   },
 
   getToken() {
-    return localStorage.getItem("token");
+    return getToken();
   },
 
   isAuthenticated() {
