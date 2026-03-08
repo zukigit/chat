@@ -4,13 +4,13 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY ./web/package.json ./web/package-lock.json* ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy source code
-COPY . .
+COPY ./web/ .
 
 # Build the application
 RUN npm run build
@@ -19,7 +19,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY ./web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html

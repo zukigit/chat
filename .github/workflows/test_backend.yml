@@ -7,8 +7,11 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  test-backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,4 +23,4 @@ jobs:
 
       # ── Step 1: Test ────────────────────────────────────────────────────────
       - name: Test
-        run: go test -v ./backend/...
+        run: go test -v ./...

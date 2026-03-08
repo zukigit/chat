@@ -22,10 +22,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build backend binary
-        run: |
-          docker run --rm -v "$(pwd)":/workspace -w /workspace golang:1.25.3-alpine3.22 sh -c "go build -o chat_backend ./backend/cmd/backend/main.go"
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:

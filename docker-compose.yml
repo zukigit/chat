@@ -22,11 +22,22 @@ services:
       - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - db
-  
+
   gateway:
     image: zukidocker/chat-gateway:latest
     ports:
       - "8080:8080"
+    depends_on:
+      - backend
     environment:
       - BACKEND_LISTEN_ADDRESS=backend:1234
-      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_URL=web
+
+  web:
+    image: zukidocker/chat-web:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+    environment:
+      - API_BASE_URL=gateway:8080
