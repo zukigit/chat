@@ -2,7 +2,8 @@
 
 import { getToken, removeToken } from "../utils/cookies";
 
-const GATE_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+// Use runtime config from Docker env vars, fallback to default
+const GATE_BASE_URL = window.ENV?.API_URL || "http://localhost:8080";
 
 interface ApiResponse<T> {
   data?: T;
