@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
@@ -23,31 +22,10 @@ func NewFriendshipServer(sqlDB *sql.DB) *FriendshipServer {
 	return &FriendshipServer{sqlDB: sqlDB}
 }
 
-// callerUUID parses the caller's UUID from context and returns it.
-// Returns an error gRPC status if the token did not carry a valid UUID —
-// which should not happen in practice since the JWT interceptor sets it.
-func callerUUID(ctx context.Context) (uuid.UUID, error) {
-	raw := lib.CallerIDFrom(ctx)
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return uuid.Nil, status.Errorf(codes.Internal, "invalid caller user_id in context: %v", err)
-	}
-	return id, nil
-}
-
-// orderedUUIDPair returns the two UUIDs sorted lexicographically so that
-// first.String() < second.String(), satisfying the DB CHECK constraint.
-func orderedUUIDPair(a, b uuid.UUID) (first, second uuid.UUID) {
-	if a.String() < b.String() {
-		return a, b
-	}
-	return b, a
-}
-
 // SendFriendRequest handles a friend request from the caller to target_username.
 // It creates the friendship row and notifies the target user.
 func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.FriendRequest) (*pb.FriendResponse, error) {
-	callerID, err := callerUUID(ctx)
+	callerID, err := lib.CallerUUID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +48,6 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 
 	q := db.New(tx)
 
-	// Resolve target username → user_id.
 	targetUser, err := q.GetUserByUsername(ctx, target)
 	if err == sql.ErrNoRows {
 		return nil, status.Errorf(codes.InvalidArgument, "user %q not found", target)
@@ -81,7 +58,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	}
 	targetID := targetUser.UserID
 
-	first, second := orderedUUIDPair(callerID, targetID)
+	first, second := lib.OrderedUUIDPair(callerID, targetID)
 
 	// Read the existing row (if any) to decide which write to perform.
 	var doWrite func(*db.Queries) (db.Friendship, error)
@@ -123,10 +100,10 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	}
 
 	if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-		UserID:    targetID,
-		SenderID:  callerID,
-		Type:      db.NotificationTypeFriendRequest,
-		Message:   callerName + " sent you a friend request",
+		UserID:   targetID,
+		SenderID: callerID,
+		Type:     db.NotificationTypeFriendRequest,
+		Message:  callerName + " sent you a friend request",
 	}); err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: create notification: %v", err)
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
@@ -157,7 +134,7 @@ func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.Frie
 // friendship, verifies that the caller is the addressee, updates the status,
 // and (on accept) notifies the original requester.
 func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendRequest, newStatus db.FriendshipStatus) (*pb.FriendResponse, error) {
-	callerID, err := callerUUID(ctx)
+	callerID, err := lib.CallerUUID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +165,7 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	}
 	targetID := targetUser.UserID
 
-	first, second := orderedUUIDPair(callerID, targetID)
+	first, second := lib.OrderedUUIDPair(callerID, targetID)
 
 	existing, err := q.GetFriendship(ctx, db.GetFriendshipParams{
 		RequesterUserid: first,
@@ -224,10 +201,10 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	// On accept: notify the original requester that their request was accepted.
 	if newStatus == db.FriendshipStatusAccepted {
 		if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-			UserID:    targetID, // the original requester
-			SenderID:  callerID,
-			Type:      db.NotificationTypeFriendRequest,
-			Message:   callerName + " accepted your friend request",
+			UserID:   targetID, // the original requester
+			SenderID: callerID,
+			Type:     db.NotificationTypeFriendRequest,
+			Message:  callerName + " accepted your friend request",
 		}); err != nil {
 			lib.ErrorLog.Printf("respondToRequest: create notification: %v", err)
 			// Non-fatal.

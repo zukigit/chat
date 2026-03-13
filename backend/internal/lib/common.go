@@ -4,6 +4,10 @@ import (
 	"context"
 	"log"
 	"os"
+
+	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func Getenv(key, fallback string) string {
@@ -52,4 +56,25 @@ func OrderedPair(x, y string) (first, second string) {
 		return x, y
 	}
 	return y, x
+}
+
+// CallerUUID parses the caller's UUID from context and returns it.
+// Returns an error gRPC status if the token did not carry a valid UUID —
+// which should not happen in practice since the JWT interceptor sets it.
+func CallerUUID(ctx context.Context) (uuid.UUID, error) {
+	raw := CallerIDFrom(ctx)
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return uuid.Nil, status.Errorf(codes.Internal, "invalid caller user_id in context: %v", err)
+	}
+	return id, nil
+}
+
+// OrderedUUIDPair returns the two UUIDs sorted lexicographically so that
+// first.String() < second.String(), satisfying the DB CHECK constraint.
+func OrderedUUIDPair(a, b uuid.UUID) (first, second uuid.UUID) {
+	if a.String() < b.String() {
+		return a, b
+	}
+	return b, a
 }
