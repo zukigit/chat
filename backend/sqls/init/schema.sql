@@ -85,8 +85,8 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- ── Indexes ────────────────────────────────────────────────────────────────────
 
 -- users: look up by user_id (PK index created automatically; this covers FK joins)
-CREATE INDEX IF NOT EXISTS idx_users_user_name
-    ON users (user_name);
+CREATE INDEX IF NOT EXISTS idx_users_user_id
+    ON users (user_id);
 
 -- conversation_members: look up all conversations a user belongs to
 CREATE INDEX IF NOT EXISTS idx_conv_members_user
