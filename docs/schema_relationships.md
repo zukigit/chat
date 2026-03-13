@@ -5,7 +5,8 @@
 ```mermaid
 erDiagram
     users {
-        varchar user_name PK
+        uuid user_id PK
+        varchar user_name UK
         text hashed_passwd
         signup_type signup_type
         varchar display_name
@@ -16,8 +17,9 @@ erDiagram
     }
 
     friendships {
-        varchar requester_username PK_FK
-        varchar addressee_username PK_FK
+        uuid requester_userid PK_FK
+        uuid addressee_userid PK_FK
+        uuid initiator_userid FK
         friendship_status status
         timestamptz created_at
         timestamptz updated_at
@@ -33,14 +35,14 @@ erDiagram
 
     conversation_members {
         bigint conversation_id PK_FK
-        varchar user_username PK_FK
+        uuid user_id PK_FK
         timestamptz joined_at
     }
 
     messages {
         bigserial id PK
         bigint conversation_id FK
-        varchar sender_username FK
+        uuid sender_id FK
         text content
         message_type message_type
         text media_url
@@ -52,30 +54,30 @@ erDiagram
 
     message_reads {
         bigint message_id PK_FK
-        varchar user_username PK_FK
+        uuid user_id PK_FK
         timestamptz read_at
     }
 
     notifications {
         bigserial id PK
-        varchar user_username FK
-        varchar sender_username FK
+        uuid user_id FK
+        uuid sender_id FK
         notification_type type
         text message
         boolean is_read
         timestamptz created_at
     }
 
-    users ||--o{ friendships : "requests (requester_username)"
-    users ||--o{ friendships : "receives (addressee_username)"
-    users ||--o{ conversation_members : "joins (user_username)"
+    users ||--o{ friendships : "requests (requester_userid)"
+    users ||--o{ friendships : "receives (addressee_userid)"
+    users ||--o{ conversation_members : "joins (user_id)"
     conversations ||--o{ conversation_members : "has members"
     conversations ||--o{ messages : "contains (conversation_id)"
-    users ||--o{ messages : "sends (sender_username)"
+    users ||--o{ messages : "sends (sender_id)"
     messages ||--o{ message_reads : "read receipts"
-    users ||--o{ message_reads : "reads (user_username)"
-    users ||--o{ notifications : "notified (user_username)"
-    users ||--o{ notifications : "sends (sender_username)"
+    users ||--o{ message_reads : "reads (user_id)"
+    users ||--o{ notifications : "notified (user_id)"
+    users ||--o{ notifications : "sends (sender_id)"
 ```
 
 ---
@@ -87,7 +89,8 @@ Central table. Every other table references it.
 
 | Column | Type | Notes |
 |---|---|---|
-| `user_name` | `VARCHAR(50)` | **PK** |
+| `user_id` | `UUID` | **PK** |
+| `user_name` | `VARCHAR(50)` | **UNIQUE** |
 | `hashed_passwd` | `TEXT` | |
 | `signup_type` | `signup_type` | `email`, `google`, `github` |
 | `display_name` | `VARCHAR(100)` | nullable |
@@ -99,12 +102,13 @@ Central table. Every other table references it.
 ---
 
 ### `friendships`
-Tracks friend relationships. The primary key is `(requester_username, addressee_username)`. A `CHECK` constraint enforces canonical ordering (`requester < addressee`) so `(A,B)` and `(B,A)` cannot both exist.
+Tracks friend relationships. The primary key is `(requester_userid, addressee_userid)`. A `CHECK` constraint enforces canonical ordering (`requester < addressee`) so `(A,B)` and `(B,A)` cannot both exist.
 
 | Column | Type | Notes |
 |---|---|---|
-| `requester_username` | `VARCHAR(50)` | **PK, FK** → `users.user_name` |
-| `addressee_username` | `VARCHAR(50)` | **PK, FK** → `users.user_name` |
+| `requester_userid` | `UUID` | **PK, FK** → `users.user_id` |
+| `addressee_userid` | `UUID` | **PK, FK** → `users.user_id` |
+| `initiator_userid` | `UUID` | **FK** → `users.user_id` |
 | `status` | `friendship_status` | `pending`, `accepted`, `rejected` |
 | `created_at` | `TIMESTAMPTZ` | |
 | `updated_at` | `TIMESTAMPTZ` | |
@@ -130,7 +134,7 @@ Join table linking users to the conversations they belong to.
 | Column | Type | Notes |
 |---|---|---|
 | `conversation_id` | `BIGINT` | **PK, FK** → `conversations.id` (CASCADE) |
-| `user_username` | `VARCHAR(50)` | **PK, FK** → `users.user_name` (CASCADE) |
+| `user_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
 | `joined_at` | `TIMESTAMPTZ` | |
 
 ---
@@ -142,7 +146,7 @@ Stores messages within a conversation. Supports soft-delete via `deleted_at`.
 |---|---|---|
 | `id` | `BIGSERIAL` | **PK** |
 | `conversation_id` | `BIGINT` | **FK** → `conversations.id` (CASCADE) |
-| `sender_username` | `VARCHAR(50)` | **FK** → `users.user_name` (CASCADE) |
+| `sender_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
 | `content` | `TEXT` | |
 | `message_type` | `message_type` | `text`, `image`, `file`, `audio` |
 | `media_url` | `TEXT` | nullable — S3/CDN URL for non-text messages |
@@ -159,7 +163,7 @@ Per-user read receipts. One row per `(message, user)` pair.
 | Column | Type | Notes |
 |---|---|---|
 | `message_id` | `BIGINT` | **PK, FK** → `messages.id` (CASCADE) |
-| `user_username` | `VARCHAR(50)` | **PK, FK** → `users.user_name` (CASCADE) |
+| `user_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
 | `read_at` | `TIMESTAMPTZ` | |
 
 ---
@@ -170,8 +174,8 @@ Notifies a user of an event.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` | **PK** |
-| `user_username` | `VARCHAR(50)` | **FK** → `users.user_name` (CASCADE) |
-| `sender_username` | `VARCHAR(50)` | **FK** → `users.user_name` (CASCADE) |
+| `user_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
+| `sender_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
 | `type` | `notification_type` | `message`, `friend_request` |
 | `message` | `TEXT` | |
 | `is_read` | `BOOLEAN` | default `false` |
@@ -183,16 +187,17 @@ Notifies a user of an event.
 
 | From | To | Via | Cardinality |
 |---|---|---|---|
-| `users` | `friendships` | `requester_username` | one-to-many |
-| `users` | `friendships` | `addressee_username` | one-to-many |
-| `users` | `conversation_members` | `user_username` | one-to-many |
+| `users` | `friendships` | `requester_userid` | one-to-many |
+| `users` | `friendships` | `addressee_userid` | one-to-many |
+| `users` | `friendships` | `initiator_userid` | one-to-many |
+| `users` | `conversation_members` | `user_id` | one-to-many |
 | `conversations` | `conversation_members` | `conversation_id` | one-to-many |
 | `conversations` | `messages` | `conversation_id` | one-to-many |
-| `users` | `messages` | `sender_username` | one-to-many |
+| `users` | `messages` | `sender_id` | one-to-many |
 | `messages` | `message_reads` | `message_id` | one-to-many |
-| `users` | `message_reads` | `user_username` | one-to-many |
-| `users` | `notifications` | `user_username` | one-to-many |
-| `users` | `notifications` | `sender_username` | one-to-many |
+| `users` | `message_reads` | `user_id` | one-to-many |
+| `users` | `notifications` | `user_id` | one-to-many |
+| `users` | `notifications` | `sender_id` | one-to-many |
 
 ---
 
@@ -200,11 +205,12 @@ Notifies a user of an event.
 
 | Index | Table | Columns | Purpose |
 |---|---|---|---|
-| `idx_conv_members_user` | `conversation_members` | `user_username` | Look up all conversations a user belongs to |
+| `idx_users_user_id` | `users` | `user_id` | Look up users by user_id |
+| `idx_conv_members_user` | `conversation_members` | `user_id` | Look up all conversations a user belongs to |
 | `idx_messages_conv_time` | `messages` | `(conversation_id, created_at ASC)` | Primary read pattern — messages in a conversation ordered by time |
 | `idx_messages_conv_not_deleted` | `messages` | `(conversation_id, created_at ASC) WHERE deleted_at IS NULL` | Efficiently exclude soft-deleted rows |
-| `idx_message_reads_user` | `message_reads` | `(user_username, message_id)` | Check which messages a user has read |
-| `idx_notifications_user_read_time` | `notifications` | `(user_username, is_read, created_at DESC)` | User inbox sorted by time, filterable by read status |
-| `idx_friendships_requester_status` | `friendships` | `(requester_username, status)` | Accepted friends lookup per user |
-| `idx_friendships_addressee_status` | `friendships` | `(addressee_username, status)` | Accepted friends lookup per user (other side) |
-| `idx_friendships_addressee_status_time` | `friendships` | `(addressee_username, status, created_at DESC)` | Pending incoming friend requests |
+| `idx_message_reads_user` | `message_reads` | `(user_id, message_id)` | Check which messages a user has read |
+| `idx_notifications_user_read_time` | `notifications` | `(user_id, is_read, created_at DESC)` | User inbox sorted by time, filterable by read status |
+| `idx_friendships_requester_status` | `friendships` | `(requester_userid, status)` | Accepted friends lookup per user |
+| `idx_friendships_addressee_status` | `friendships` | `(addressee_userid, status)` | Accepted friends lookup per user (other side) |
+| `idx_friendships_addressee_status_time` | `friendships` | `(addressee_userid, status, created_at DESC)` | Pending incoming friend requests |
