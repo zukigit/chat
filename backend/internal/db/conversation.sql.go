@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const addMemberToConversation = `-- name: AddMemberToConversation :one
@@ -75,7 +77,7 @@ func (q *Queries) GetConversation(ctx context.Context, id int64) (Conversation, 
 
 const getConversationMembers = `-- name: GetConversationMembers :many
 SELECT cm.conversation_id, cm.user_username, cm.joined_at,
-       u.display_name, u.avatar_url, u.last_seen_at
+       u.user_id, u.display_name, u.avatar_url, u.last_seen_at
 FROM conversation_members cm
 JOIN users u ON u.user_name = cm.user_username
 WHERE cm.conversation_id = $1
@@ -85,6 +87,7 @@ type GetConversationMembersRow struct {
 	ConversationID int64          `json:"conversation_id"`
 	UserUsername   string         `json:"user_username"`
 	JoinedAt       time.Time      `json:"joined_at"`
+	UserID         uuid.UUID      `json:"user_id"`
 	DisplayName    sql.NullString `json:"display_name"`
 	AvatarUrl      sql.NullString `json:"avatar_url"`
 	LastSeenAt     sql.NullTime   `json:"last_seen_at"`
@@ -103,6 +106,7 @@ func (q *Queries) GetConversationMembers(ctx context.Context, conversationID int
 			&i.ConversationID,
 			&i.UserUsername,
 			&i.JoinedAt,
+			&i.UserID,
 			&i.DisplayName,
 			&i.AvatarUrl,
 			&i.LastSeenAt,

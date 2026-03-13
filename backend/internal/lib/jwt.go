@@ -9,6 +9,7 @@ import (
 
 // Claims holds the data embedded inside a JWT.
 type Claims struct {
+	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
@@ -23,9 +24,10 @@ func jwtSecret() []byte {
 	return []byte(secret)
 }
 
-// GenerateToken signs a JWT for the given username with a 24-hour expiry.
-func GenerateToken(username string) (string, error) {
+// GenerateToken signs a JWT for the given userID and username with a 24-hour expiry.
+func GenerateToken(userID, username string) (string, error) {
 	claims := &Claims{
+		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),

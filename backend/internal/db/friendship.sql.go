@@ -8,30 +8,40 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const getFriends = `-- name: GetFriends :many
 SELECT
     CASE
-        WHEN requester_username = $1 THEN addressee_username
-        ELSE requester_username
+        WHEN f.requester_username = $1 THEN f.addressee_username
+        ELSE f.requester_username
     END AS friend_username,
-    status,
-    created_at,
-    updated_at
-FROM friendships
-WHERE (requester_username = $1 OR addressee_username = $1)
-  AND status = 'accepted'
+    u.user_id AS friend_user_id,
+    f.status,
+    f.created_at,
+    f.updated_at
+FROM friendships f
+JOIN users u ON u.user_name = (
+    CASE
+        WHEN f.requester_username = $1 THEN f.addressee_username
+        ELSE f.requester_username
+    END
+)
+WHERE (f.requester_username = $1 OR f.addressee_username = $1)
+  AND f.status = 'accepted'
 `
 
 type GetFriendsRow struct {
 	FriendUsername interface{}      `json:"friend_username"`
+	FriendUserID   uuid.UUID        `json:"friend_user_id"`
 	Status         FriendshipStatus `json:"status"`
 	CreatedAt      time.Time        `json:"created_at"`
 	UpdatedAt      time.Time        `json:"updated_at"`
 }
 
-// Returns all accepted friends for a user.
+// Returns all accepted friends for a user, including their user_id.
 func (q *Queries) GetFriends(ctx context.Context, requesterUsername string) ([]GetFriendsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFriends, requesterUsername)
 	if err != nil {
@@ -43,6 +53,7 @@ func (q *Queries) GetFriends(ctx context.Context, requesterUsername string) ([]G
 		var i GetFriendsRow
 		if err := rows.Scan(
 			&i.FriendUsername,
+			&i.FriendUserID,
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,

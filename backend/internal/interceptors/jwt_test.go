@@ -34,7 +34,7 @@ func ctxWithToken(t *testing.T, token string) context.Context {
 func validToken(t *testing.T) string {
 	t.Helper()
 	t.Setenv("JWT_SECRET", testSecret)
-	tok, err := lib.GenerateToken("testuser")
+	tok, err := lib.GenerateToken("00000000-0000-0000-0000-000000000001", "testuser")
 	if err != nil {
 		t.Fatalf("GenerateToken: %v", err)
 	}

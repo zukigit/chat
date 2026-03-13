@@ -9,6 +9,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type FriendshipStatus string
@@ -235,6 +237,7 @@ type Notification struct {
 }
 
 type User struct {
+	UserID       uuid.UUID      `json:"user_id"`
 	UserName     string         `json:"user_name"`
 	HashedPasswd string         `json:"hashed_passwd"`
 	SignupType   SignupType     `json:"signup_type"`

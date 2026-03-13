@@ -8,12 +8,14 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (user_name, hashed_passwd, signup_type)
 VALUES ($1, $2, $3)
-RETURNING user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -26,6 +28,31 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	row := q.db.QueryRowContext(ctx, createUser, arg.UserName, arg.HashedPasswd, arg.SignupType)
 	var i User
 	err := row.Scan(
+		&i.UserID,
+		&i.UserName,
+		&i.HashedPasswd,
+		&i.SignupType,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+FROM users
+WHERE user_id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, userID)
+	var i User
+	err := row.Scan(
+		&i.UserID,
 		&i.UserName,
 		&i.HashedPasswd,
 		&i.SignupType,
@@ -39,7 +66,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+SELECT user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
 FROM users
 WHERE user_name = $1
 LIMIT 1
@@ -49,6 +76,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User,
 	row := q.db.QueryRowContext(ctx, getUserByUsername, userName)
 	var i User
 	err := row.Scan(
+		&i.UserID,
 		&i.UserName,
 		&i.HashedPasswd,
 		&i.SignupType,
@@ -78,7 +106,7 @@ SET display_name = $2,
     avatar_url   = $3,
     updated_at   = NOW()
 WHERE user_name = $1
-RETURNING user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
 `
 
 type UpdateUserProfileParams struct {
@@ -91,6 +119,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 	row := q.db.QueryRowContext(ctx, updateUserProfile, arg.UserName, arg.DisplayName, arg.AvatarUrl)
 	var i User
 	err := row.Scan(
+		&i.UserID,
 		&i.UserName,
 		&i.HashedPasswd,
 		&i.SignupType,

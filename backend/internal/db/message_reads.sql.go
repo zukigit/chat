@@ -9,11 +9,13 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const getReadReceiptsForMessage = `-- name: GetReadReceiptsForMessage :many
 SELECT mr.user_username, mr.read_at,
-       u.display_name, u.avatar_url
+       u.user_id, u.display_name, u.avatar_url
 FROM message_reads mr
 JOIN users u ON u.user_name = mr.user_username
 WHERE mr.message_id = $1
@@ -22,11 +24,12 @@ WHERE mr.message_id = $1
 type GetReadReceiptsForMessageRow struct {
 	UserUsername string         `json:"user_username"`
 	ReadAt       time.Time      `json:"read_at"`
+	UserID       uuid.UUID      `json:"user_id"`
 	DisplayName  sql.NullString `json:"display_name"`
 	AvatarUrl    sql.NullString `json:"avatar_url"`
 }
 
-// Returns who has read a given message and when.
+// Returns who has read a given message and when, including the reader's user_id.
 func (q *Queries) GetReadReceiptsForMessage(ctx context.Context, messageID int64) ([]GetReadReceiptsForMessageRow, error) {
 	rows, err := q.db.QueryContext(ctx, getReadReceiptsForMessage, messageID)
 	if err != nil {
@@ -39,6 +42,7 @@ func (q *Queries) GetReadReceiptsForMessage(ctx context.Context, messageID int64
 		if err := rows.Scan(
 			&i.UserUsername,
 			&i.ReadAt,
+			&i.UserID,
 			&i.DisplayName,
 			&i.AvatarUrl,
 		); err != nil {

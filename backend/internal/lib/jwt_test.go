@@ -17,7 +17,7 @@ func setSecret(t *testing.T, secret string) {
 // generateToken generates a token for username, failing the test on error.
 func generateToken(t *testing.T, username string) string {
 	t.Helper()
-	token, err := lib.GenerateToken(username)
+	token, err := lib.GenerateToken("00000000-0000-0000-0000-000000000001", username)
 	if err != nil {
 		t.Fatalf("GenerateToken(%q): %v", username, err)
 	}

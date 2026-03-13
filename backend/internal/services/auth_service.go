@@ -55,7 +55,7 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 	}
 
 	// Generate JWT token
-	token, err := lib.GenerateToken(req.UserName)
+	token, err := lib.GenerateToken(user.UserID.String(), req.UserName)
 	if err != nil {
 		lib.ErrorLog.Printf("Failed to generate JWT token: %v", err)
 		return nil, status.Error(codes.Internal, "internal server error")
