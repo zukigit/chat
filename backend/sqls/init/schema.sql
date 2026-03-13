@@ -18,14 +18,15 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'rejected');
 
 CREATE TABLE IF NOT EXISTS friendships (
-    requester_username  VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
-    addressee_username  VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
+    requester_userid  UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    addressee_userid  UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    initiator_userid  UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     status              friendship_status NOT NULL DEFAULT 'pending',
     created_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (requester_username, addressee_username),
+    PRIMARY KEY (requester_userid, addressee_userid),
     -- Enforce canonical ordering so (A,B) and (B,A) cannot both exist
-    CHECK (requester_username < addressee_username)
+    CHECK (requester_userid < addressee_userid)
 );
 
 -- ── Conversations ──────────────────────────────────────────────────────────────
@@ -110,11 +111,11 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_read_time
 
 -- friendships: accepted friends lookup per user (both sides)
 CREATE INDEX IF NOT EXISTS idx_friendships_requester_status
-    ON friendships (requester_username, status);
+    ON friendships (requester_userid, status);
 
 CREATE INDEX IF NOT EXISTS idx_friendships_addressee_status
-    ON friendships (addressee_username, status);
+    ON friendships (addressee_userid, status);
 
 -- friendships: pending incoming requests
 CREATE INDEX IF NOT EXISTS idx_friendships_addressee_status_time
-    ON friendships (addressee_username, status, created_at DESC);
+    ON friendships (addressee_userid, status, created_at DESC);

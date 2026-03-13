@@ -200,11 +200,12 @@ type ConversationMember struct {
 }
 
 type Friendship struct {
-	RequesterUsername string           `json:"requester_username"`
-	AddresseeUsername string           `json:"addressee_username"`
-	Status            FriendshipStatus `json:"status"`
-	CreatedAt         time.Time        `json:"created_at"`
-	UpdatedAt         time.Time        `json:"updated_at"`
+	RequesterUserid uuid.UUID        `json:"requester_userid"`
+	AddresseeUserid uuid.UUID        `json:"addressee_userid"`
+	InitiatorUserid uuid.UUID        `json:"initiator_userid"`
+	Status          FriendshipStatus `json:"status"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       time.Time        `json:"updated_at"`
 }
 
 type Message struct {

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -77,30 +78,37 @@ func setupTestDB(t *testing.T) *sql.DB {
 	return sqlDB
 }
 
-// createTestUsers inserts users via db.CreateUser (uses the db/ package).
+// createTestUsers inserts users via db.CreateUser and returns a map of
+// username → user_id (UUID) for use in test contexts.
 // Fails the test immediately if any user cannot be created.
-func createTestUsers(t *testing.T, sqlDB *sql.DB, usernames ...string) {
+func createTestUsers(t *testing.T, sqlDB *sql.DB, usernames ...string) map[string]uuid.UUID {
 	t.Helper()
 	q := db.New(sqlDB)
 	hashed, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost)
 	if err != nil {
 		t.Fatalf("createTestUsers: hash password: %v", err)
 	}
+	ids := make(map[string]uuid.UUID, len(usernames))
 	for _, username := range usernames {
-		if _, err := q.CreateUser(t.Context(), db.CreateUserParams{
+		u, err := q.CreateUser(t.Context(), db.CreateUserParams{
 			UserName:     username,
 			HashedPasswd: string(hashed),
 			SignupType:   db.SignupTypeEmail,
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatalf("createTestUsers: create %q: %v", username, err)
 		}
+		ids[username] = u.UserID
 	}
+	return ids
 }
 
-// ctxWithUser returns a context carrying the given username as the JWT claim,
-// mimicking what the JWT interceptor does for authenticated requests.
-func ctxWithUser(username string) context.Context {
-	return context.WithValue(context.Background(), lib.ContextKeyUsername, username)
+// ctxWithUser returns a context carrying the given username and user_id as
+// JWT claims, mimicking what the JWT interceptor does for authenticated requests.
+func ctxWithUser(username string, userID uuid.UUID) context.Context {
+	ctx := context.WithValue(context.Background(), lib.ContextKeyUsername, username)
+	ctx = context.WithValue(ctx, lib.ContextKeyUserID, userID.String())
+	return ctx
 }
 
 // grpcCode extracts the gRPC status code from an error (OK if err == nil).
