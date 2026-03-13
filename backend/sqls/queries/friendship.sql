@@ -1,18 +1,18 @@
 -- name: SendFriendRequest :one
 -- Note: always pass user IDs in lexicographic order (smaller UUID first) to satisfy
--- the CHECK (requester_userid < addressee_userid) constraint.
+-- the CHECK (user1_userid < user2_userid) constraint.
 -- initiator_userid is always the actual caller who triggered the request (before ordering).
-INSERT INTO friendships (requester_userid, addressee_userid, initiator_userid)
+INSERT INTO friendships (user1_userid, user2_userid, initiator_userid)
 VALUES ($1, $2, $3)
-RETURNING requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at;
+RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at;
 
 -- name: UpdateFriendshipStatus :one
 UPDATE friendships
 SET    status     = $3,
        updated_at = NOW()
-WHERE  requester_userid = $1
-  AND  addressee_userid = $2
-RETURNING requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at;
+WHERE  user1_userid = $1
+  AND  user2_userid = $2
+RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at;
 
 -- name: ResetFriendRequest :one
 -- Re-activates a previously rejected request as pending, updating the initiator.
@@ -20,24 +20,24 @@ UPDATE friendships
 SET    status           = 'pending',
        initiator_userid = $3,
        updated_at       = NOW()
-WHERE  requester_userid = $1
-  AND  addressee_userid = $2
-RETURNING requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at;
+WHERE  user1_userid = $1
+  AND  user2_userid = $2
+RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at;
 
 -- name: GetFriendship :one
 -- Always query with the lexicographically smaller UUID as $1.
-SELECT requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+SELECT user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 FROM friendships
-WHERE requester_userid = $1
-  AND addressee_userid = $2
+WHERE user1_userid = $1
+  AND user2_userid = $2
 LIMIT 1;
 
 -- name: GetFriends :many
 -- Returns all accepted friends for a user, including their user_id and username.
 SELECT
     CASE
-        WHEN f.requester_userid = $1 THEN f.addressee_userid
-        ELSE f.requester_userid
+        WHEN f.user1_userid = $1 THEN f.user2_userid
+        ELSE f.user1_userid
     END AS friend_userid,
     u.user_name AS friend_username,
     f.status,
@@ -46,17 +46,17 @@ SELECT
 FROM friendships f
 JOIN users u ON u.user_id = (
     CASE
-        WHEN f.requester_userid = $1 THEN f.addressee_userid
-        ELSE f.requester_userid
+        WHEN f.user1_userid = $1 THEN f.user2_userid
+        ELSE f.user1_userid
     END
 )
-WHERE (f.requester_userid = $1 OR f.addressee_userid = $1)
+WHERE (f.user1_userid = $1 OR f.user2_userid = $1)
   AND f.status = 'accepted';
 
 -- name: GetPendingRequests :many
 -- Returns incoming friend requests pending for a user.
-SELECT requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+SELECT user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 FROM friendships
-WHERE addressee_userid = $1
+WHERE user2_userid = $1
   AND status = 'pending'
 ORDER BY created_at DESC;

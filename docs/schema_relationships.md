@@ -17,8 +17,8 @@ erDiagram
     }
 
     friendships {
-        uuid requester_userid PK_FK
-        uuid addressee_userid PK_FK
+        uuid user1_userid PK_FK
+        uuid user2_userid PK_FK
         uuid initiator_userid FK
         friendship_status status
         timestamptz created_at
@@ -68,8 +68,8 @@ erDiagram
         timestamptz created_at
     }
 
-    users ||--o{ friendships : "requests (requester_userid)"
-    users ||--o{ friendships : "receives (addressee_userid)"
+    users ||--o{ friendships : "requests (user1_userid)"
+    users ||--o{ friendships : "receives (user2_userid)"
     users ||--o{ conversation_members : "joins (user_id)"
     conversations ||--o{ conversation_members : "has members"
     conversations ||--o{ messages : "contains (conversation_id)"
@@ -102,12 +102,12 @@ Central table. Every other table references it.
 ---
 
 ### `friendships`
-Tracks friend relationships. The primary key is `(requester_userid, addressee_userid)`. A `CHECK` constraint enforces canonical ordering (`requester < addressee`) so `(A,B)` and `(B,A)` cannot both exist.
+Tracks friend relationships. The primary key is `(user1_userid, user2_userid)`. A `CHECK` constraint enforces canonical ordering (`user1_userid < user2_userid`) so `(A,B)` and `(B,A)` cannot both exist.
 
 | Column | Type | Notes |
 |---|---|---|
-| `requester_userid` | `UUID` | **PK, FK** → `users.user_id` |
-| `addressee_userid` | `UUID` | **PK, FK** → `users.user_id` |
+| `user1_userid` | `UUID` | **PK, FK** → `users.user_id` |
+| `user2_userid` | `UUID` | **PK, FK** → `users.user_id` |
 | `initiator_userid` | `UUID` | **FK** → `users.user_id` |
 | `status` | `friendship_status` | `pending`, `accepted`, `rejected` |
 | `created_at` | `TIMESTAMPTZ` | |
@@ -187,8 +187,8 @@ Notifies a user of an event.
 
 | From | To | Via | Cardinality |
 |---|---|---|---|
-| `users` | `friendships` | `requester_userid` | one-to-many |
-| `users` | `friendships` | `addressee_userid` | one-to-many |
+| `users` | `friendships` | `user1_userid` | one-to-many |
+| `users` | `friendships` | `user2_userid` | one-to-many |
 | `users` | `friendships` | `initiator_userid` | one-to-many |
 | `users` | `conversation_members` | `user_id` | one-to-many |
 | `conversations` | `conversation_members` | `conversation_id` | one-to-many |
@@ -211,6 +211,6 @@ Notifies a user of an event.
 | `idx_messages_conv_not_deleted` | `messages` | `(conversation_id, created_at ASC) WHERE deleted_at IS NULL` | Efficiently exclude soft-deleted rows |
 | `idx_message_reads_user` | `message_reads` | `(user_id, message_id)` | Check which messages a user has read |
 | `idx_notifications_user_read_time` | `notifications` | `(user_id, is_read, created_at DESC)` | User inbox sorted by time, filterable by read status |
-| `idx_friendships_requester_status` | `friendships` | `(requester_userid, status)` | Accepted friends lookup per user |
-| `idx_friendships_addressee_status` | `friendships` | `(addressee_userid, status)` | Accepted friends lookup per user (other side) |
-| `idx_friendships_addressee_status_time` | `friendships` | `(addressee_userid, status, created_at DESC)` | Pending incoming friend requests |
+| `idx_friendships_user1_status` | `friendships` | `(user1_userid, status)` | Accepted friends lookup per user |
+| `idx_friendships_user2_status` | `friendships` | `(user2_userid, status)` | Accepted friends lookup per user (other side) |
+| `idx_friendships_user2_status_time` | `friendships` | `(user2_userid, status, created_at DESC)` | Pending incoming friend requests |

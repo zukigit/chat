@@ -64,16 +64,16 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	var doWrite func(*db.Queries) (db.Friendship, error)
 
 	existing, err := q.GetFriendship(ctx, db.GetFriendshipParams{
-		RequesterUserid: first,
-		AddresseeUserid: second,
+		User1Userid: first,
+		User2Userid: second,
 	})
 	switch {
 	case err == sql.ErrNoRows:
 		// No prior relationship — INSERT a fresh request.
 		doWrite = func(qt *db.Queries) (db.Friendship, error) {
 			return qt.SendFriendRequest(ctx, db.SendFriendRequestParams{
-				RequesterUserid: first,
-				AddresseeUserid: second,
+				User1Userid:     first,
+				User2Userid:     second,
 				InitiatorUserid: callerID,
 			})
 		}
@@ -84,8 +84,8 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		// Previous request was rejected — allow re-sending by resetting to pending.
 		doWrite = func(qt *db.Queries) (db.Friendship, error) {
 			return qt.ResetFriendRequest(ctx, db.ResetFriendRequestParams{
-				RequesterUserid: first,
-				AddresseeUserid: second,
+				User1Userid:     first,
+				User2Userid:     second,
 				InitiatorUserid: callerID,
 			})
 		}
@@ -154,7 +154,6 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 
 	q := db.New(tx)
 
-	// Resolve target username → user_id.
 	targetUser, err := q.GetUserByUsername(ctx, target)
 	if err == sql.ErrNoRows {
 		return nil, status.Errorf(codes.InvalidArgument, "user %q not found", target)
@@ -168,8 +167,8 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	first, second := lib.OrderedUUIDPair(callerID, targetID)
 
 	existing, err := q.GetFriendship(ctx, db.GetFriendshipParams{
-		RequesterUserid: first,
-		AddresseeUserid: second,
+		User1Userid: first,
+		User2Userid: second,
 	})
 	if err == sql.ErrNoRows {
 		return nil, status.Error(codes.NotFound, "friend request not found")
@@ -189,9 +188,9 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	}
 
 	updated, err := q.UpdateFriendshipStatus(ctx, db.UpdateFriendshipStatusParams{
-		RequesterUserid: first,
-		AddresseeUserid: second,
-		Status:          newStatus,
+		User1Userid: first,
+		User2Userid: second,
+		Status:      newStatus,
 	})
 	if err != nil {
 		lib.ErrorLog.Printf("respondToRequest: update status: %v", err)

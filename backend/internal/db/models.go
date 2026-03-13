@@ -200,8 +200,8 @@ type ConversationMember struct {
 }
 
 type Friendship struct {
-	RequesterUserid uuid.UUID        `json:"requester_userid"`
-	AddresseeUserid uuid.UUID        `json:"addressee_userid"`
+	User1Userid     uuid.UUID        `json:"user1_userid"`
+	User2Userid     uuid.UUID        `json:"user2_userid"`
 	InitiatorUserid uuid.UUID        `json:"initiator_userid"`
 	Status          FriendshipStatus `json:"status"`
 	CreatedAt       time.Time        `json:"created_at"`

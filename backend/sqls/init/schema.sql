@@ -18,15 +18,15 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'rejected');
 
 CREATE TABLE IF NOT EXISTS friendships (
-    requester_userid  UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    addressee_userid  UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    user1_userid      UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    user2_userid      UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     initiator_userid  UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     status              friendship_status NOT NULL DEFAULT 'pending',
     created_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (requester_userid, addressee_userid),
+    PRIMARY KEY (user1_userid, user2_userid),
     -- Enforce canonical ordering so (A,B) and (B,A) cannot both exist
-    CHECK (requester_userid < addressee_userid)
+    CHECK (user1_userid < user2_userid)
 );
 
 -- ── Conversations ──────────────────────────────────────────────────────────────
@@ -110,12 +110,12 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_read_time
     ON notifications (user_id, is_read, created_at DESC);
 
 -- friendships: accepted friends lookup per user (both sides)
-CREATE INDEX IF NOT EXISTS idx_friendships_requester_status
-    ON friendships (requester_userid, status);
+CREATE INDEX IF NOT EXISTS idx_friendships_user1_status
+    ON friendships (user1_userid, status);
 
-CREATE INDEX IF NOT EXISTS idx_friendships_addressee_status
-    ON friendships (addressee_userid, status);
+CREATE INDEX IF NOT EXISTS idx_friendships_user2_status
+    ON friendships (user2_userid, status);
 
 -- friendships: pending incoming requests
-CREATE INDEX IF NOT EXISTS idx_friendships_addressee_status_time
-    ON friendships (addressee_userid, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_friendships_user2_status_time
+    ON friendships (user2_userid, status, created_at DESC);

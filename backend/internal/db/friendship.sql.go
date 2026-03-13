@@ -15,8 +15,8 @@ import (
 const getFriends = `-- name: GetFriends :many
 SELECT
     CASE
-        WHEN f.requester_userid = $1 THEN f.addressee_userid
-        ELSE f.requester_userid
+        WHEN f.user1_userid = $1 THEN f.user2_userid
+        ELSE f.user1_userid
     END AS friend_userid,
     u.user_name AS friend_username,
     f.status,
@@ -25,11 +25,11 @@ SELECT
 FROM friendships f
 JOIN users u ON u.user_id = (
     CASE
-        WHEN f.requester_userid = $1 THEN f.addressee_userid
-        ELSE f.requester_userid
+        WHEN f.user1_userid = $1 THEN f.user2_userid
+        ELSE f.user1_userid
     END
 )
-WHERE (f.requester_userid = $1 OR f.addressee_userid = $1)
+WHERE (f.user1_userid = $1 OR f.user2_userid = $1)
   AND f.status = 'accepted'
 `
 
@@ -42,8 +42,8 @@ type GetFriendsRow struct {
 }
 
 // Returns all accepted friends for a user, including their user_id and username.
-func (q *Queries) GetFriends(ctx context.Context, requesterUserid uuid.UUID) ([]GetFriendsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getFriends, requesterUserid)
+func (q *Queries) GetFriends(ctx context.Context, user1Userid uuid.UUID) ([]GetFriendsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFriends, user1Userid)
 	if err != nil {
 		return nil, err
 	}
@@ -72,25 +72,25 @@ func (q *Queries) GetFriends(ctx context.Context, requesterUserid uuid.UUID) ([]
 }
 
 const getFriendship = `-- name: GetFriendship :one
-SELECT requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+SELECT user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 FROM friendships
-WHERE requester_userid = $1
-  AND addressee_userid = $2
+WHERE user1_userid = $1
+  AND user2_userid = $2
 LIMIT 1
 `
 
 type GetFriendshipParams struct {
-	RequesterUserid uuid.UUID `json:"requester_userid"`
-	AddresseeUserid uuid.UUID `json:"addressee_userid"`
+	User1Userid uuid.UUID `json:"user1_userid"`
+	User2Userid uuid.UUID `json:"user2_userid"`
 }
 
 // Always query with the lexicographically smaller UUID as $1.
 func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (Friendship, error) {
-	row := q.db.QueryRowContext(ctx, getFriendship, arg.RequesterUserid, arg.AddresseeUserid)
+	row := q.db.QueryRowContext(ctx, getFriendship, arg.User1Userid, arg.User2Userid)
 	var i Friendship
 	err := row.Scan(
-		&i.RequesterUserid,
-		&i.AddresseeUserid,
+		&i.User1Userid,
+		&i.User2Userid,
 		&i.InitiatorUserid,
 		&i.Status,
 		&i.CreatedAt,
@@ -100,16 +100,16 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 }
 
 const getPendingRequests = `-- name: GetPendingRequests :many
-SELECT requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+SELECT user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 FROM friendships
-WHERE addressee_userid = $1
+WHERE user2_userid = $1
   AND status = 'pending'
 ORDER BY created_at DESC
 `
 
 // Returns incoming friend requests pending for a user.
-func (q *Queries) GetPendingRequests(ctx context.Context, addresseeUserid uuid.UUID) ([]Friendship, error) {
-	rows, err := q.db.QueryContext(ctx, getPendingRequests, addresseeUserid)
+func (q *Queries) GetPendingRequests(ctx context.Context, user2Userid uuid.UUID) ([]Friendship, error) {
+	rows, err := q.db.QueryContext(ctx, getPendingRequests, user2Userid)
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +118,8 @@ func (q *Queries) GetPendingRequests(ctx context.Context, addresseeUserid uuid.U
 	for rows.Next() {
 		var i Friendship
 		if err := rows.Scan(
-			&i.RequesterUserid,
-			&i.AddresseeUserid,
+			&i.User1Userid,
+			&i.User2Userid,
 			&i.InitiatorUserid,
 			&i.Status,
 			&i.CreatedAt,
@@ -143,24 +143,24 @@ UPDATE friendships
 SET    status           = 'pending',
        initiator_userid = $3,
        updated_at       = NOW()
-WHERE  requester_userid = $1
-  AND  addressee_userid = $2
-RETURNING requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+WHERE  user1_userid = $1
+  AND  user2_userid = $2
+RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 `
 
 type ResetFriendRequestParams struct {
-	RequesterUserid uuid.UUID `json:"requester_userid"`
-	AddresseeUserid uuid.UUID `json:"addressee_userid"`
+	User1Userid     uuid.UUID `json:"user1_userid"`
+	User2Userid     uuid.UUID `json:"user2_userid"`
 	InitiatorUserid uuid.UUID `json:"initiator_userid"`
 }
 
 // Re-activates a previously rejected request as pending, updating the initiator.
 func (q *Queries) ResetFriendRequest(ctx context.Context, arg ResetFriendRequestParams) (Friendship, error) {
-	row := q.db.QueryRowContext(ctx, resetFriendRequest, arg.RequesterUserid, arg.AddresseeUserid, arg.InitiatorUserid)
+	row := q.db.QueryRowContext(ctx, resetFriendRequest, arg.User1Userid, arg.User2Userid, arg.InitiatorUserid)
 	var i Friendship
 	err := row.Scan(
-		&i.RequesterUserid,
-		&i.AddresseeUserid,
+		&i.User1Userid,
+		&i.User2Userid,
 		&i.InitiatorUserid,
 		&i.Status,
 		&i.CreatedAt,
@@ -170,26 +170,26 @@ func (q *Queries) ResetFriendRequest(ctx context.Context, arg ResetFriendRequest
 }
 
 const sendFriendRequest = `-- name: SendFriendRequest :one
-INSERT INTO friendships (requester_userid, addressee_userid, initiator_userid)
+INSERT INTO friendships (user1_userid, user2_userid, initiator_userid)
 VALUES ($1, $2, $3)
-RETURNING requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 `
 
 type SendFriendRequestParams struct {
-	RequesterUserid uuid.UUID `json:"requester_userid"`
-	AddresseeUserid uuid.UUID `json:"addressee_userid"`
+	User1Userid     uuid.UUID `json:"user1_userid"`
+	User2Userid     uuid.UUID `json:"user2_userid"`
 	InitiatorUserid uuid.UUID `json:"initiator_userid"`
 }
 
 // Note: always pass user IDs in lexicographic order (smaller UUID first) to satisfy
-// the CHECK (requester_userid < addressee_userid) constraint.
+// the CHECK (user1_userid < user2_userid) constraint.
 // initiator_userid is always the actual caller who triggered the request (before ordering).
 func (q *Queries) SendFriendRequest(ctx context.Context, arg SendFriendRequestParams) (Friendship, error) {
-	row := q.db.QueryRowContext(ctx, sendFriendRequest, arg.RequesterUserid, arg.AddresseeUserid, arg.InitiatorUserid)
+	row := q.db.QueryRowContext(ctx, sendFriendRequest, arg.User1Userid, arg.User2Userid, arg.InitiatorUserid)
 	var i Friendship
 	err := row.Scan(
-		&i.RequesterUserid,
-		&i.AddresseeUserid,
+		&i.User1Userid,
+		&i.User2Userid,
 		&i.InitiatorUserid,
 		&i.Status,
 		&i.CreatedAt,
@@ -202,23 +202,23 @@ const updateFriendshipStatus = `-- name: UpdateFriendshipStatus :one
 UPDATE friendships
 SET    status     = $3,
        updated_at = NOW()
-WHERE  requester_userid = $1
-  AND  addressee_userid = $2
-RETURNING requester_userid, addressee_userid, initiator_userid, status, created_at, updated_at
+WHERE  user1_userid = $1
+  AND  user2_userid = $2
+RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
 `
 
 type UpdateFriendshipStatusParams struct {
-	RequesterUserid uuid.UUID        `json:"requester_userid"`
-	AddresseeUserid uuid.UUID        `json:"addressee_userid"`
-	Status          FriendshipStatus `json:"status"`
+	User1Userid uuid.UUID        `json:"user1_userid"`
+	User2Userid uuid.UUID        `json:"user2_userid"`
+	Status      FriendshipStatus `json:"status"`
 }
 
 func (q *Queries) UpdateFriendshipStatus(ctx context.Context, arg UpdateFriendshipStatusParams) (Friendship, error) {
-	row := q.db.QueryRowContext(ctx, updateFriendshipStatus, arg.RequesterUserid, arg.AddresseeUserid, arg.Status)
+	row := q.db.QueryRowContext(ctx, updateFriendshipStatus, arg.User1Userid, arg.User2Userid, arg.Status)
 	var i Friendship
 	err := row.Scan(
-		&i.RequesterUserid,
-		&i.AddresseeUserid,
+		&i.User1Userid,
+		&i.User2Userid,
 		&i.InitiatorUserid,
 		&i.Status,
 		&i.CreatedAt,
