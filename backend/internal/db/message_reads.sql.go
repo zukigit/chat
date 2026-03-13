@@ -14,19 +14,20 @@ import (
 )
 
 const getReadReceiptsForMessage = `-- name: GetReadReceiptsForMessage :many
-SELECT mr.user_username, mr.read_at,
-       u.user_id, u.display_name, u.avatar_url
+SELECT mr.user_id, mr.read_at,
+       u.user_id, u.user_name, u.display_name, u.avatar_url
 FROM message_reads mr
-JOIN users u ON u.user_name = mr.user_username
+JOIN users u ON u.user_id = mr.user_id
 WHERE mr.message_id = $1
 `
 
 type GetReadReceiptsForMessageRow struct {
-	UserUsername string         `json:"user_username"`
-	ReadAt       time.Time      `json:"read_at"`
-	UserID       uuid.UUID      `json:"user_id"`
-	DisplayName  sql.NullString `json:"display_name"`
-	AvatarUrl    sql.NullString `json:"avatar_url"`
+	UserID      uuid.UUID      `json:"user_id"`
+	ReadAt      time.Time      `json:"read_at"`
+	UserID_2    uuid.UUID      `json:"user_id_2"`
+	UserName    string         `json:"user_name"`
+	DisplayName sql.NullString `json:"display_name"`
+	AvatarUrl   sql.NullString `json:"avatar_url"`
 }
 
 // Returns who has read a given message and when, including the reader's user_id.
@@ -40,9 +41,10 @@ func (q *Queries) GetReadReceiptsForMessage(ctx context.Context, messageID int64
 	for rows.Next() {
 		var i GetReadReceiptsForMessageRow
 		if err := rows.Scan(
-			&i.UserUsername,
-			&i.ReadAt,
 			&i.UserID,
+			&i.ReadAt,
+			&i.UserID_2,
+			&i.UserName,
 			&i.DisplayName,
 			&i.AvatarUrl,
 		); err != nil {
@@ -63,41 +65,41 @@ const getUnreadMessageCount = `-- name: GetUnreadMessageCount :one
 SELECT COUNT(*) AS unread_count
 FROM messages m
 WHERE m.conversation_id = $1
-  AND m.sender_username <> $2
+  AND m.sender_id <> $2
   AND m.deleted_at IS NULL
   AND NOT EXISTS (
       SELECT 1 FROM message_reads mr
       WHERE mr.message_id    = m.id
-        AND mr.user_username = $2
+        AND mr.user_id = $2
   )
 `
 
 type GetUnreadMessageCountParams struct {
-	ConversationID int64  `json:"conversation_id"`
-	SenderUsername string `json:"sender_username"`
+	ConversationID int64     `json:"conversation_id"`
+	SenderID       uuid.UUID `json:"sender_id"`
 }
 
 // Counts unread messages in a conversation for a given user.
 func (q *Queries) GetUnreadMessageCount(ctx context.Context, arg GetUnreadMessageCountParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getUnreadMessageCount, arg.ConversationID, arg.SenderUsername)
+	row := q.db.QueryRowContext(ctx, getUnreadMessageCount, arg.ConversationID, arg.SenderID)
 	var unread_count int64
 	err := row.Scan(&unread_count)
 	return unread_count, err
 }
 
 const markMessageAsRead = `-- name: MarkMessageAsRead :exec
-INSERT INTO message_reads (message_id, user_username)
+INSERT INTO message_reads (message_id, user_id)
 VALUES ($1, $2)
 ON CONFLICT DO NOTHING
 `
 
 type MarkMessageAsReadParams struct {
-	MessageID    int64  `json:"message_id"`
-	UserUsername string `json:"user_username"`
+	MessageID int64     `json:"message_id"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 // Inserts a read receipt; silently ignored if already read (ON CONFLICT DO NOTHING).
 func (q *Queries) MarkMessageAsRead(ctx context.Context, arg MarkMessageAsReadParams) error {
-	_, err := q.db.ExecContext(ctx, markMessageAsRead, arg.MessageID, arg.UserUsername)
+	_, err := q.db.ExecContext(ctx, markMessageAsRead, arg.MessageID, arg.UserID)
 	return err
 }

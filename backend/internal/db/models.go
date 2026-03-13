@@ -195,7 +195,7 @@ type Conversation struct {
 
 type ConversationMember struct {
 	ConversationID int64     `json:"conversation_id"`
-	UserUsername   string    `json:"user_username"`
+	UserID         uuid.UUID `json:"user_id"`
 	JoinedAt       time.Time `json:"joined_at"`
 }
 
@@ -211,7 +211,7 @@ type Friendship struct {
 type Message struct {
 	ID             int64          `json:"id"`
 	ConversationID int64          `json:"conversation_id"`
-	SenderUsername string         `json:"sender_username"`
+	SenderID       uuid.UUID      `json:"sender_id"`
 	Content        string         `json:"content"`
 	MessageType    MessageType    `json:"message_type"`
 	MediaUrl       sql.NullString `json:"media_url"`
@@ -222,19 +222,19 @@ type Message struct {
 }
 
 type MessageRead struct {
-	MessageID    int64     `json:"message_id"`
-	UserUsername string    `json:"user_username"`
-	ReadAt       time.Time `json:"read_at"`
+	MessageID int64     `json:"message_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ReadAt    time.Time `json:"read_at"`
 }
 
 type Notification struct {
-	ID             int64            `json:"id"`
-	UserUsername   string           `json:"user_username"`
-	SenderUsername string           `json:"sender_username"`
-	Type           NotificationType `json:"type"`
-	Message        string           `json:"message"`
-	IsRead         bool             `json:"is_read"`
-	CreatedAt      time.Time        `json:"created_at"`
+	ID        int64            `json:"id"`
+	UserID    uuid.UUID        `json:"user_id"`
+	SenderID  uuid.UUID        `json:"sender_id"`
+	Type      NotificationType `json:"type"`
+	Message   string           `json:"message"`
+	IsRead    bool             `json:"is_read"`
+	CreatedAt time.Time        `json:"created_at"`
 }
 
 type User struct {

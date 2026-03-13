@@ -14,20 +14,20 @@ import (
 )
 
 const addMemberToConversation = `-- name: AddMemberToConversation :one
-INSERT INTO conversation_members (conversation_id, user_username)
+INSERT INTO conversation_members (conversation_id, user_id)
 VALUES ($1, $2)
-RETURNING conversation_id, user_username, joined_at
+RETURNING conversation_id, user_id, joined_at
 `
 
 type AddMemberToConversationParams struct {
-	ConversationID int64  `json:"conversation_id"`
-	UserUsername   string `json:"user_username"`
+	ConversationID int64     `json:"conversation_id"`
+	UserID         uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) AddMemberToConversation(ctx context.Context, arg AddMemberToConversationParams) (ConversationMember, error) {
-	row := q.db.QueryRowContext(ctx, addMemberToConversation, arg.ConversationID, arg.UserUsername)
+	row := q.db.QueryRowContext(ctx, addMemberToConversation, arg.ConversationID, arg.UserID)
 	var i ConversationMember
-	err := row.Scan(&i.ConversationID, &i.UserUsername, &i.JoinedAt)
+	err := row.Scan(&i.ConversationID, &i.UserID, &i.JoinedAt)
 	return i, err
 }
 
@@ -76,18 +76,19 @@ func (q *Queries) GetConversation(ctx context.Context, id int64) (Conversation, 
 }
 
 const getConversationMembers = `-- name: GetConversationMembers :many
-SELECT cm.conversation_id, cm.user_username, cm.joined_at,
-       u.user_id, u.display_name, u.avatar_url, u.last_seen_at
+SELECT cm.conversation_id, cm.user_id, cm.joined_at,
+       u.user_id, u.user_name, u.display_name, u.avatar_url, u.last_seen_at
 FROM conversation_members cm
-JOIN users u ON u.user_name = cm.user_username
+JOIN users u ON u.user_id = cm.user_id
 WHERE cm.conversation_id = $1
 `
 
 type GetConversationMembersRow struct {
 	ConversationID int64          `json:"conversation_id"`
-	UserUsername   string         `json:"user_username"`
-	JoinedAt       time.Time      `json:"joined_at"`
 	UserID         uuid.UUID      `json:"user_id"`
+	JoinedAt       time.Time      `json:"joined_at"`
+	UserID_2       uuid.UUID      `json:"user_id_2"`
+	UserName       string         `json:"user_name"`
 	DisplayName    sql.NullString `json:"display_name"`
 	AvatarUrl      sql.NullString `json:"avatar_url"`
 	LastSeenAt     sql.NullTime   `json:"last_seen_at"`
@@ -104,9 +105,10 @@ func (q *Queries) GetConversationMembers(ctx context.Context, conversationID int
 		var i GetConversationMembersRow
 		if err := rows.Scan(
 			&i.ConversationID,
-			&i.UserUsername,
-			&i.JoinedAt,
 			&i.UserID,
+			&i.JoinedAt,
+			&i.UserID_2,
+			&i.UserName,
 			&i.DisplayName,
 			&i.AvatarUrl,
 			&i.LastSeenAt,
@@ -128,13 +130,13 @@ const getConversationsByUser = `-- name: GetConversationsByUser :many
 SELECT c.id, c.is_group, c.name, c.created_at, c.updated_at
 FROM conversations c
 JOIN conversation_members cm ON cm.conversation_id = c.id
-WHERE cm.user_username = $1
+WHERE cm.user_id = $1
 ORDER BY c.updated_at DESC
 `
 
 // Returns all conversations a user is a member of, most recently updated first.
-func (q *Queries) GetConversationsByUser(ctx context.Context, userUsername string) ([]Conversation, error) {
-	rows, err := q.db.QueryContext(ctx, getConversationsByUser, userUsername)
+func (q *Queries) GetConversationsByUser(ctx context.Context, userID uuid.UUID) ([]Conversation, error) {
+	rows, err := q.db.QueryContext(ctx, getConversationsByUser, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,15 +167,15 @@ func (q *Queries) GetConversationsByUser(ctx context.Context, userUsername strin
 const removeMemberFromConversation = `-- name: RemoveMemberFromConversation :exec
 DELETE FROM conversation_members
 WHERE conversation_id = $1
-  AND user_username   = $2
+  AND user_id         = $2
 `
 
 type RemoveMemberFromConversationParams struct {
-	ConversationID int64  `json:"conversation_id"`
-	UserUsername   string `json:"user_username"`
+	ConversationID int64     `json:"conversation_id"`
+	UserID         uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) RemoveMemberFromConversation(ctx context.Context, arg RemoveMemberFromConversationParams) error {
-	_, err := q.db.ExecContext(ctx, removeMemberFromConversation, arg.ConversationID, arg.UserUsername)
+	_, err := q.db.ExecContext(ctx, removeMemberFromConversation, arg.ConversationID, arg.UserID)
 	return err
 }

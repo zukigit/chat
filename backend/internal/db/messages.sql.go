@@ -8,6 +8,8 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 const editMessage = `-- name: EditMessage :one
@@ -17,7 +19,7 @@ SET content    = $2,
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at IS NULL
-RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+RETURNING id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 `
 
 type EditMessageParams struct {
@@ -31,7 +33,7 @@ func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Messa
 	err := row.Scan(
 		&i.ID,
 		&i.ConversationID,
-		&i.SenderUsername,
+		&i.SenderID,
 		&i.Content,
 		&i.MessageType,
 		&i.MediaUrl,
@@ -44,7 +46,7 @@ func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Messa
 }
 
 const getConversationMessages = `-- name: GetConversationMessages :many
-SELECT id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+SELECT id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 FROM messages
 WHERE conversation_id = $1
   AND deleted_at IS NULL
@@ -71,7 +73,7 @@ func (q *Queries) GetConversationMessages(ctx context.Context, arg GetConversati
 		if err := rows.Scan(
 			&i.ID,
 			&i.ConversationID,
-			&i.SenderUsername,
+			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
 			&i.MediaUrl,
@@ -94,14 +96,14 @@ func (q *Queries) GetConversationMessages(ctx context.Context, arg GetConversati
 }
 
 const sendMessage = `-- name: SendMessage :one
-INSERT INTO messages (conversation_id, sender_username, content, message_type, media_url)
+INSERT INTO messages (conversation_id, sender_id, content, message_type, media_url)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+RETURNING id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 `
 
 type SendMessageParams struct {
 	ConversationID int64          `json:"conversation_id"`
-	SenderUsername string         `json:"sender_username"`
+	SenderID       uuid.UUID      `json:"sender_id"`
 	Content        string         `json:"content"`
 	MessageType    MessageType    `json:"message_type"`
 	MediaUrl       sql.NullString `json:"media_url"`
@@ -110,7 +112,7 @@ type SendMessageParams struct {
 func (q *Queries) SendMessage(ctx context.Context, arg SendMessageParams) (Message, error) {
 	row := q.db.QueryRowContext(ctx, sendMessage,
 		arg.ConversationID,
-		arg.SenderUsername,
+		arg.SenderID,
 		arg.Content,
 		arg.MessageType,
 		arg.MediaUrl,
@@ -119,7 +121,7 @@ func (q *Queries) SendMessage(ctx context.Context, arg SendMessageParams) (Messa
 	err := row.Scan(
 		&i.ID,
 		&i.ConversationID,
-		&i.SenderUsername,
+		&i.SenderID,
 		&i.Content,
 		&i.MessageType,
 		&i.MediaUrl,
@@ -136,7 +138,7 @@ UPDATE messages
 SET deleted_at = NOW(),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, conversation_id, sender_username, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+RETURNING id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 `
 
 func (q *Queries) SoftDeleteMessage(ctx context.Context, id int64) (Message, error) {
@@ -145,7 +147,7 @@ func (q *Queries) SoftDeleteMessage(ctx context.Context, id int64) (Message, err
 	err := row.Scan(
 		&i.ID,
 		&i.ConversationID,
-		&i.SenderUsername,
+		&i.SenderID,
 		&i.Content,
 		&i.MessageType,
 		&i.MediaUrl,

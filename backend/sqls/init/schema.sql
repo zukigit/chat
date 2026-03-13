@@ -40,9 +40,9 @@ CREATE TABLE IF NOT EXISTS conversations (
 
 CREATE TABLE IF NOT EXISTS conversation_members (
     conversation_id BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    user_username   VARCHAR(50) NOT NULL REFERENCES users(user_name)  ON DELETE CASCADE,
+    user_id         UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
     joined_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (conversation_id, user_username)
+    PRIMARY KEY (conversation_id, user_id)
 );
 
 -- ── Messages ───────────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'audio');
 CREATE TABLE IF NOT EXISTS messages (
     id              BIGSERIAL    PRIMARY KEY,
     conversation_id BIGINT       NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    sender_username VARCHAR(50)  NOT NULL REFERENCES users(user_name)  ON DELETE CASCADE,
+    sender_id       UUID         NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
     content         TEXT         NOT NULL,
     message_type    message_type NOT NULL DEFAULT 'text',
     media_url       TEXT,                     -- S3/CDN URL for non-text messages
@@ -64,9 +64,9 @@ CREATE TABLE IF NOT EXISTS messages (
 -- ── Message reads (per-user read receipts) ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS message_reads (
     message_id    BIGINT      NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    user_username VARCHAR(50) NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
+    user_id       UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     read_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (message_id, user_username)
+    PRIMARY KEY (message_id, user_id)
 );
 
 -- ── Notifications ──────────────────────────────────────────────────────────────
@@ -74,8 +74,8 @@ CREATE TYPE notification_type AS ENUM ('message', 'friend_request');
 
 CREATE TABLE IF NOT EXISTS notifications (
     id               BIGSERIAL         PRIMARY KEY,
-    user_username    VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
-    sender_username  VARCHAR(50)       NOT NULL REFERENCES users(user_name) ON DELETE CASCADE,
+    user_id          UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    sender_id        UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     type             notification_type NOT NULL,
     message          TEXT              NOT NULL,
     is_read          BOOLEAN           NOT NULL DEFAULT FALSE,
@@ -90,7 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_users_user_name
 
 -- conversation_members: look up all conversations a user belongs to
 CREATE INDEX IF NOT EXISTS idx_conv_members_user
-    ON conversation_members (user_username);
+    ON conversation_members (user_id);
 
 -- messages: primary access pattern — messages in a conversation ordered by time
 CREATE INDEX IF NOT EXISTS idx_messages_conv_time
@@ -103,11 +103,11 @@ CREATE INDEX IF NOT EXISTS idx_messages_conv_not_deleted
 
 -- message_reads: check which messages a user has read
 CREATE INDEX IF NOT EXISTS idx_message_reads_user
-    ON message_reads (user_username, message_id);
+    ON message_reads (user_id, message_id);
 
 -- notifications: user inbox sorted by time, filterable by is_read
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read_time
-    ON notifications (user_username, is_read, created_at DESC);
+    ON notifications (user_id, is_read, created_at DESC);
 
 -- friendships: accepted friends lookup per user (both sides)
 CREATE INDEX IF NOT EXISTS idx_friendships_requester_status

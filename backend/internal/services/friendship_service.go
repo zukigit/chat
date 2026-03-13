@@ -123,10 +123,10 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 	}
 
 	if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-		UserUsername:   target,
-		SenderUsername: callerName,
-		Type:           db.NotificationTypeFriendRequest,
-		Message:        callerName + " sent you a friend request",
+		UserID:    targetID,
+		SenderID:  callerID,
+		Type:      db.NotificationTypeFriendRequest,
+		Message:   callerName + " sent you a friend request",
 	}); err != nil {
 		lib.ErrorLog.Printf("SendFriendRequest: create notification: %v", err)
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
@@ -224,10 +224,10 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	// On accept: notify the original requester that their request was accepted.
 	if newStatus == db.FriendshipStatusAccepted {
 		if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-			UserUsername:   targetUser.UserName, // the original requester
-			SenderUsername: callerName,
-			Type:           db.NotificationTypeFriendRequest,
-			Message:        callerName + " accepted your friend request",
+			UserID:    targetID, // the original requester
+			SenderID:  callerID,
+			Type:      db.NotificationTypeFriendRequest,
+			Message:   callerName + " accepted your friend request",
 		}); err != nil {
 			lib.ErrorLog.Printf("respondToRequest: create notification: %v", err)
 			// Non-fatal.
