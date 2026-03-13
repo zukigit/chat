@@ -24,7 +24,7 @@ RETURNING conversation_id, user_username, joined_at;
 
 -- name: GetConversationMembers :many
 SELECT cm.conversation_id, cm.user_username, cm.joined_at,
-       u.display_name, u.avatar_url, u.last_seen_at
+       u.user_id, u.display_name, u.avatar_url, u.last_seen_at
 FROM conversation_members cm
 JOIN users u ON u.user_name = cm.user_username
 WHERE cm.conversation_id = $1;

@@ -1,7 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TYPE signup_type AS ENUM ('email', 'google', 'github');
 
 CREATE TABLE IF NOT EXISTS users (
-    user_name     VARCHAR(50)  PRIMARY KEY,
+    user_id       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_name     VARCHAR(50)  NOT NULL UNIQUE,
     hashed_passwd TEXT         NOT NULL,
     signup_type   signup_type  NOT NULL DEFAULT 'email',
     display_name  VARCHAR(100),
@@ -79,6 +82,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ── Indexes ────────────────────────────────────────────────────────────────────
+
+-- users: look up by user_id (PK index created automatically; this covers FK joins)
+CREATE INDEX IF NOT EXISTS idx_users_user_name
+    ON users (user_name);
 
 -- conversation_members: look up all conversations a user belongs to
 CREATE INDEX IF NOT EXISTS idx_conv_members_user

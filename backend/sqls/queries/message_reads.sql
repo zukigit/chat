@@ -18,9 +18,9 @@ WHERE m.conversation_id = $1
   );
 
 -- name: GetReadReceiptsForMessage :many
--- Returns who has read a given message and when.
+-- Returns who has read a given message and when, including the reader's user_id.
 SELECT mr.user_username, mr.read_at,
-       u.display_name, u.avatar_url
+       u.user_id, u.display_name, u.avatar_url
 FROM message_reads mr
 JOIN users u ON u.user_name = mr.user_username
 WHERE mr.message_id = $1;
