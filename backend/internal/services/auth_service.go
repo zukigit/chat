@@ -20,9 +20,13 @@ type AuthServer struct {
 
 // NewAuthServer creates a new AuthServer instance
 func NewAuthServer(sqlDB *sql.DB) *AuthServer {
-	return &AuthServer{
-		sqlDB: sqlDB,
+	if sqlDB != nil {
+		return &AuthServer{
+			sqlDB: sqlDB,
+		}
 	}
+
+	return nil
 }
 
 // Login handles user login

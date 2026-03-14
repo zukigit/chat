@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package session;
+
+option go_package = "proto/session/";
+
+message SessionRequest {
+  string session_id = 1;
+}
+
+message SessionResponse {}
+
+service Session {
+  rpc SetSession(SessionRequest) returns (SessionResponse);
+}
