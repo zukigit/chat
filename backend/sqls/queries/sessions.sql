@@ -2,14 +2,15 @@
 INSERT INTO sessions (
     user_userid,
     type,
-    status
+    status,
+    listen_path
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 )
-RETURNING id, user_userid, type, status, created_at, updated_at;
+RETURNING id, user_userid, type, status, listen_path, created_at, updated_at;
 
 -- name: GetSession :one
-SELECT id, user_userid, type, status, created_at, updated_at
+SELECT id, user_userid, type, status, listen_path, created_at, updated_at
 FROM sessions
 WHERE user_userid = $1 AND type = $2 LIMIT 1;
 

@@ -5,7 +5,7 @@ package session;
 option go_package = "proto/session/";
 
 message SessionRequest {
-  string session_id = 1;
+  string listen_path = 1;
 }
 
 message SessionResponse {}
