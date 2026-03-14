@@ -81,6 +81,18 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read          BOOLEAN           NOT NULL DEFAULT FALSE,
     created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );
+-- ── Sessions ───────────────────────────────────────────────────────────────────
+CREATE TYPE session_type AS ENUM ('notification', 'chat');
+CREATE TYPE session_status AS ENUM ('active', 'idel', 'terminate');
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id           UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_userid  UUID           NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    type         session_type   NOT NULL,
+    status       session_status NOT NULL DEFAULT 'active',
+    created_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+);
 
 -- ── Indexes ────────────────────────────────────────────────────────────────────
 
@@ -119,3 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user2_status
 -- friendships: pending incoming requests
 CREATE INDEX IF NOT EXISTS idx_friendships_user2_status_time
     ON friendships (user2_userid, status, created_at DESC);
+
+-- sessions: lookup by user and type
+CREATE INDEX IF NOT EXISTS idx_sessions_user_type
+    ON sessions (user_userid, type);

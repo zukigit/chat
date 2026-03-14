@@ -1,11 +1,11 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    schema: "backend/sqls/init/schema.sql"
-    queries: "backend/sqls/queries"
+    schema: "sqls/init/schema.sql"
+    queries: "sqls/queries"
     gen:
       go:
         package: "db"
-        out: "backend/internal/db"
+        out: "internal/db"
         emit_json_tags: true
         emit_prepared_queries: false
