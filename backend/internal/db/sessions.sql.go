@@ -15,27 +15,35 @@ const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
     user_userid,
     type,
-    status
+    status,
+    listen_path
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 )
-RETURNING id, user_userid, type, status, created_at, updated_at
+RETURNING id, user_userid, type, status, listen_path, created_at, updated_at
 `
 
 type CreateSessionParams struct {
 	UserUserid uuid.UUID     `json:"user_userid"`
 	Type       SessionType   `json:"type"`
 	Status     SessionStatus `json:"status"`
+	ListenPath string        `json:"listen_path"`
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, createSession, arg.UserUserid, arg.Type, arg.Status)
+	row := q.db.QueryRowContext(ctx, createSession,
+		arg.UserUserid,
+		arg.Type,
+		arg.Status,
+		arg.ListenPath,
+	)
 	var i Session
 	err := row.Scan(
 		&i.ID,
 		&i.UserUserid,
 		&i.Type,
 		&i.Status,
+		&i.ListenPath,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -53,7 +61,7 @@ func (q *Queries) DeleteSession(ctx context.Context, id uuid.UUID) error {
 }
 
 const getSession = `-- name: GetSession :one
-SELECT id, user_userid, type, status, created_at, updated_at
+SELECT id, user_userid, type, status, listen_path, created_at, updated_at
 FROM sessions
 WHERE user_userid = $1 AND type = $2 LIMIT 1
 `
@@ -71,6 +79,7 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (Session
 		&i.UserUserid,
 		&i.Type,
 		&i.Status,
+		&i.ListenPath,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

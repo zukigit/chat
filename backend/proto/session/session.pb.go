@@ -23,7 +23,8 @@ const (
 
 type SessionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ListenPath    string                 `protobuf:"bytes,1,opt,name=listen_path,json=listenPath,proto3" json:"listen_path,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -58,9 +59,16 @@ func (*SessionRequest) Descriptor() ([]byte, []int) {
 	return file_proto_session_session_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SessionRequest) GetSessionId() string {
+func (x *SessionRequest) GetListenPath() string {
 	if x != nil {
-		return x.SessionId
+		return x.ListenPath
+	}
+	return ""
+}
+
+func (x *SessionRequest) GetType() string {
+	if x != nil {
+		return x.Type
 	}
 	return ""
 }
@@ -105,10 +113,11 @@ var File_proto_session_session_proto protoreflect.FileDescriptor
 
 const file_proto_session_session_proto_rawDesc = "" +
 	"\n" +
-	"\x1bproto/session/session.proto\x12\asession\"/\n" +
-	"\x0eSessionRequest\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"\x11\n" +
+	"\x1bproto/session/session.proto\x12\asession\"E\n" +
+	"\x0eSessionRequest\x12\x1f\n" +
+	"\vlisten_path\x18\x01 \x01(\tR\n" +
+	"listenPath\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\"\x11\n" +
 	"\x0fSessionResponse2J\n" +
 	"\aSession\x12?\n" +
 	"\n" +

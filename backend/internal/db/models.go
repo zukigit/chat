@@ -327,6 +327,7 @@ type Session struct {
 	UserUserid uuid.UUID     `json:"user_userid"`
 	Type       SessionType   `json:"type"`
 	Status     SessionStatus `json:"status"`
+	ListenPath string        `json:"listen_path"`
 	CreatedAt  time.Time     `json:"created_at"`
 	UpdatedAt  time.Time     `json:"updated_at"`
 }
