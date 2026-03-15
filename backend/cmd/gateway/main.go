@@ -25,6 +25,12 @@ func main() {
 	}
 	defer friendshipClient.Close()
 
+	sessionClient, err := clients.NewSessionClient(backendAddr)
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to connect to backend (session): %v", err)
+	}
+	defer sessionClient.Close()
+
 	authHandler := handlers.NewAuthHandler(authClient)
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
 
