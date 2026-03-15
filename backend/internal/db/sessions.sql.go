@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -15,35 +16,36 @@ const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
     user_userid,
     type,
-    status,
-    listen_path
+    status
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3
 )
-RETURNING id, user_userid, type, status, listen_path, created_at, updated_at
+RETURNING id, user_userid, type, status, created_at, updated_at
 `
 
 type CreateSessionParams struct {
 	UserUserid uuid.UUID     `json:"user_userid"`
 	Type       SessionType   `json:"type"`
 	Status     SessionStatus `json:"status"`
-	ListenPath string        `json:"listen_path"`
 }
 
-func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, createSession,
-		arg.UserUserid,
-		arg.Type,
-		arg.Status,
-		arg.ListenPath,
-	)
-	var i Session
+type CreateSessionRow struct {
+	ID         uuid.UUID     `json:"id"`
+	UserUserid uuid.UUID     `json:"user_userid"`
+	Type       SessionType   `json:"type"`
+	Status     SessionStatus `json:"status"`
+	CreatedAt  time.Time     `json:"created_at"`
+	UpdatedAt  time.Time     `json:"updated_at"`
+}
+
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (CreateSessionRow, error) {
+	row := q.db.QueryRowContext(ctx, createSession, arg.UserUserid, arg.Type, arg.Status)
+	var i CreateSessionRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserUserid,
 		&i.Type,
 		&i.Status,
-		&i.ListenPath,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

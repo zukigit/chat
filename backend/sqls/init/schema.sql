@@ -83,13 +83,13 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 -- ── Sessions ───────────────────────────────────────────────────────────────────
 CREATE TYPE session_type AS ENUM ('notification', 'chat');
-CREATE TYPE session_status AS ENUM ('active', 'idel', 'terminate');
+CREATE TYPE session_status AS ENUM ('active', 'idel', 'terminate', 'new');
 
 CREATE TABLE IF NOT EXISTS sessions (
     id           UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
     user_userid  UUID           NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     type         session_type   NOT NULL,
-    status       session_status NOT NULL DEFAULT 'active',
+    status       session_status NOT NULL DEFAULT 'new',
     listen_path  TEXT           NOT NULL,
     created_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW()

@@ -4,13 +4,21 @@ package session;
 
 option go_package = "proto/session/";
 
-message SessionRequest {
-  string listen_path = 1;
-  string type = 2;
+message AddSessionRequest {
+  string type = 1;
 }
 
-message SessionResponse {}
+message AddSessionResponse {
+  string listen_path = 1;
+}
+
+message SetSessionStatusRequest {
+  string status = 1;
+}
+
+message SetSessionStatusResponse {}
 
 service Session {
-  rpc SetSession(SessionRequest) returns (SessionResponse);
+  rpc AddSession(AddSessionRequest) returns (AddSessionResponse);
+  rpc SetSessionStatus(SetSessionStatusRequest) returns (SetSessionStatusResponse);
 }

@@ -148,6 +148,7 @@ const (
 	SessionStatusActive    SessionStatus = "active"
 	SessionStatusIdel      SessionStatus = "idel"
 	SessionStatusTerminate SessionStatus = "terminate"
+	SessionStatusNew       SessionStatus = "new"
 )
 
 func (e *SessionStatus) Scan(src interface{}) error {

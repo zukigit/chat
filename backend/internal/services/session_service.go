@@ -25,9 +25,9 @@ func NewSessionServer(sqlDB *sql.DB) *SessionServer {
 	return nil
 }
 
-func (s *SessionServer) SetSession(ctx context.Context, request *session.SessionRequest) (*session.SessionResponse, error) {
-	if request.GetListenPath() == "" {
-		return nil, status.Error(codes.InvalidArgument, "ListenPath is required")
+func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSessionRequest) (*session.AddSessionResponse, error) {
+	if request.GetType() == "" {
+		return nil, status.Error(codes.InvalidArgument, "Type is required")
 	}
 
 	callerID, err := lib.CallerUUID(ctx)
@@ -46,8 +46,7 @@ func (s *SessionServer) SetSession(ctx context.Context, request *session.Session
 	_, err = quries.CreateSession(ctx, db.CreateSessionParams{
 		UserUserid: callerID,
 		Type:       db.SessionType(request.Type),
-		ListenPath: request.GetListenPath(),
-		Status:     db.SessionStatusActive,
+		Status:     db.SessionStatusNew,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to create session: %v", err)
@@ -58,5 +57,5 @@ func (s *SessionServer) SetSession(ctx context.Context, request *session.Session
 		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
 	}
 
-	return &session.SessionResponse{}, nil
+	return &session.AddSessionResponse{}, nil
 }

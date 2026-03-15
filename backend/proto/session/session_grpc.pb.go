@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Session_SetSession_FullMethodName = "/session.Session/SetSession"
+	Session_AddSession_FullMethodName       = "/session.Session/AddSession"
+	Session_SetSessionStatus_FullMethodName = "/session.Session/SetSessionStatus"
 )
 
 // SessionClient is the client API for Session service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SessionClient interface {
-	SetSession(ctx context.Context, in *SessionRequest, opts ...grpc.CallOption) (*SessionResponse, error)
+	AddSession(ctx context.Context, in *AddSessionRequest, opts ...grpc.CallOption) (*AddSessionResponse, error)
+	SetSessionStatus(ctx context.Context, in *SetSessionStatusRequest, opts ...grpc.CallOption) (*SetSessionStatusResponse, error)
 }
 
 type sessionClient struct {
@@ -37,10 +39,20 @@ func NewSessionClient(cc grpc.ClientConnInterface) SessionClient {
 	return &sessionClient{cc}
 }
 
-func (c *sessionClient) SetSession(ctx context.Context, in *SessionRequest, opts ...grpc.CallOption) (*SessionResponse, error) {
+func (c *sessionClient) AddSession(ctx context.Context, in *AddSessionRequest, opts ...grpc.CallOption) (*AddSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SessionResponse)
-	err := c.cc.Invoke(ctx, Session_SetSession_FullMethodName, in, out, cOpts...)
+	out := new(AddSessionResponse)
+	err := c.cc.Invoke(ctx, Session_AddSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionClient) SetSessionStatus(ctx context.Context, in *SetSessionStatusRequest, opts ...grpc.CallOption) (*SetSessionStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetSessionStatusResponse)
+	err := c.cc.Invoke(ctx, Session_SetSessionStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +63,8 @@ func (c *sessionClient) SetSession(ctx context.Context, in *SessionRequest, opts
 // All implementations must embed UnimplementedSessionServer
 // for forward compatibility.
 type SessionServer interface {
-	SetSession(context.Context, *SessionRequest) (*SessionResponse, error)
+	AddSession(context.Context, *AddSessionRequest) (*AddSessionResponse, error)
+	SetSessionStatus(context.Context, *SetSessionStatusRequest) (*SetSessionStatusResponse, error)
 	mustEmbedUnimplementedSessionServer()
 }
 
@@ -62,8 +75,11 @@ type SessionServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSessionServer struct{}
 
-func (UnimplementedSessionServer) SetSession(context.Context, *SessionRequest) (*SessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetSession not implemented")
+func (UnimplementedSessionServer) AddSession(context.Context, *AddSessionRequest) (*AddSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddSession not implemented")
+}
+func (UnimplementedSessionServer) SetSessionStatus(context.Context, *SetSessionStatusRequest) (*SetSessionStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetSessionStatus not implemented")
 }
 func (UnimplementedSessionServer) mustEmbedUnimplementedSessionServer() {}
 func (UnimplementedSessionServer) testEmbeddedByValue()                 {}
@@ -86,20 +102,38 @@ func RegisterSessionServer(s grpc.ServiceRegistrar, srv SessionServer) {
 	s.RegisterService(&Session_ServiceDesc, srv)
 }
 
-func _Session_SetSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SessionRequest)
+func _Session_AddSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddSessionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SessionServer).SetSession(ctx, in)
+		return srv.(SessionServer).AddSession(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Session_SetSession_FullMethodName,
+		FullMethod: Session_AddSession_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionServer).SetSession(ctx, req.(*SessionRequest))
+		return srv.(SessionServer).AddSession(ctx, req.(*AddSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Session_SetSessionStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSessionStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServer).SetSessionStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Session_SetSessionStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServer).SetSessionStatus(ctx, req.(*SetSessionStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -112,8 +146,12 @@ var Session_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*SessionServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SetSession",
-			Handler:    _Session_SetSession_Handler,
+			MethodName: "AddSession",
+			Handler:    _Session_AddSession_Handler,
+		},
+		{
+			MethodName: "SetSessionStatus",
+			Handler:    _Session_SetSessionStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
