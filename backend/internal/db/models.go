@@ -324,13 +324,13 @@ type Notification struct {
 }
 
 type Session struct {
-	ID         uuid.UUID     `json:"id"`
-	UserUserid uuid.UUID     `json:"user_userid"`
-	Type       SessionType   `json:"type"`
-	Status     SessionStatus `json:"status"`
-	ListenPath string        `json:"listen_path"`
-	CreatedAt  time.Time     `json:"created_at"`
-	UpdatedAt  time.Time     `json:"updated_at"`
+	ID         uuid.UUID      `json:"id"`
+	UserUserid uuid.UUID      `json:"user_userid"`
+	Type       SessionType    `json:"type"`
+	Status     SessionStatus  `json:"status"`
+	ListenPath sql.NullString `json:"listen_path"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
 }
 
 type User struct {

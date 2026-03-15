@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/proto/session"
@@ -43,7 +45,7 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 
 	quries := db.New(tx)
 
-	_, err = quries.CreateSession(ctx, db.CreateSessionParams{
+	row, err := quries.CreateSession(ctx, db.CreateSessionParams{
 		UserUserid: callerID,
 		Type:       db.SessionType(request.Type),
 		Status:     db.SessionStatusNew,
@@ -57,7 +59,10 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
 	}
 
-	return &session.AddSessionResponse{}, nil
+	return &session.AddSessionResponse{
+		SessionId:  row.ID.String(),
+		ListenPath: fmt.Sprintf("NOTIFICATIONS.%s", row.ID.String()),
+	}, nil
 }
 
 func (s *SessionServer) SetSessionStatus(ctx context.Context, request *session.SetSessionStatusRequest) (*session.SetSessionStatusResponse, error) {
@@ -65,9 +70,9 @@ func (s *SessionServer) SetSessionStatus(ctx context.Context, request *session.S
 		return nil, status.Error(codes.InvalidArgument, "Status is required")
 	}
 
-	callerID, err := lib.CallerUUID(ctx)
+	sessionID, err := uuid.Parse(request.GetSessionId())
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "Failed to get caller UUID")
+		return nil, status.Error(codes.InvalidArgument, "Invalid session ID")
 	}
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
@@ -79,7 +84,7 @@ func (s *SessionServer) SetSessionStatus(ctx context.Context, request *session.S
 	quries := db.New(tx)
 
 	err = quries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
-		ID:     callerID,
+		ID:     sessionID,
 		Status: db.SessionStatus(request.Status),
 	})
 	if err != nil {

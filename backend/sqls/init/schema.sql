@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_userid  UUID           NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     type         session_type   NOT NULL,
     status       session_status NOT NULL DEFAULT 'new',
-    listen_path  TEXT           NOT NULL,
+    listen_path  TEXT,
     created_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW()
 );
