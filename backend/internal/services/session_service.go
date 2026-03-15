@@ -59,3 +59,37 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 
 	return &session.AddSessionResponse{}, nil
 }
+
+func (s *SessionServer) SetSessionStatus(ctx context.Context, request *session.SetSessionStatusRequest) (*session.SetSessionStatusResponse, error) {
+	if request.GetStatus() == "" {
+		return nil, status.Error(codes.InvalidArgument, "Status is required")
+	}
+
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Failed to get caller UUID")
+	}
+
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	quries := db.New(tx)
+
+	err = quries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
+		ID:     callerID,
+		Status: db.SessionStatus(request.Status),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to update session status: %v", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
+	}
+
+	return &session.SetSessionStatusResponse{}, nil
+}

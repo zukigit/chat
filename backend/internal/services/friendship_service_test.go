@@ -12,7 +12,6 @@ func TestSendFriendRequest(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	friendshipServer := services.NewFriendshipServer(sqlDB)
 
-	// Create two users so foreign-key constraints pass.
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
 
 	cases := []struct {
