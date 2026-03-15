@@ -33,6 +33,7 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(authClient)
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
+	handlers.NewSessionHandler(sessionClient)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
