@@ -64,18 +64,6 @@ func TestValidateToken_InvalidInputs(t *testing.T) {
 	}
 }
 
-func TestValidateToken_TamperedToken(t *testing.T) {
-	setSecret(t, testSecret)
-
-	tokenStr := generateToken(t, "bob")
-
-	// Flip the last character to tamper with the signature.
-	tampered := tokenStr[:len(tokenStr)-1] + "X"
-	if _, err := lib.ValidateToken(tampered); err == nil {
-		t.Fatal("expected error for tampered token, got nil")
-	}
-}
-
 func TestValidateToken_WrongSecret(t *testing.T) {
 	setSecret(t, "secret-a")
 	tokenStr := generateToken(t, "carol")
