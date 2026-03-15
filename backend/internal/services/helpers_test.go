@@ -103,15 +103,12 @@ func createTestUsers(t *testing.T, sqlDB *sql.DB, usernames ...string) map[strin
 	return ids
 }
 
-// ctxWithUser returns a context carrying the given username and user_id as
-// JWT claims, mimicking what the JWT interceptor does for authenticated requests.
 func ctxWithUser(username string, userID uuid.UUID) context.Context {
 	ctx := context.WithValue(context.Background(), lib.ContextKeyUsername, username)
 	ctx = context.WithValue(ctx, lib.ContextKeyUserID, userID.String())
 	return ctx
 }
 
-// grpcCode extracts the gRPC status code from an error (OK if err == nil).
 func grpcCode(err error) codes.Code {
 	if err == nil {
 		return codes.OK

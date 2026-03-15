@@ -44,7 +44,6 @@ func TestSetSessionStatus(t *testing.T) {
 	ids := createTestUsers(t, sqlDB, "alice")
 	ctx := ctxWithUser("alice", ids["alice"])
 
-	// Create a session so SetSessionStatus has a real record to update.
 	resp, err := sessionServer.AddSession(ctx, &pb.AddSessionRequest{Type: "chat"})
 	if err != nil {
 		t.Fatalf("setup AddSession: %v", err)
