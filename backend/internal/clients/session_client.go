@@ -34,11 +34,10 @@ func (c *SessionClient) Close() {
 }
 
 // AddSession forwards an add session request to the backend via gRPC.
-func (c *SessionClient) AddSession(ctx context.Context, token, sessionType string) error {
-	_, err := c.client.AddSession(lib.WithToken(ctx, token), &pb.AddSessionRequest{
+func (c *SessionClient) AddSession(ctx context.Context, token, sessionType string) (*pb.AddSessionResponse, error) {
+	return c.client.AddSession(lib.WithToken(ctx, token), &pb.AddSessionRequest{
 		Type: sessionType,
 	})
-	return err
 }
 
 // SetSessionStatus forwards a set session status request to the backend via gRPC.
