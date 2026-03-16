@@ -70,8 +70,8 @@ func main() {
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
-	r.HandleFunc("/session/notification", sessionHandler.NotificationSession).Methods(http.MethodPost)
-	r.HandleFunc("/session/chat", sessionHandler.ChatSession).Methods(http.MethodPost)
+	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodPost)
+	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodPost)
 
 	cors := gorhandlers.CORS(
 		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "http://localhost:5173")}),

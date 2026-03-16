@@ -41,7 +41,7 @@ func noopSetStatus(_ context.Context, _, _, _ string) error { return nil }
 // setupNATS starts a throwaway NATS server with JetStream enabled and returns
 // a connected nats.Conn and jetstream.JetStream. Both are cleaned up when the
 // test finishes.
-func setupNATS(t *testing.T) (*natsgo.Conn, jetstream.JetStream) {
+func setupNATS(t *testing.T) jetstream.JetStream {
 	t.Helper()
 	ctx := context.Background()
 
@@ -82,7 +82,7 @@ func setupNATS(t *testing.T) (*natsgo.Conn, jetstream.JetStream) {
 		t.Fatalf("failed to create JetStream context: %v", err)
 	}
 
-	return nc, js
+	return js
 }
 
 // createTestStream creates a JetStream stream with the given name and subjects.
@@ -123,7 +123,7 @@ func TestNotificationSession_MissingToken(t *testing.T) {
 		setSessionStatusFn: noopSetStatus,
 	}, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/session/notification", nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/notification", nil)
 	rec := httptest.NewRecorder()
 	h.NotificationSession(rec, req)
 
@@ -142,7 +142,7 @@ func TestNotificationSession_AddSessionError(t *testing.T) {
 		setSessionStatusFn: noopSetStatus,
 	}, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/session/notification?token=mytoken", nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/notification?token=mytoken", nil)
 	rec := httptest.NewRecorder()
 	h.NotificationSession(rec, req)
 
@@ -161,7 +161,7 @@ func TestNotificationSession_Integration_MessageForwarding(t *testing.T) {
 		listenPath = "notifications.user.alice"
 	)
 
-	_, js := setupNATS(t)
+	js := setupNATS(t)
 	stream := createTestStream(t, js, streamName, []string{"notifications.>"})
 
 	client := &mockSessionClient{
@@ -180,7 +180,7 @@ func TestNotificationSession_Integration_MessageForwarding(t *testing.T) {
 
 	// Do NOT defer conn.Close() before the read — closing the WS would cancel
 	// the handler's consumer context and race with the forwarding callback.
-	conn, _ := dialWS(t, srv, "/session/notification", "test-token")
+	conn, _ := dialWS(t, srv, "/sessions/notification", "test-token")
 
 	// Give the ordered consumer goroutine a moment to attach.
 	time.Sleep(150 * time.Millisecond)
@@ -213,7 +213,7 @@ func TestNotificationSession_Integration_StatusLifecycle(t *testing.T) {
 		listenPath = "notifications.user.bob"
 	)
 
-	_, js := setupNATS(t)
+	js := setupNATS(t)
 	stream := createTestStream(t, js, streamName, []string{"notifications.>"})
 
 	var (
@@ -237,7 +237,7 @@ func TestNotificationSession_Integration_StatusLifecycle(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(h.NotificationSession))
 	defer srv.Close()
 
-	conn, _ := dialWS(t, srv, "/session/notification", "tok")
+	conn, _ := dialWS(t, srv, "/sessions/notification", "tok")
 
 	// Give the handler time to call SetSessionStatus("active").
 	time.Sleep(100 * time.Millisecond)
@@ -279,7 +279,7 @@ func TestNotificationSession_Integration_TokenFromQueryParam(t *testing.T) {
 		listenPath = "notifications.user.carol"
 	)
 
-	_, js := setupNATS(t)
+	js := setupNATS(t)
 	stream := createTestStream(t, js, streamName, []string{"notifications.>"})
 
 	addCalled := false
@@ -301,7 +301,7 @@ func TestNotificationSession_Integration_TokenFromQueryParam(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(h.NotificationSession))
 	defer srv.Close()
 
-	conn, _ := dialWS(t, srv, "/session/notification", "querytoken")
+	conn, _ := dialWS(t, srv, "/sessions/notification", "querytoken")
 	defer conn.Close()
 
 	time.Sleep(100 * time.Millisecond)
