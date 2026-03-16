@@ -1,26 +1,45 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/handlers"
 	"github.com/zukigit/chat/backend/internal/lib"
 )
 
 func main() {
+	// env variables
 	backendAddr := lib.Getenv("BACKEND_LISTEN_ADDRESS", "localhost:1234")
 	natsURL := lib.Getenv("NATS_URL", nats.DefaultURL)
 
+	// nats connection
 	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to connect to NATS: %v", err)
 	}
 	defer nc.Close()
 
+	// streams preparation
+	js, err := jetstream.New(nc)
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to create JetStream: %v", err)
+	}
+
+	sessionsStream, err := js.CreateOrUpdateStream(context.Background(), jetstream.StreamConfig{
+		Name:     "SESSIONS",
+		Subjects: []string{lib.NotiSubjectPrefix, lib.ChatSubjectPrefix},
+	})
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to create sessions stream: %v", err)
+	}
+
+	// clients preparation
 	authClient, err := clients.NewAuthClient(backendAddr)
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to connect to backend: %v", err)
@@ -39,9 +58,10 @@ func main() {
 	}
 	defer sessionClient.Close()
 
+	// handlers preparation
 	authHandler := handlers.NewAuthHandler(authClient)
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
-	sessionHandler := handlers.NewSessionHandler(sessionClient, nc)
+	sessionHandler := handlers.NewSessionHandler(sessionClient, sessionsStream)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)

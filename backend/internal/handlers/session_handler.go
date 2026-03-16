@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/session"
@@ -20,19 +21,18 @@ type sessionClientInterface interface {
 // SessionHandler holds dependencies for session-related HTTP handlers.
 type SessionHandler struct {
 	client sessionClientInterface
-	nc     *nats.Conn
+	stream jetstream.Stream
 }
 
 // NewSessionHandler creates a SessionHandler with the given gRPC client.
-func NewSessionHandler(client sessionClientInterface, nc *nats.Conn) *SessionHandler {
-	return &SessionHandler{client: client, nc: nc}
+func NewSessionHandler(client sessionClientInterface, stream jetstream.Stream) *SessionHandler {
+	return &SessionHandler{client: client, stream: stream}
 }
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// allow all origins for now
 		return true
 	},
 }
@@ -52,55 +52,72 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 
 	addSessionResp, err := s.client.AddSession(r.Context(), token, string(db.SessionTypeNotification))
 	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: "Failed to add session"})
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to add session, sessionId: %s, err: %v", addSessionResp.SessionId, err),
+		})
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to upgrade to websocket: %v", err)
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to upgrade to websocket: %v", err),
+		})
 		return
 	}
 	defer conn.Close()
 
-	sub, err := s.nc.SubscribeSync(addSessionResp.ListenPath)
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+		Name:           addSessionResp.SessionId,
+		FilterSubjects: []string{addSessionResp.ListenPath},
+	})
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to subscribe to nats subject: %v", err)
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to create consumer: %v", err),
+		})
 		return
 	}
-	defer sub.Unsubscribe()
 
 	// Handle disconnect to update status
 	defer func() {
 		_ = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusTerminate))
 	}()
 
+	// Set session status to active
+	err = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusActive))
+	if err != nil {
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to set session status active: %v", err),
+		})
+		return
+	}
+
 	// Read channel from WS client so we detect close/disconnect
 	go func() {
 		for {
 			if _, _, err := conn.ReadMessage(); err != nil {
-				conn.Close()
-				break
+				lib.InfoLog.Printf("closing session: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+
+				// cancel context to stop consumer
+				cancel()
 			}
 		}
 	}()
 
-	// Loop to read from NATS and write to WS
-	for {
-		msg, err := sub.NextMsg(0) // wait indefinitely
-		if err != nil {
-			if err == nats.ErrConnectionClosed || err == nats.ErrBadSubscription {
-				break
-			}
-			lib.ErrorLog.Printf("Error reading from nats: %v", err)
-			continue
-		}
+	consumer.Consume(func(msg jetstream.Msg) {
+		if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
+			lib.ErrorLog.Printf("Error writing to websocket: sessionId: %s, err: %v", addSessionResp.SessionId, err)
 
-		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
-			lib.ErrorLog.Printf("Error writing to websocket: %v", err)
-			break
 		}
-	}
+		msg.Ack()
+	})
 }
 
 func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
