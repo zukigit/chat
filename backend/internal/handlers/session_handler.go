@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go"
+	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/session"
 )
@@ -42,11 +43,14 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		token = r.URL.Query().Get("token")
 	}
 	if token == "" {
-		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Missing token"})
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
+			Success: false,
+			Message: "Missing token",
+		})
 		return
 	}
 
-	addResp, err := s.client.AddSession(r.Context(), token, "NOTIFICATION")
+	addSessionResp, err := s.client.AddSession(r.Context(), token, string(db.SessionTypeNotification))
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: "Failed to add session"})
 		return
@@ -59,7 +63,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	}
 	defer conn.Close()
 
-	sub, err := s.nc.SubscribeSync(addResp.ListenPath)
+	sub, err := s.nc.SubscribeSync(addSessionResp.ListenPath)
 	if err != nil {
 		lib.ErrorLog.Printf("Failed to subscribe to nats subject: %v", err)
 		return
@@ -68,7 +72,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 
 	// Handle disconnect to update status
 	defer func() {
-		_ = s.client.SetSessionStatus(context.Background(), token, addResp.SessionId, "offline")
+		_ = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusTerminate))
 	}()
 
 	// Read channel from WS client so we detect close/disconnect
