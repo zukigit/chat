@@ -72,8 +72,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Name:           addSessionResp.SessionId,
+	consumer, err := s.stream.OrderedConsumer(ctx, jetstream.OrderedConsumerConfig{
 		FilterSubjects: []string{addSessionResp.ListenPath},
 	})
 	if err != nil {
@@ -105,8 +104,9 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 			if _, _, err := conn.ReadMessage(); err != nil {
 				lib.InfoLog.Printf("closing session: sessionId: %s, err: %v", addSessionResp.SessionId, err)
 
-				// cancel context to stop consumer
+				// cancel context to stop consumer and exit the read loop
 				cancel()
+				return
 			}
 		}
 	}()
@@ -118,6 +118,10 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		}
 		msg.Ack()
 	})
+
+	// Block until the client disconnects (the read goroutine calls cancel() on
+	// any WS error, which unblocks this and lets the deferred cleanup run).
+	<-ctx.Done()
 }
 
 func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
