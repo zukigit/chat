@@ -88,16 +88,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		_ = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusTerminate))
 	}()
 
-	// Set session status to active
-	err = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusActive))
-	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to set session status active: %v", err),
-		})
-		return
-	}
-
 	// Read channel from WS client so we detect close/disconnect
 	go func() {
 		for {
@@ -111,13 +101,32 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		}
 	}()
 
-	consumer.Consume(func(msg jetstream.Msg) {
+	// it will go with another goroutine
+	cc, err := consumer.Consume(func(msg jetstream.Msg) {
 		if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
 			lib.ErrorLog.Printf("Error writing to websocket: sessionId: %s, err: %v", addSessionResp.SessionId, err)
 
 		}
 		msg.Ack()
 	})
+	if err != nil {
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to consume messages: %v", err),
+		})
+		return
+	}
+	defer cc.Stop()
+
+	// Set session status to active
+	err = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusActive))
+	if err != nil {
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to set session status active: %v", err),
+		})
+		return
+	}
 
 	// Block until the client disconnects (the read goroutine calls cancel() on
 	// any WS error, which unblocks this and lets the deferred cleanup run).
