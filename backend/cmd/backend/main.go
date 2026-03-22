@@ -6,6 +6,7 @@ import (
 	"net"
 
 	_ "github.com/lib/pq"
+	"github.com/nats-io/nats.go"
 	"github.com/zukigit/chat/backend/internal/interceptors"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/internal/services"
@@ -26,6 +27,13 @@ func main() {
 		lib.ErrorLog.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	natsURL := lib.Getenv("NATS_URL", nats.DefaultURL)
+	nc, err := nats.Connect(natsURL)
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to connect to NATS: %v", err)
+	}
+	defer nc.Close()
+
 	srv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.UnaryRecoveryInterceptor,
@@ -38,7 +46,7 @@ func main() {
 	)
 
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))
-	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB))
+	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB, nc))
 	session.RegisterSessionServer(srv, services.NewSessionServer(sqlDB))
 
 	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))

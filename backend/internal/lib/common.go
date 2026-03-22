@@ -35,8 +35,8 @@ const ContextKeyUsername contextKey = "username"
 // after JWT validation by the interceptor.
 const ContextKeyUserID contextKey = "user_id"
 
-const NotiSubjectPrefix = "sessions.noti.>"
-const ChatSubjectPrefix = "sessions.chat.>"
+const NotiSubjectPrefix = "sessions.noti."
+const ChatSubjectPrefix = "sessions.chat."
 
 // CallerFrom extracts the authenticated username from the request context.
 // Returns "" if not present (should not happen for protected methods).

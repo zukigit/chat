@@ -10,7 +10,7 @@ import (
 
 func TestSendFriendRequest(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	friendshipServer := services.NewFriendshipServer(sqlDB)
+	friendshipServer := services.NewFriendshipServer(sqlDB, nil)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
 
@@ -40,7 +40,7 @@ func TestSendFriendRequest(t *testing.T) {
 
 func TestAcceptFriendRequest(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	friendshipServer := services.NewFriendshipServer(sqlDB)
+	friendshipServer := services.NewFriendshipServer(sqlDB, nil)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
@@ -74,7 +74,7 @@ func TestAcceptFriendRequest(t *testing.T) {
 
 func TestRejectFriendRequest(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	friendshipServer := services.NewFriendshipServer(sqlDB)
+	friendshipServer := services.NewFriendshipServer(sqlDB, nil)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
@@ -107,7 +107,7 @@ func TestRejectFriendRequest(t *testing.T) {
 
 func TestAcceptFriendRequest_NotFound(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	friendshipServer := services.NewFriendshipServer(sqlDB)
+	friendshipServer := services.NewFriendshipServer(sqlDB, nil)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
@@ -120,7 +120,7 @@ func TestAcceptFriendRequest_NotFound(t *testing.T) {
 
 func TestSendFriendRequest_AfterRejection(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	friendshipServer := services.NewFriendshipServer(sqlDB)
+	friendshipServer := services.NewFriendshipServer(sqlDB, nil)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
@@ -146,7 +146,7 @@ func TestSendFriendRequest_AfterRejection(t *testing.T) {
 
 func TestAcceptFriendRequest_AfterRejection(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	fs := services.NewFriendshipServer(sqlDB)
+	fs := services.NewFriendshipServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
 	// alice → bob, bob rejects
@@ -166,7 +166,7 @@ func TestAcceptFriendRequest_AfterRejection(t *testing.T) {
 
 func TestAcceptFriendRequest_AfterAcception(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	fs := services.NewFriendshipServer(sqlDB)
+	fs := services.NewFriendshipServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
 	// alice → bob, bob accepts
@@ -186,7 +186,7 @@ func TestAcceptFriendRequest_AfterAcception(t *testing.T) {
 
 func TestRejectFriendRequest_AfterRejection(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	fs := services.NewFriendshipServer(sqlDB)
+	fs := services.NewFriendshipServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
 	// alice → bob, bob rejects
@@ -206,7 +206,7 @@ func TestRejectFriendRequest_AfterRejection(t *testing.T) {
 
 func TestRejectFriendRequest_AfterAcception(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	fs := services.NewFriendshipServer(sqlDB)
+	fs := services.NewFriendshipServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
 	// alice → bob, bob accepts
@@ -226,7 +226,7 @@ func TestRejectFriendRequest_AfterAcception(t *testing.T) {
 
 func TestSendFriendRequest_AfterAcception(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	fs := services.NewFriendshipServer(sqlDB)
+	fs := services.NewFriendshipServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
 	// alice → bob, bob accepts

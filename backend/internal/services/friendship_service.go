@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
@@ -11,15 +12,23 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// NatsPublisher is a minimal interface for publishing to a NATS subject.
+// Implemented by *nats.Conn (via Publish) or any JetStream wrapper.
+type NatsPublisher interface {
+	Publish(subject string, data []byte) error
+}
+
 // FriendshipServer implements the friendship.FriendshipServer interface.
 type FriendshipServer struct {
 	pb.UnimplementedFriendshipServer
-	sqlDB *sql.DB
+	sqlDB     *sql.DB
+	publisher NatsPublisher // nil means NATS publish is disabled (e.g. in tests)
 }
 
 // NewFriendshipServer creates a new FriendshipServer instance.
-func NewFriendshipServer(sqlDB *sql.DB) *FriendshipServer {
-	return &FriendshipServer{sqlDB: sqlDB}
+// publisher may be nil, in which case live NATS notifications are skipped.
+func NewFriendshipServer(sqlDB *sql.DB, publisher NatsPublisher) *FriendshipServer {
+	return &FriendshipServer{sqlDB: sqlDB, publisher: publisher}
 }
 
 // SendFriendRequest handles a friend request from the caller to target_username.
@@ -113,6 +122,9 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		lib.ErrorLog.Printf("SendFriendRequest: commit: %v", err)
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
+
+	// Live push — non-fatal if the target user is offline.
+	s.publishIfOnline(targetID, callerName+" sent you a friend request")
 
 	return &pb.FriendResponse{Status: string(friendship.Status)}, nil
 }
@@ -208,6 +220,9 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 			lib.ErrorLog.Printf("respondToRequest: create notification: %v", err)
 			// Non-fatal.
 		}
+
+		// Live push — non-fatal if the requester is offline.
+		s.publishIfOnline(targetID, callerName+" accepted your friend request")
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -216,4 +231,52 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	}
 
 	return &pb.FriendResponse{Status: string(updated.Status)}, nil
+}
+
+// natsNotification is the JSON payload pushed over NATS to active notification sessions.
+type natsNotification struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
+
+// publishIfOnline looks up an active notification session for the given user and,
+// if one exists, publishes a JSON notification to its listen_path.
+// All errors are logged and swallowed — a missing or offline session is normal.
+func (s *FriendshipServer) publishIfOnline(userID uuid.UUID, message string) {
+	if s.publisher == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	conn, err := s.sqlDB.Conn(ctx)
+	if err != nil {
+		lib.ErrorLog.Printf("publishIfOnline: get conn: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	q := db.New(conn)
+
+	sessions, err := q.GetSession(ctx, db.GetSessionParams{
+		UserUserid: userID,
+		Type:       db.SessionTypeNotification,
+	})
+	if err != nil {
+		lib.ErrorLog.Printf("publishIfOnline: get session: %v", err)
+		return
+	}
+	if len(sessions) == 0 {
+		lib.ErrorLog.Printf("there is no sessions for user %v", userID)
+		// No active sessions — user is offline.
+		return
+	}
+
+	for _, session := range sessions {
+		subject := session.ListenPath.String
+		if err := s.publisher.Publish(subject, []byte(message)); err != nil {
+			lib.ErrorLog.Printf("publishIfOnline: publish to %s: %v", subject, err)
+			continue
+		}
+	}
 }

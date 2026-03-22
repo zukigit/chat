@@ -7,7 +7,7 @@ package db
 
 import (
 	"context"
-	"time"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -16,36 +16,35 @@ const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
     user_userid,
     type,
-    status
+    status,
+    listen_path
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 )
-RETURNING id, user_userid, type, status, created_at, updated_at
+RETURNING id, user_userid, type, status, listen_path, created_at, updated_at
 `
 
 type CreateSessionParams struct {
-	UserUserid uuid.UUID     `json:"user_userid"`
-	Type       SessionType   `json:"type"`
-	Status     SessionStatus `json:"status"`
+	UserUserid uuid.UUID      `json:"user_userid"`
+	Type       SessionType    `json:"type"`
+	Status     SessionStatus  `json:"status"`
+	ListenPath sql.NullString `json:"listen_path"`
 }
 
-type CreateSessionRow struct {
-	ID         uuid.UUID     `json:"id"`
-	UserUserid uuid.UUID     `json:"user_userid"`
-	Type       SessionType   `json:"type"`
-	Status     SessionStatus `json:"status"`
-	CreatedAt  time.Time     `json:"created_at"`
-	UpdatedAt  time.Time     `json:"updated_at"`
-}
-
-func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (CreateSessionRow, error) {
-	row := q.db.QueryRowContext(ctx, createSession, arg.UserUserid, arg.Type, arg.Status)
-	var i CreateSessionRow
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
+	row := q.db.QueryRowContext(ctx, createSession,
+		arg.UserUserid,
+		arg.Type,
+		arg.Status,
+		arg.ListenPath,
+	)
+	var i Session
 	err := row.Scan(
 		&i.ID,
 		&i.UserUserid,
 		&i.Type,
 		&i.Status,
+		&i.ListenPath,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -62,10 +61,10 @@ func (q *Queries) DeleteSession(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getSession = `-- name: GetSession :one
+const getSession = `-- name: GetSession :many
 SELECT id, user_userid, type, status, listen_path, created_at, updated_at
 FROM sessions
-WHERE user_userid = $1 AND type = $2 LIMIT 1
+WHERE user_userid = $1 AND type = $2 AND status = 'active'
 `
 
 type GetSessionParams struct {
@@ -73,19 +72,51 @@ type GetSessionParams struct {
 	Type       SessionType `json:"type"`
 }
 
-func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, getSession, arg.UserUserid, arg.Type)
-	var i Session
-	err := row.Scan(
-		&i.ID,
-		&i.UserUserid,
-		&i.Type,
-		&i.Status,
-		&i.ListenPath,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) ([]Session, error) {
+	rows, err := q.db.QueryContext(ctx, getSession, arg.UserUserid, arg.Type)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Session
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserUserid,
+			&i.Type,
+			&i.Status,
+			&i.ListenPath,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateListenPath = `-- name: UpdateListenPath :exec
+UPDATE sessions
+SET listen_path = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateListenPathParams struct {
+	ID         uuid.UUID      `json:"id"`
+	ListenPath sql.NullString `json:"listen_path"`
+}
+
+func (q *Queries) UpdateListenPath(ctx context.Context, arg UpdateListenPathParams) error {
+	_, err := q.db.ExecContext(ctx, updateListenPath, arg.ID, arg.ListenPath)
+	return err
 }
 
 const updateSessionStatus = `-- name: UpdateSessionStatus :exec

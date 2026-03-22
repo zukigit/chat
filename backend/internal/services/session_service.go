@@ -49,9 +49,25 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 		UserUserid: callerID,
 		Type:       db.SessionType(request.Type),
 		Status:     db.SessionStatusNew,
+		ListenPath: sql.NullString{
+			Valid:  true,
+			String: fmt.Sprintf("SESSIONS.noti.%s", uuid.NewString()),
+		},
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to create session: %v", err)
+	}
+
+	// update listen_path
+	err = quries.UpdateListenPath(ctx, db.UpdateListenPathParams{
+		ID: row.ID,
+		ListenPath: sql.NullString{
+			Valid:  true,
+			String: fmt.Sprintf("%s%s", lib.NotiSubjectPrefix, row.ID.String()),
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to update listen path: %v", err)
 	}
 
 	err = tx.Commit()
@@ -61,7 +77,7 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 
 	return &session.AddSessionResponse{
 		SessionId:  row.ID.String(),
-		ListenPath: fmt.Sprintf("NOTIFICATIONS.%s", row.ID.String()),
+		ListenPath: fmt.Sprintf("sessions.noti.%s", row.ID.String()),
 	}, nil
 }
 

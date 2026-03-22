@@ -33,7 +33,7 @@ func main() {
 
 	sessionsStream, err := js.CreateOrUpdateStream(context.Background(), jetstream.StreamConfig{
 		Name:     "SESSIONS",
-		Subjects: []string{lib.NotiSubjectPrefix, lib.ChatSubjectPrefix},
+		Subjects: []string{lib.NotiSubjectPrefix + ">", lib.ChatSubjectPrefix + ">"},
 	})
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to create sessions stream: %v", err)
@@ -70,7 +70,7 @@ func main() {
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
-	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodPost)
+	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodGet)
 	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodPost)
 
 	cors := gorhandlers.CORS(
