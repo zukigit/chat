@@ -31,14 +31,6 @@ func NewSessionHandler(client sessionClientInterface, stream jetstream.Stream) *
 	return &SessionHandler{client: client, stream: stream}
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
 func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Request) {
 	token, ok := lib.BearerToken(r)
 	if !ok {
