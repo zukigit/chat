@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
@@ -50,8 +51,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		lib.ErrorLog.Printf("SendFriendRequest: begin tx: %v", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: begin tx: %v", err)
 	}
 	defer tx.Rollback()
 
@@ -62,8 +62,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		return nil, status.Errorf(codes.InvalidArgument, "user %q not found", target)
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("SendFriendRequest: get target user: %v", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: get target user: %v", err)
 	}
 	targetID := targetUser.UserID
 
@@ -87,8 +86,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 			})
 		}
 	case err != nil:
-		lib.ErrorLog.Printf("SendFriendRequest: get friendship: %v", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: get friendship: %v", err)
 	case existing.Status == db.FriendshipStatusRejected:
 		// Previous request was rejected — allow re-sending by resetting to pending.
 		doWrite = func(qt *db.Queries) (db.Friendship, error) {
@@ -104,27 +102,30 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 
 	friendship, err := doWrite(q)
 	if err != nil {
-		lib.ErrorLog.Printf("SendFriendRequest: write: %v", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: write: %v", err)
 	}
 
-	if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
+	notification, err := q.CreateNotification(ctx, db.CreateNotificationParams{
 		UserID:   targetID,
 		SenderID: callerID,
 		Type:     db.NotificationTypeFriendRequest,
 		Message:  callerName + " sent you a friend request",
-	}); err != nil {
-		lib.ErrorLog.Printf("SendFriendRequest: create notification: %v", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: create notification: %v", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		lib.ErrorLog.Printf("SendFriendRequest: commit: %v", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	notificationByte, err := json.Marshal(notification)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: marshal notification: %v", err)
 	}
 
 	// Live push — non-fatal if the target user is offline.
-	s.publishIfOnline(targetID, callerName+" sent you a friend request")
+	s.publishIfOnline(targetID, notificationByte)
+
+	if err := tx.Commit(); err != nil {
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: commit: %v", err)
+	}
 
 	return &pb.FriendResponse{Status: string(friendship.Status)}, nil
 }
@@ -205,44 +206,41 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 		Status:      newStatus,
 	})
 	if err != nil {
-		lib.ErrorLog.Printf("respondToRequest: update status: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "respondToRequest: update status: %v", err)
 	}
 
 	// On accept: notify the original requester that their request was accepted.
 	if newStatus == db.FriendshipStatusAccepted {
-		if _, err := q.CreateNotification(ctx, db.CreateNotificationParams{
+		notification, err := q.CreateNotification(ctx, db.CreateNotificationParams{
 			UserID:   targetID, // the original requester
 			SenderID: callerID,
 			Type:     db.NotificationTypeFriendRequest,
 			Message:  callerName + " accepted your friend request",
-		}); err != nil {
-			lib.ErrorLog.Printf("respondToRequest: create notification: %v", err)
-			// Non-fatal.
+		})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "respondToRequest: create notification: %v", err)
+		}
+
+		notificationByte, err := json.Marshal(notification)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "respondToRequest: marshal notification: %v", err)
 		}
 
 		// Live push — non-fatal if the requester is offline.
-		s.publishIfOnline(targetID, callerName+" accepted your friend request")
+		s.publishIfOnline(targetID, notificationByte)
 	}
 
 	if err := tx.Commit(); err != nil {
-		lib.ErrorLog.Printf("respondToRequest: commit: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "respondToRequest: commit: %v", err)
 	}
 
 	return &pb.FriendResponse{Status: string(updated.Status)}, nil
 }
 
-// natsNotification is the JSON payload pushed over NATS to active notification sessions.
-type natsNotification struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
-
 // publishIfOnline looks up an active notification session for the given user and,
 // if one exists, publishes a JSON notification to its listen_path.
 // All errors are logged and swallowed — a missing or offline session is normal.
-func (s *FriendshipServer) publishIfOnline(userID uuid.UUID, message string) {
+func (s *FriendshipServer) publishIfOnline(userID uuid.UUID, notificationByte []byte) {
 	if s.publisher == nil {
 		return
 	}
@@ -274,7 +272,7 @@ func (s *FriendshipServer) publishIfOnline(userID uuid.UUID, message string) {
 
 	for _, session := range sessions {
 		subject := session.ListenPath.String
-		if err := s.publisher.Publish(subject, []byte(message)); err != nil {
+		if err := s.publisher.Publish(subject, notificationByte); err != nil {
 			lib.ErrorLog.Printf("publishIfOnline: publish to %s: %v", subject, err)
 			continue
 		}
