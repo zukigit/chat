@@ -56,7 +56,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
 			Success: false,
-			Message: fmt.Sprintf("Failed to add session, sessionId: %s, err: %v", addSessionResp.SessionId, err),
+			Message: fmt.Sprintf("Failed to add session: %v", err),
 		})
 		return
 	}
@@ -69,7 +69,10 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		})
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		conn.Close()
+	}()
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
@@ -81,10 +84,8 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		InactiveThreshold: 24 * time.Hour, // auto-delete consumer if no client is consuming
 	})
 	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to create consumer: %v", err),
-		})
+		closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, fmt.Sprintf("Failed to create consumer: %v", err))
+		_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
 		return
 	}
 
@@ -116,11 +117,9 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		},
 		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {
 			if errors.Is(err, jetstream.ErrConsumerDeleted) {
-				lib.WriteJSON(w, http.StatusGatewayTimeout, lib.Response{
-					Success: false,
-					Message: fmt.Sprintf("consumer deleted by server: sessionId: %s", addSessionResp.SessionId),
-				})
-
+				lib.InfoLog.Printf("consumer deleted by server: sessionId: %s", addSessionResp.SessionId)
+				closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "consumer deleted by server")
+				_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
 				cancel()
 				return
 			}
@@ -128,10 +127,8 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		}),
 	)
 	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to consume messages: %v", err),
-		})
+		closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, fmt.Sprintf("Failed to consume messages: %v", err))
+		_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
 		return
 	}
 	defer cc.Stop()
