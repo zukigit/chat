@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go/jetstream"
@@ -72,8 +74,11 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	consumer, err := s.stream.OrderedConsumer(ctx, jetstream.OrderedConsumerConfig{
-		FilterSubjects: []string{addSessionResp.ListenPath},
+	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+		Durable:           addSessionResp.SessionId,
+		FilterSubjects:    []string{addSessionResp.ListenPath},
+		AckPolicy:         jetstream.AckExplicitPolicy,
+		InactiveThreshold: 24 * time.Hour, // auto-delete consumer if no client is consuming
 	})
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
@@ -102,13 +107,26 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	}()
 
 	// it will go with another goroutine
-	cc, err := consumer.Consume(func(msg jetstream.Msg) {
-		if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
-			lib.ErrorLog.Printf("Error writing to websocket: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+	cc, err := consumer.Consume(
+		func(msg jetstream.Msg) {
+			if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
+				lib.ErrorLog.Printf("Error writing to websocket: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+			}
+			msg.Ack()
+		},
+		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {
+			if errors.Is(err, jetstream.ErrConsumerDeleted) {
+				lib.WriteJSON(w, http.StatusGatewayTimeout, lib.Response{
+					Success: false,
+					Message: fmt.Sprintf("consumer deleted by server: sessionId: %s", addSessionResp.SessionId),
+				})
 
-		}
-		msg.Ack()
-	})
+				cancel()
+				return
+			}
+			lib.ErrorLog.Printf("consumer error: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+		}),
+	)
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
 			Success: false,
