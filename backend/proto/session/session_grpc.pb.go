@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Session_AddSession_FullMethodName       = "/session.Session/AddSession"
 	Session_SetSessionStatus_FullMethodName = "/session.Session/SetSessionStatus"
+	Session_DeleteSession_FullMethodName    = "/session.Session/DeleteSession"
 )
 
 // SessionClient is the client API for Session service.
@@ -29,6 +30,7 @@ const (
 type SessionClient interface {
 	AddSession(ctx context.Context, in *AddSessionRequest, opts ...grpc.CallOption) (*AddSessionResponse, error)
 	SetSessionStatus(ctx context.Context, in *SetSessionStatusRequest, opts ...grpc.CallOption) (*SetSessionStatusResponse, error)
+	DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*DeleteSessionResponse, error)
 }
 
 type sessionClient struct {
@@ -59,12 +61,23 @@ func (c *sessionClient) SetSessionStatus(ctx context.Context, in *SetSessionStat
 	return out, nil
 }
 
+func (c *sessionClient) DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*DeleteSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteSessionResponse)
+	err := c.cc.Invoke(ctx, Session_DeleteSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SessionServer is the server API for Session service.
 // All implementations must embed UnimplementedSessionServer
 // for forward compatibility.
 type SessionServer interface {
 	AddSession(context.Context, *AddSessionRequest) (*AddSessionResponse, error)
 	SetSessionStatus(context.Context, *SetSessionStatusRequest) (*SetSessionStatusResponse, error)
+	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error)
 	mustEmbedUnimplementedSessionServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedSessionServer) AddSession(context.Context, *AddSessionRequest
 }
 func (UnimplementedSessionServer) SetSessionStatus(context.Context, *SetSessionStatusRequest) (*SetSessionStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetSessionStatus not implemented")
+}
+func (UnimplementedSessionServer) DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSession not implemented")
 }
 func (UnimplementedSessionServer) mustEmbedUnimplementedSessionServer() {}
 func (UnimplementedSessionServer) testEmbeddedByValue()                 {}
@@ -138,6 +154,24 @@ func _Session_SetSessionStatus_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Session_DeleteSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServer).DeleteSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Session_DeleteSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServer).DeleteSession(ctx, req.(*DeleteSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Session_ServiceDesc is the grpc.ServiceDesc for Session service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var Session_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetSessionStatus",
 			Handler:    _Session_SetSessionStatus_Handler,
+		},
+		{
+			MethodName: "DeleteSession",
+			Handler:    _Session_DeleteSession_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

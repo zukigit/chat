@@ -114,3 +114,34 @@ func (s *SessionServer) SetSessionStatus(ctx context.Context, request *session.S
 
 	return &session.SetSessionStatusResponse{}, nil
 }
+
+func (s *SessionServer) DeleteSession(ctx context.Context, request *session.DeleteSessionRequest) (*session.DeleteSessionResponse, error) {
+	if request.GetSessionId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "Session ID is required")
+	}
+
+	sessionID, err := uuid.Parse(request.GetSessionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Invalid session ID")
+	}
+
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	quries := db.New(tx)
+
+	err = quries.DeleteSession(ctx, sessionID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to delete session: %v", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
+	}
+
+	return &session.DeleteSessionResponse{}, nil
+}

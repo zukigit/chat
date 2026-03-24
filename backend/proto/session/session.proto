@@ -20,7 +20,14 @@ message SetSessionStatusRequest {
 
 message SetSessionStatusResponse {}
 
+message DeleteSessionRequest {
+  string session_id = 1;
+}
+
+message DeleteSessionResponse {}
+
 service Session {
   rpc AddSession(AddSessionRequest) returns (AddSessionResponse);
   rpc SetSessionStatus(SetSessionStatusRequest) returns (SetSessionStatusResponse);
+  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
 }

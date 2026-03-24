@@ -48,3 +48,11 @@ func (c *SessionClient) SetSessionStatus(ctx context.Context, token, sessionID, 
 	})
 	return err
 }
+
+// DeleteSession forwards a delete session request to the backend via gRPC.
+func (c *SessionClient) DeleteSession(ctx context.Context, token, sessionID string) error {
+	_, err := c.client.DeleteSession(lib.WithToken(ctx, token), &pb.DeleteSessionRequest{
+		SessionId: sessionID,
+	})
+	return err
+}

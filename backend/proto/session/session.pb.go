@@ -205,6 +205,86 @@ func (*SetSessionStatusResponse) Descriptor() ([]byte, []int) {
 	return file_proto_session_session_proto_rawDescGZIP(), []int{3}
 }
 
+type DeleteSessionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSessionRequest) Reset() {
+	*x = DeleteSessionRequest{}
+	mi := &file_proto_session_session_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSessionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSessionRequest) ProtoMessage() {}
+
+func (x *DeleteSessionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_session_session_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSessionRequest.ProtoReflect.Descriptor instead.
+func (*DeleteSessionRequest) Descriptor() ([]byte, []int) {
+	return file_proto_session_session_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeleteSessionRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type DeleteSessionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSessionResponse) Reset() {
+	*x = DeleteSessionResponse{}
+	mi := &file_proto_session_session_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSessionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSessionResponse) ProtoMessage() {}
+
+func (x *DeleteSessionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_session_session_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSessionResponse.ProtoReflect.Descriptor instead.
+func (*DeleteSessionResponse) Descriptor() ([]byte, []int) {
+	return file_proto_session_session_proto_rawDescGZIP(), []int{5}
+}
+
 var File_proto_session_session_proto protoreflect.FileDescriptor
 
 const file_proto_session_session_proto_rawDesc = "" +
@@ -221,11 +301,16 @@ const file_proto_session_session_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\"\x1a\n" +
-	"\x18SetSessionStatusResponse2\xa9\x01\n" +
+	"\x18SetSessionStatusResponse\"5\n" +
+	"\x14DeleteSessionRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"\x17\n" +
+	"\x15DeleteSessionResponse2\xf9\x01\n" +
 	"\aSession\x12E\n" +
 	"\n" +
 	"AddSession\x12\x1a.session.AddSessionRequest\x1a\x1b.session.AddSessionResponse\x12W\n" +
-	"\x10SetSessionStatus\x12 .session.SetSessionStatusRequest\x1a!.session.SetSessionStatusResponseB\x10Z\x0eproto/session/b\x06proto3"
+	"\x10SetSessionStatus\x12 .session.SetSessionStatusRequest\x1a!.session.SetSessionStatusResponse\x12N\n" +
+	"\rDeleteSession\x12\x1d.session.DeleteSessionRequest\x1a\x1e.session.DeleteSessionResponseB\x10Z\x0eproto/session/b\x06proto3"
 
 var (
 	file_proto_session_session_proto_rawDescOnce sync.Once
@@ -239,20 +324,24 @@ func file_proto_session_session_proto_rawDescGZIP() []byte {
 	return file_proto_session_session_proto_rawDescData
 }
 
-var file_proto_session_session_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_session_session_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_session_session_proto_goTypes = []any{
 	(*AddSessionRequest)(nil),        // 0: session.AddSessionRequest
 	(*AddSessionResponse)(nil),       // 1: session.AddSessionResponse
 	(*SetSessionStatusRequest)(nil),  // 2: session.SetSessionStatusRequest
 	(*SetSessionStatusResponse)(nil), // 3: session.SetSessionStatusResponse
+	(*DeleteSessionRequest)(nil),     // 4: session.DeleteSessionRequest
+	(*DeleteSessionResponse)(nil),    // 5: session.DeleteSessionResponse
 }
 var file_proto_session_session_proto_depIdxs = []int32{
 	0, // 0: session.Session.AddSession:input_type -> session.AddSessionRequest
 	2, // 1: session.Session.SetSessionStatus:input_type -> session.SetSessionStatusRequest
-	1, // 2: session.Session.AddSession:output_type -> session.AddSessionResponse
-	3, // 3: session.Session.SetSessionStatus:output_type -> session.SetSessionStatusResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: session.Session.DeleteSession:input_type -> session.DeleteSessionRequest
+	1, // 3: session.Session.AddSession:output_type -> session.AddSessionResponse
+	3, // 4: session.Session.SetSessionStatus:output_type -> session.SetSessionStatusResponse
+	5, // 5: session.Session.DeleteSession:output_type -> session.DeleteSessionResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -269,7 +358,7 @@ func file_proto_session_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_session_session_proto_rawDesc), len(file_proto_session_session_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

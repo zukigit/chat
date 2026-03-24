@@ -18,6 +18,7 @@ import (
 type sessionClientInterface interface {
 	AddSession(ctx context.Context, token, sessionType string) (*pb.AddSessionResponse, error)
 	SetSessionStatus(ctx context.Context, token, sessionID, status string) error
+	DeleteSession(ctx context.Context, token, sessionID string) error
 }
 
 // SessionHandler holds dependencies for session-related HTTP handlers.
@@ -62,7 +63,9 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	defer func() {
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		s.client.DeleteSession(context.Background(), token, addSessionResp.SessionId)
+
+		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		conn.Close()
 	}()
 
@@ -80,11 +83,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
 		return
 	}
-
-	// Handle disconnect to update status
-	defer func() {
-		_ = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusTerminate))
-	}()
 
 	// Read channel from WS client so we detect close/disconnect
 	go func() {
