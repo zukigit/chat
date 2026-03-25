@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "proto/notification/";
+
+message SetNotificationStatusRequest {
+  string id = 1;
+}
+
+message SetNotificationStatusResponse {}
+
+service Session {
+  rpc SetNotificationStatus(SetNotificationStatusRequest) returns (SetNotificationStatusResponse);
+}
