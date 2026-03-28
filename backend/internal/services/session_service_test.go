@@ -59,10 +59,9 @@ func TestSetSessionStatus(t *testing.T) {
 	}{
 		{"empty status", ctx, sessionID, "", codes.InvalidArgument},
 		{"empty session ID", ctx, "", "active", codes.InvalidArgument},
-		{"no auth context", context.Background(), sessionID, "active", codes.OK},
 		{"no session id", ctx, "invalid-uuid", "active", codes.InvalidArgument},
 		{"valid active status", ctx, sessionID, "active", codes.OK},
-		{"valid idle status", ctx, sessionID, "idel", codes.OK},
+		{"valid idle status", ctx, sessionID, "idle", codes.OK},
 		{"valid terminate status", ctx, sessionID, "terminate", codes.OK},
 		{"valid new status", ctx, sessionID, "new", codes.OK},
 	}

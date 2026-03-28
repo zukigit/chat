@@ -38,7 +38,6 @@ func TestLogin(t *testing.T) {
 		{"non-existent user", "nonexistent", "password", true},
 		{"empty username", "", "password", true},
 		{"empty password", "test", "", true},
-		{"user not found", "unknown", "password", true},
 	}
 
 	authServer := services.NewAuthServer(sqlDb)
@@ -48,8 +47,12 @@ func TestLogin(t *testing.T) {
 				UserName: tt.username,
 				Passwd:   tt.password,
 			})
-			if err != nil {
-				if !tt.wantErr {
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
 			}
@@ -80,8 +83,12 @@ func TestSignup(t *testing.T) {
 				UserName: tt.username,
 				Passwd:   tt.password,
 			})
-			if err != nil {
-				if !tt.wantErr {
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
 			}
