@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 -- ── Sessions ───────────────────────────────────────────────────────────────────
 CREATE TYPE session_type AS ENUM ('notification', 'chat');
-CREATE TYPE session_status AS ENUM ('active', 'idel', 'terminate', 'new');
+CREATE TYPE session_status AS ENUM ('active', 'idle', 'terminate', 'new');
 
 CREATE TABLE IF NOT EXISTS sessions (
     id           UUID           PRIMARY KEY DEFAULT gen_random_uuid(),

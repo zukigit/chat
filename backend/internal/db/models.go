@@ -146,7 +146,7 @@ type SessionStatus string
 
 const (
 	SessionStatusActive    SessionStatus = "active"
-	SessionStatusIdel      SessionStatus = "idel"
+	SessionStatusIdle      SessionStatus = "idle"
 	SessionStatusTerminate SessionStatus = "terminate"
 	SessionStatusNew       SessionStatus = "new"
 )
