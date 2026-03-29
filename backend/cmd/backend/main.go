@@ -12,6 +12,7 @@ import (
 	"github.com/zukigit/chat/backend/internal/services"
 	"github.com/zukigit/chat/backend/proto/auth"
 	"github.com/zukigit/chat/backend/proto/friendship"
+	"github.com/zukigit/chat/backend/proto/notification"
 	"github.com/zukigit/chat/backend/proto/session"
 	"google.golang.org/grpc"
 )
@@ -46,7 +47,9 @@ func main() {
 	)
 
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))
-	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB, nc))
+	notifServer := services.NewNotificationServer(sqlDB, nc)
+	notification.RegisterNotificationServer(srv, notifServer)
+	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB, notifServer))
 	session.RegisterSessionServer(srv, services.NewSessionServer(sqlDB))
 
 	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))

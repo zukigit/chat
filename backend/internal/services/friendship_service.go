@@ -3,9 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 
-	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
@@ -13,23 +11,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// NatsPublisher is a minimal interface for publishing to a NATS subject.
-// Implemented by *nats.Conn (via Publish) or any JetStream wrapper.
-type NatsPublisher interface {
-	Publish(subject string, data []byte) error
-}
-
 // FriendshipServer implements the friendship.FriendshipServer interface.
 type FriendshipServer struct {
 	pb.UnimplementedFriendshipServer
-	sqlDB     *sql.DB
-	publisher NatsPublisher // nil means NATS publish is disabled (e.g. in tests)
+	sqlDB *sql.DB
+	notif *NotificationServer // nil disables notifications (e.g. in tests)
 }
 
 // NewFriendshipServer creates a new FriendshipServer instance.
-// publisher may be nil, in which case live NATS notifications are skipped.
-func NewFriendshipServer(sqlDB *sql.DB, publisher NatsPublisher) *FriendshipServer {
-	return &FriendshipServer{sqlDB: sqlDB, publisher: publisher}
+// notif may be nil, in which case notifications are skipped.
+func NewFriendshipServer(sqlDB *sql.DB, notif *NotificationServer) *FriendshipServer {
+	return &FriendshipServer{sqlDB: sqlDB, notif: notif}
 }
 
 // SendFriendRequest handles a friend request from the caller to target_username.
@@ -105,23 +97,9 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		return nil, status.Errorf(codes.Internal, "SendFriendRequest: write: %v", err)
 	}
 
-	notification, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-		UserID:   targetID,
-		SenderID: callerID,
-		Type:     db.NotificationTypeFriendRequest,
-		Message:  callerName + " sent you a friend request",
-	})
-	if err != nil {
+	if err := s.notif.Send(ctx, q, targetID, callerID, db.NotificationTypeFriendRequest, callerName+" sent you a friend request"); err != nil {
 		return nil, status.Errorf(codes.Internal, "SendFriendRequest: create notification: %v", err)
 	}
-
-	notificationByte, err := json.Marshal(notification)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "SendFriendRequest: marshal notification: %v", err)
-	}
-
-	// Live push — non-fatal if the target user is offline.
-	s.publishIfOnline(targetID, notificationByte)
 
 	if err := tx.Commit(); err != nil {
 		return nil, status.Errorf(codes.Internal, "SendFriendRequest: commit: %v", err)
@@ -211,23 +189,9 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 
 	// On accept: notify the original requester that their request was accepted.
 	if newStatus == db.FriendshipStatusAccepted {
-		notification, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-			UserID:   targetID, // the original requester
-			SenderID: callerID,
-			Type:     db.NotificationTypeFriendRequest,
-			Message:  callerName + " accepted your friend request",
-		})
-		if err != nil {
+		if err := s.notif.Send(ctx, q, targetID, callerID, db.NotificationTypeFriendRequest, callerName+" accepted your friend request"); err != nil {
 			return nil, status.Errorf(codes.Internal, "respondToRequest: create notification: %v", err)
 		}
-
-		notificationByte, err := json.Marshal(notification)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "respondToRequest: marshal notification: %v", err)
-		}
-
-		// Live push — non-fatal if the requester is offline.
-		s.publishIfOnline(targetID, notificationByte)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -237,43 +201,3 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 	return &pb.FriendResponse{Status: string(updated.Status)}, nil
 }
 
-// publishIfOnline looks up an active notification session for the given user and,
-// if one exists, publishes a JSON notification to its listen_path.
-// All errors are logged and swallowed — a missing or offline session is normal.
-func (s *FriendshipServer) publishIfOnline(userID uuid.UUID, notificationByte []byte) {
-	if s.publisher == nil {
-		return
-	}
-
-	ctx := context.Background()
-
-	conn, err := s.sqlDB.Conn(ctx)
-	if err != nil {
-		lib.ErrorLog.Printf("publishIfOnline: get conn: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	q := db.New(conn)
-
-	sessions, err := q.GetSession(ctx, db.GetSessionParams{
-		UserUserid: userID,
-		Type:       db.SessionTypeNotification,
-	})
-	if err != nil {
-		lib.ErrorLog.Printf("publishIfOnline: get session: %v", err)
-		return
-	}
-	if len(sessions) == 0 {
-		// No active sessions — user is offline.
-		return
-	}
-
-	for _, session := range sessions {
-		subject := session.ListenPath.String
-		if err := s.publisher.Publish(subject, notificationByte); err != nil {
-			lib.ErrorLog.Printf("publishIfOnline: publish to %s: %v", subject, err)
-			continue
-		}
-	}
-}
