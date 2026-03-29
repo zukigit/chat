@@ -6,10 +6,11 @@ option go_package = "proto/notification/";
 
 message SetNotificationStatusRequest {
   string id = 1;
+  string status = 2;
 }
 
 message SetNotificationStatusResponse {}
 
-service Session {
+service Notification {
   rpc SetNotificationStatus(SetNotificationStatusRequest) returns (SetNotificationStatusResponse);
 }

@@ -265,7 +265,6 @@ func (s *FriendshipServer) publishIfOnline(userID uuid.UUID, notificationByte []
 		return
 	}
 	if len(sessions) == 0 {
-		lib.ErrorLog.Printf("there is no sessions for user %v", userID)
 		// No active sessions — user is offline.
 		return
 	}
