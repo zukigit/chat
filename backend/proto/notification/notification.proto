@@ -4,13 +4,12 @@ package notification;
 
 option go_package = "proto/notification/";
 
-message SetNotificationStatusRequest {
+message MarkNotificationReadRequest {
   string id = 1;
-  string status = 2;
 }
 
-message SetNotificationStatusResponse {}
+message MarkNotificationReadResponse {}
 
 service Notification {
-  rpc SetNotificationStatus(SetNotificationStatusRequest) returns (SetNotificationStatusResponse);
+  rpc MarkNotificationRead(MarkNotificationReadRequest) returns (MarkNotificationReadResponse);
 }

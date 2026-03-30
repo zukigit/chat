@@ -58,10 +58,17 @@ func main() {
 	}
 	defer sessionClient.Close()
 
+	notiClient, err := clients.NewNotificationClient(backendAddr)
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to connect to backend (notification): %v", err)
+	}
+	defer notiClient.Close()
+
 	// handlers preparation
 	authHandler := handlers.NewAuthHandler(authClient)
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
 	sessionHandler := handlers.NewSessionHandler(sessionClient, sessionsStream)
+	notificationHandler := handlers.NewNotificationHandler(notiClient)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
@@ -70,6 +77,7 @@ func main() {
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
+	r.HandleFunc("/notifications/read", notificationHandler.MarkNotificationRead).Methods(http.MethodPost)
 	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodGet)
 	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodPost)
 

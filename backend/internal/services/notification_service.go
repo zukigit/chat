@@ -62,13 +62,9 @@ func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, recipientI
 	return nil
 }
 
-// SetNotificationStatus implements notification.NotificationServer.
+// MarkNotificationRead implements notification.NotificationServer.
 // It marks a single notification as read (the only supported status).
-func (s *NotificationServer) SetNotificationStatus(ctx context.Context, req *pb.SetNotificationStatusRequest) (*pb.SetNotificationStatusResponse, error) {
-	if req.GetStatus() != "read" {
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported status %q: only \"read\" is accepted", req.GetStatus())
-	}
-
+func (s *NotificationServer) MarkNotificationRead(ctx context.Context, req *pb.MarkNotificationReadRequest) (*pb.MarkNotificationReadResponse, error) {
 	id, err := strconv.ParseInt(req.GetId(), 10, 64)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid notification id %q: %v", req.GetId(), err)
@@ -78,10 +74,10 @@ func (s *NotificationServer) SetNotificationStatus(ctx context.Context, req *pb.
 	if _, err := q.MarkNotificationAsRead(ctx, id); err == sql.ErrNoRows {
 		return nil, status.Errorf(codes.NotFound, "notification %d not found", id)
 	} else if err != nil {
-		return nil, status.Errorf(codes.Internal, "SetNotificationStatus: %v", err)
+		return nil, status.Errorf(codes.Internal, "MarkNotificationRead: %v", err)
 	}
 
-	return &pb.SetNotificationStatusResponse{}, nil
+	return &pb.MarkNotificationReadResponse{}, nil
 }
 
 // publishIfOnline looks up active notification sessions for userID and publishes

@@ -25,6 +25,11 @@ type friendshipRequest struct {
 	Username string `json:"username"`
 }
 
+// notificationRequest is the request body for notification status updates.
+type notificationRequest struct {
+	ID string `json:"id"`
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,

@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Notification_SetNotificationStatus_FullMethodName = "/notification.Notification/SetNotificationStatus"
+	Notification_MarkNotificationRead_FullMethodName = "/notification.Notification/MarkNotificationRead"
 )
 
 // NotificationClient is the client API for Notification service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NotificationClient interface {
-	SetNotificationStatus(ctx context.Context, in *SetNotificationStatusRequest, opts ...grpc.CallOption) (*SetNotificationStatusResponse, error)
+	MarkNotificationRead(ctx context.Context, in *MarkNotificationReadRequest, opts ...grpc.CallOption) (*MarkNotificationReadResponse, error)
 }
 
 type notificationClient struct {
@@ -37,10 +37,10 @@ func NewNotificationClient(cc grpc.ClientConnInterface) NotificationClient {
 	return &notificationClient{cc}
 }
 
-func (c *notificationClient) SetNotificationStatus(ctx context.Context, in *SetNotificationStatusRequest, opts ...grpc.CallOption) (*SetNotificationStatusResponse, error) {
+func (c *notificationClient) MarkNotificationRead(ctx context.Context, in *MarkNotificationReadRequest, opts ...grpc.CallOption) (*MarkNotificationReadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetNotificationStatusResponse)
-	err := c.cc.Invoke(ctx, Notification_SetNotificationStatus_FullMethodName, in, out, cOpts...)
+	out := new(MarkNotificationReadResponse)
+	err := c.cc.Invoke(ctx, Notification_MarkNotificationRead_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *notificationClient) SetNotificationStatus(ctx context.Context, in *SetN
 // All implementations must embed UnimplementedNotificationServer
 // for forward compatibility.
 type NotificationServer interface {
-	SetNotificationStatus(context.Context, *SetNotificationStatusRequest) (*SetNotificationStatusResponse, error)
+	MarkNotificationRead(context.Context, *MarkNotificationReadRequest) (*MarkNotificationReadResponse, error)
 	mustEmbedUnimplementedNotificationServer()
 }
 
@@ -62,8 +62,8 @@ type NotificationServer interface {
 // pointer dereference when methods are called.
 type UnimplementedNotificationServer struct{}
 
-func (UnimplementedNotificationServer) SetNotificationStatus(context.Context, *SetNotificationStatusRequest) (*SetNotificationStatusResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetNotificationStatus not implemented")
+func (UnimplementedNotificationServer) MarkNotificationRead(context.Context, *MarkNotificationReadRequest) (*MarkNotificationReadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MarkNotificationRead not implemented")
 }
 func (UnimplementedNotificationServer) mustEmbedUnimplementedNotificationServer() {}
 func (UnimplementedNotificationServer) testEmbeddedByValue()                      {}
@@ -86,20 +86,20 @@ func RegisterNotificationServer(s grpc.ServiceRegistrar, srv NotificationServer)
 	s.RegisterService(&Notification_ServiceDesc, srv)
 }
 
-func _Notification_SetNotificationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetNotificationStatusRequest)
+func _Notification_MarkNotificationRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MarkNotificationReadRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NotificationServer).SetNotificationStatus(ctx, in)
+		return srv.(NotificationServer).MarkNotificationRead(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Notification_SetNotificationStatus_FullMethodName,
+		FullMethod: Notification_MarkNotificationRead_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotificationServer).SetNotificationStatus(ctx, req.(*SetNotificationStatusRequest))
+		return srv.(NotificationServer).MarkNotificationRead(ctx, req.(*MarkNotificationReadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -112,8 +112,8 @@ var Notification_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*NotificationServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SetNotificationStatus",
-			Handler:    _Notification_SetNotificationStatus_Handler,
+			MethodName: "MarkNotificationRead",
+			Handler:    _Notification_MarkNotificationRead_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

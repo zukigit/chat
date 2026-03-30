@@ -21,28 +21,27 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type SetNotificationStatusRequest struct {
+type MarkNotificationReadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetNotificationStatusRequest) Reset() {
-	*x = SetNotificationStatusRequest{}
+func (x *MarkNotificationReadRequest) Reset() {
+	*x = MarkNotificationReadRequest{}
 	mi := &file_proto_notification_notification_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetNotificationStatusRequest) String() string {
+func (x *MarkNotificationReadRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetNotificationStatusRequest) ProtoMessage() {}
+func (*MarkNotificationReadRequest) ProtoMessage() {}
 
-func (x *SetNotificationStatusRequest) ProtoReflect() protoreflect.Message {
+func (x *MarkNotificationReadRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_notification_notification_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -54,45 +53,38 @@ func (x *SetNotificationStatusRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetNotificationStatusRequest.ProtoReflect.Descriptor instead.
-func (*SetNotificationStatusRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MarkNotificationReadRequest.ProtoReflect.Descriptor instead.
+func (*MarkNotificationReadRequest) Descriptor() ([]byte, []int) {
 	return file_proto_notification_notification_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SetNotificationStatusRequest) GetId() string {
+func (x *MarkNotificationReadRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *SetNotificationStatusRequest) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-type SetNotificationStatusResponse struct {
+type MarkNotificationReadResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetNotificationStatusResponse) Reset() {
-	*x = SetNotificationStatusResponse{}
+func (x *MarkNotificationReadResponse) Reset() {
+	*x = MarkNotificationReadResponse{}
 	mi := &file_proto_notification_notification_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetNotificationStatusResponse) String() string {
+func (x *MarkNotificationReadResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetNotificationStatusResponse) ProtoMessage() {}
+func (*MarkNotificationReadResponse) ProtoMessage() {}
 
-func (x *SetNotificationStatusResponse) ProtoReflect() protoreflect.Message {
+func (x *MarkNotificationReadResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_notification_notification_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -104,8 +96,8 @@ func (x *SetNotificationStatusResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetNotificationStatusResponse.ProtoReflect.Descriptor instead.
-func (*SetNotificationStatusResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MarkNotificationReadResponse.ProtoReflect.Descriptor instead.
+func (*MarkNotificationReadResponse) Descriptor() ([]byte, []int) {
 	return file_proto_notification_notification_proto_rawDescGZIP(), []int{1}
 }
 
@@ -113,13 +105,12 @@ var File_proto_notification_notification_proto protoreflect.FileDescriptor
 
 const file_proto_notification_notification_proto_rawDesc = "" +
 	"\n" +
-	"%proto/notification/notification.proto\x12\fnotification\"F\n" +
-	"\x1cSetNotificationStatusRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\"\x1f\n" +
-	"\x1dSetNotificationStatusResponse2\x80\x01\n" +
-	"\fNotification\x12p\n" +
-	"\x15SetNotificationStatus\x12*.notification.SetNotificationStatusRequest\x1a+.notification.SetNotificationStatusResponseB\x15Z\x13proto/notification/b\x06proto3"
+	"%proto/notification/notification.proto\x12\fnotification\"-\n" +
+	"\x1bMarkNotificationReadRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x1e\n" +
+	"\x1cMarkNotificationReadResponse2}\n" +
+	"\fNotification\x12m\n" +
+	"\x14MarkNotificationRead\x12).notification.MarkNotificationReadRequest\x1a*.notification.MarkNotificationReadResponseB\x15Z\x13proto/notification/b\x06proto3"
 
 var (
 	file_proto_notification_notification_proto_rawDescOnce sync.Once
@@ -135,12 +126,12 @@ func file_proto_notification_notification_proto_rawDescGZIP() []byte {
 
 var file_proto_notification_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_proto_notification_notification_proto_goTypes = []any{
-	(*SetNotificationStatusRequest)(nil),  // 0: notification.SetNotificationStatusRequest
-	(*SetNotificationStatusResponse)(nil), // 1: notification.SetNotificationStatusResponse
+	(*MarkNotificationReadRequest)(nil),  // 0: notification.MarkNotificationReadRequest
+	(*MarkNotificationReadResponse)(nil), // 1: notification.MarkNotificationReadResponse
 }
 var file_proto_notification_notification_proto_depIdxs = []int32{
-	0, // 0: notification.Notification.SetNotificationStatus:input_type -> notification.SetNotificationStatusRequest
-	1, // 1: notification.Notification.SetNotificationStatus:output_type -> notification.SetNotificationStatusResponse
+	0, // 0: notification.Notification.MarkNotificationRead:input_type -> notification.MarkNotificationReadRequest
+	1, // 1: notification.Notification.MarkNotificationRead:output_type -> notification.MarkNotificationReadResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
