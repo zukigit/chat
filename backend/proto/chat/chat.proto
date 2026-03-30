@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package chat;
+
+option go_package = "proto/chat/";
+
+message SendMessageRequest {
+  string target_username = 1;
+  string message = 2;
+}
+
+message SendMessageResponse {
+}
+
+service chat {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}
