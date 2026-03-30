@@ -53,8 +53,6 @@ func (h *NotificationHandler) MarkNotificationRead(w http.ResponseWriter, r *htt
 			lib.WriteJSON(w, http.StatusNotFound, lib.Response{Success: false, Message: st.Message()})
 		case codes.InvalidArgument:
 			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: st.Message()})
-		case codes.PermissionDenied:
-			lib.WriteJSON(w, http.StatusForbidden, lib.Response{Success: false, Message: st.Message()})
 		case codes.Unauthenticated:
 			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
 		default:
