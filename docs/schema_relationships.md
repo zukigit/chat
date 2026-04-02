@@ -37,7 +37,7 @@ erDiagram
         bigint conversation_id PK_FK
         uuid user_id PK_FK
         member_role role
-        bigint last_read_message_id FK
+        bigint last_read_message_id
         timestamptz joined_at
     }
 
@@ -58,7 +58,7 @@ erDiagram
     notifications {
         bigserial id PK
         uuid user_id FK
-        uuid sender_id FK
+        uuid sender_id
         notification_type type
         text message
         boolean is_read
@@ -81,7 +81,6 @@ erDiagram
     conversations ||--o{ messages : "contains (conversation_id)"
     users ||--o{ messages : "sends (sender_id)"
     messages ||--o{ messages : "reply (reply_to_message_id)"
-    messages ||--o{ conversation_members : "last read (last_read_message_id)"
     users ||--o{ notifications : "notified (user_id)"
     users ||--o{ notifications : "sends (sender_id)"
 ```
@@ -97,7 +96,7 @@ Central table. Every other table references it.
 |---|---|---|
 | `user_id` | `UUID` | **PK** |
 | `user_name` | `VARCHAR(50)` | **UNIQUE** |
-| `hashed_passwd` | `TEXT` | |
+| `hashed_passwd` | `TEXT` | nullable — required when `signup_type = 'email'` (enforced by CHECK) |
 | `signup_type` | `signup_type` | `email`, `google`, `github` |
 | `display_name` | `VARCHAR(100)` | nullable |
 | `avatar_url` | `TEXT` | nullable |
@@ -115,7 +114,7 @@ Tracks friend relationships. The primary key is `(user1_userid, user2_userid)`. 
 | `user1_userid` | `UUID` | **PK, FK** → `users.user_id` |
 | `user2_userid` | `UUID` | **PK, FK** → `users.user_id` |
 | `initiator_userid` | `UUID` | **FK** → `users.user_id` |
-| `status` | `friendship_status` | `pending`, `accepted`, `rejected` |
+| `status` | `friendship_status` | `pending`, `accepted` |
 | `created_at` | `TIMESTAMPTZ` | |
 | `updated_at` | `TIMESTAMPTZ` | |
 
@@ -153,7 +152,7 @@ Join table linking users to the conversations they belong to. Tracks each member
 | `conversation_id` | `BIGINT` | **PK, FK** → `conversations.id` (CASCADE) |
 | `user_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
 | `role` | `member_role` | `member`, `admin`, `owner` — default `member` |
-| `last_read_message_id` | `BIGINT` | **FK** → `messages.id` (SET NULL) — tracks read position |
+| `last_read_message_id` | `BIGINT` | `NOT NULL DEFAULT 0` — ID of the last message read by this member |
 | `joined_at` | `TIMESTAMPTZ` | |
 
 ---
@@ -184,7 +183,7 @@ Notifies a user of an event.
 |---|---|---|
 | `id` | `BIGSERIAL` | **PK** |
 | `user_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
-| `sender_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
+| `sender_id` | `UUID` | **FK** → `users.user_id` (SET NULL) — nullable |
 | `type` | `notification_type` | `message`, `friend_request` |
 | `message` | `TEXT` | |
 | `is_read` | `BOOLEAN` | default `false` |
@@ -201,7 +200,6 @@ Notifies a user of an event.
 | `users` | `friendships` | `initiator_userid` | one-to-many |
 | `users` | `conversation_members` | `user_id` | one-to-many |
 | `conversations` | `conversation_members` | `conversation_id` | one-to-many |
-| `messages` | `conversation_members` | `last_read_message_id` | one-to-many |
 | `conversations` | `messages` | `conversation_id` | one-to-many |
 | `users` | `messages` | `sender_id` | one-to-many |
 | `messages` | `messages` | `reply_to_message_id` | one-to-many (self) |

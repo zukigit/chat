@@ -5,17 +5,18 @@ CREATE TYPE signup_type AS ENUM ('email', 'google', 'github');
 CREATE TABLE IF NOT EXISTS users (
     user_id       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     user_name     VARCHAR(50)  NOT NULL UNIQUE,
-    hashed_passwd TEXT         NOT NULL,
+    hashed_passwd TEXT,
     signup_type   signup_type  NOT NULL DEFAULT 'email',
     display_name  VARCHAR(100),
     avatar_url    TEXT,
     last_seen_at  TIMESTAMPTZ,
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    CHECK (signup_type != 'email' OR hashed_passwd IS NOT NULL)
 );
 
 -- ── Friendships ────────────────────────────────────────────────────────────────
-CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'rejected');
+CREATE TYPE friendship_status AS ENUM ('pending', 'accepted');
 
 CREATE TABLE IF NOT EXISTS friendships (
     user1_userid      UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS conversation_members (
     conversation_id      BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     user_id              UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
     role                 member_role NOT NULL DEFAULT 'member',
-    last_read_message_id BIGINT      REFERENCES messages(id) ON DELETE SET NULL,
+    last_read_message_id BIGINT NOT NULL DEFAULT 0,
     joined_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (conversation_id, user_id)
 );
@@ -81,7 +82,7 @@ CREATE TYPE notification_type AS ENUM ('message', 'friend_request');
 CREATE TABLE IF NOT EXISTS notifications (
     id               BIGSERIAL         PRIMARY KEY,
     user_id          UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    sender_id        UUID              NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    sender_id        UUID              REFERENCES users(user_id) ON DELETE SET NULL,
     type             notification_type NOT NULL,
     message          TEXT              NOT NULL,
     is_read          BOOLEAN           NOT NULL DEFAULT FALSE,
