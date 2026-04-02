@@ -36,6 +36,8 @@ erDiagram
     conversation_members {
         bigint conversation_id PK_FK
         uuid user_id PK_FK
+        member_role role
+        bigint last_read_message_id FK
         timestamptz joined_at
     }
 
@@ -43,6 +45,7 @@ erDiagram
         bigserial id PK
         bigint conversation_id FK
         uuid sender_id FK
+        bigint reply_to_message_id FK
         text content
         message_type message_type
         text media_url
@@ -50,12 +53,6 @@ erDiagram
         timestamptz deleted_at
         timestamptz created_at
         timestamptz updated_at
-    }
-
-    message_reads {
-        bigint message_id PK_FK
-        uuid user_id PK_FK
-        timestamptz read_at
     }
 
     notifications {
@@ -83,8 +80,8 @@ erDiagram
     users ||--o{ dm_peers : "dm peer (user2_id)"
     conversations ||--o{ messages : "contains (conversation_id)"
     users ||--o{ messages : "sends (sender_id)"
-    messages ||--o{ message_reads : "read receipts"
-    users ||--o{ message_reads : "reads (user_id)"
+    messages ||--o{ messages : "reply (reply_to_message_id)"
+    messages ||--o{ conversation_members : "last read (last_read_message_id)"
     users ||--o{ notifications : "notified (user_id)"
     users ||--o{ notifications : "sends (sender_id)"
 ```
@@ -149,24 +146,27 @@ Fast lookup table for DM conversations. Maps a canonical user pair to a `convers
 ---
 
 ### `conversation_members`
-Join table linking users to the conversations they belong to.
+Join table linking users to the conversations they belong to. Tracks each member's role and read position.
 
 | Column | Type | Notes |
 |---|---|---|
 | `conversation_id` | `BIGINT` | **PK, FK** → `conversations.id` (CASCADE) |
 | `user_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
+| `role` | `member_role` | `member`, `admin`, `owner` — default `member` |
+| `last_read_message_id` | `BIGINT` | **FK** → `messages.id` (SET NULL) — tracks read position |
 | `joined_at` | `TIMESTAMPTZ` | |
 
 ---
 
 ### `messages`
-Stores messages within a conversation. Supports soft-delete via `deleted_at`.
+Stores messages within a conversation. Supports soft-delete via `deleted_at` and threaded replies via `reply_to_message_id`.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` | **PK** |
 | `conversation_id` | `BIGINT` | **FK** → `conversations.id` (CASCADE) |
 | `sender_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
+| `reply_to_message_id` | `BIGINT` | **FK** → `messages.id` (SET NULL) — nullable |
 | `content` | `TEXT` | |
 | `message_type` | `message_type` | `text`, `image`, `file`, `audio` |
 | `media_url` | `TEXT` | nullable — S3/CDN URL for non-text messages |
@@ -174,17 +174,6 @@ Stores messages within a conversation. Supports soft-delete via `deleted_at`.
 | `deleted_at` | `TIMESTAMPTZ` | nullable — `NULL` = not deleted (soft delete) |
 | `created_at` | `TIMESTAMPTZ` | |
 | `updated_at` | `TIMESTAMPTZ` | |
-
----
-
-### `message_reads`
-Per-user read receipts. One row per `(message, user)` pair.
-
-| Column | Type | Notes |
-|---|---|---|
-| `message_id` | `BIGINT` | **PK, FK** → `messages.id` (CASCADE) |
-| `user_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
-| `read_at` | `TIMESTAMPTZ` | |
 
 ---
 
@@ -212,10 +201,10 @@ Notifies a user of an event.
 | `users` | `friendships` | `initiator_userid` | one-to-many |
 | `users` | `conversation_members` | `user_id` | one-to-many |
 | `conversations` | `conversation_members` | `conversation_id` | one-to-many |
+| `messages` | `conversation_members` | `last_read_message_id` | one-to-many |
 | `conversations` | `messages` | `conversation_id` | one-to-many |
 | `users` | `messages` | `sender_id` | one-to-many |
-| `messages` | `message_reads` | `message_id` | one-to-many |
-| `users` | `message_reads` | `user_id` | one-to-many |
+| `messages` | `messages` | `reply_to_message_id` | one-to-many (self) |
 | `users` | `notifications` | `user_id` | one-to-many |
 | `users` | `notifications` | `sender_id` | one-to-many |
 
@@ -229,8 +218,8 @@ Notifies a user of an event.
 | `idx_conv_members_user` | `conversation_members` | `user_id` | Look up all conversations a user belongs to |
 | `idx_messages_conv_time` | `messages` | `(conversation_id, created_at ASC)` | Primary read pattern — messages in a conversation ordered by time |
 | `idx_messages_conv_not_deleted` | `messages` | `(conversation_id, created_at ASC) WHERE deleted_at IS NULL` | Efficiently exclude soft-deleted rows |
-| `idx_message_reads_user` | `message_reads` | `(user_id, message_id)` | Check which messages a user has read |
 | `idx_notifications_user_read_time` | `notifications` | `(user_id, is_read, created_at DESC)` | User inbox sorted by time, filterable by read status |
 | `idx_friendships_user1_status` | `friendships` | `(user1_userid, status)` | Accepted friends lookup per user |
 | `idx_friendships_user2_status` | `friendships` | `(user2_userid, status)` | Accepted friends lookup per user (other side) |
 | `idx_friendships_user2_status_time` | `friendships` | `(user2_userid, status, created_at DESC)` | Pending incoming friend requests |
+| `idx_friendships_initiator` | `friendships` | `initiator_userid` | Look up friendships by initiator |
