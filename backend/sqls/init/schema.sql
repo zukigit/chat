@@ -38,10 +38,31 @@ CREATE TABLE IF NOT EXISTS conversations (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ── Messages ───────────────────────────────────────────────────────────────────
+CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'audio');
+
+CREATE TABLE IF NOT EXISTS messages (
+    id                  BIGSERIAL    PRIMARY KEY,
+    conversation_id     BIGINT       NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id           UUID         NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
+    reply_to_message_id BIGINT       REFERENCES messages(id) ON DELETE SET NULL,
+    content             TEXT         NOT NULL,
+    message_type        message_type NOT NULL DEFAULT 'text',
+    media_url           TEXT,                     -- S3/CDN URL for non-text messages
+    is_edited           BOOLEAN      NOT NULL DEFAULT FALSE,
+    deleted_at          TIMESTAMPTZ,              -- NULL = not deleted (soft delete)
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE TYPE member_role AS ENUM ('member', 'admin', 'owner');
+
 CREATE TABLE IF NOT EXISTS conversation_members (
-    conversation_id BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    user_id         UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
-    joined_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    conversation_id      BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id              UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
+    role                 member_role NOT NULL DEFAULT 'member',
+    last_read_message_id BIGINT      REFERENCES messages(id) ON DELETE SET NULL,
+    joined_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (conversation_id, user_id)
 );
 
@@ -52,30 +73,6 @@ CREATE TABLE IF NOT EXISTS dm_peers (
     CHECK (user1_id < user2_id),
     PRIMARY KEY (user1_id, user2_id),
     UNIQUE (conversation_id)
-);
-
--- ── Messages ───────────────────────────────────────────────────────────────────
-CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'audio');
-
-CREATE TABLE IF NOT EXISTS messages (
-    id              BIGSERIAL    PRIMARY KEY,
-    conversation_id BIGINT       NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    sender_id       UUID         NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
-    content         TEXT         NOT NULL,
-    message_type    message_type NOT NULL DEFAULT 'text',
-    media_url       TEXT,                     -- S3/CDN URL for non-text messages
-    is_edited       BOOLEAN      NOT NULL DEFAULT FALSE,
-    deleted_at      TIMESTAMPTZ,              -- NULL = not deleted (soft delete)
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
--- ── Message reads (per-user read receipts) ─────────────────────────────────────
-CREATE TABLE IF NOT EXISTS message_reads (
-    message_id    BIGINT      NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    user_id       UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    read_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (message_id, user_id)
 );
 
 -- ── Notifications ──────────────────────────────────────────────────────────────
@@ -123,10 +120,6 @@ CREATE INDEX IF NOT EXISTS idx_messages_conv_not_deleted
     ON messages (conversation_id, created_at ASC)
     WHERE deleted_at IS NULL;
 
--- message_reads: check which messages a user has read
-CREATE INDEX IF NOT EXISTS idx_message_reads_user
-    ON message_reads (user_id, message_id);
-
 -- notifications: user inbox sorted by time, filterable by is_read
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read_time
     ON notifications (user_id, is_read, created_at DESC);
@@ -141,6 +134,10 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user2_status
 -- friendships: pending incoming requests
 CREATE INDEX IF NOT EXISTS idx_friendships_user2_status_time
     ON friendships (user2_userid, status, created_at DESC);
+
+-- friendships: lookup by initiator
+CREATE INDEX IF NOT EXISTS idx_friendships_initiator
+    ON friendships (initiator_userid);
 
 -- sessions: lookup by user and type
 CREATE INDEX IF NOT EXISTS idx_sessions_user_type
