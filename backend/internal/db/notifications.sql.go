@@ -19,7 +19,7 @@ RETURNING id, user_id, sender_id, type, message, is_read, created_at
 
 type CreateNotificationParams struct {
 	UserID   uuid.UUID        `json:"user_id"`
-	SenderID uuid.UUID        `json:"sender_id"`
+	SenderID uuid.NullUUID    `json:"sender_id"`
 	Type     NotificationType `json:"type"`
 	Message  string           `json:"message"`
 }

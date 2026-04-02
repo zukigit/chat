@@ -14,15 +14,11 @@ WHERE  user1_userid = $1
   AND  user2_userid = $2
 RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at;
 
--- name: ResetFriendRequest :one
--- Re-activates a previously rejected request as pending, updating the initiator.
-UPDATE friendships
-SET    status           = 'pending',
-       initiator_userid = $3,
-       updated_at       = NOW()
-WHERE  user1_userid = $1
-  AND  user2_userid = $2
-RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at;
+-- name: DeleteFriendship :exec
+-- Deletes the friendship row (used when a request is rejected).
+DELETE FROM friendships
+WHERE user1_userid = $1
+  AND user2_userid = $2;
 
 -- name: GetFriendship :one
 -- Always query with the lexicographically smaller UUID as $1.

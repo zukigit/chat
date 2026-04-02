@@ -92,7 +92,7 @@ func TestRejectFriendRequest(t *testing.T) {
 	}{
 		{"requester cannot reject own request", "alice", "bob", codes.PermissionDenied},
 		{"addressee rejects", "bob", "alice", codes.OK},
-		{"already rejected", "bob", "alice", codes.FailedPrecondition},
+		{"already rejected", "bob", "alice", codes.NotFound},
 	}
 
 	for _, tc := range cases {
@@ -171,7 +171,7 @@ func TestFriendshipStateTransitions(t *testing.T) {
 				_, err := fs.AcceptFriendRequest(ctxWithUser("bob", ids["bob"]), &pb.FriendRequest{TargetUsername: "alice"})
 				return grpcCode(err)
 			},
-			wantErr: codes.FailedPrecondition,
+			wantErr: codes.NotFound,
 		},
 		{
 			name:  "accept after acceptance",
@@ -189,7 +189,7 @@ func TestFriendshipStateTransitions(t *testing.T) {
 				_, err := fs.RejectFriendRequest(ctxWithUser("bob", ids["bob"]), &pb.FriendRequest{TargetUsername: "alice"})
 				return grpcCode(err)
 			},
-			wantErr: codes.FailedPrecondition,
+			wantErr: codes.NotFound,
 		},
 		{
 			name:  "reject after acceptance",

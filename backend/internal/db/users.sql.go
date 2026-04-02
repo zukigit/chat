@@ -19,9 +19,9 @@ RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_u
 `
 
 type CreateUserParams struct {
-	UserName     string     `json:"user_name"`
-	HashedPasswd string     `json:"hashed_passwd"`
-	SignupType   SignupType `json:"signup_type"`
+	UserName     string         `json:"user_name"`
+	HashedPasswd sql.NullString `json:"hashed_passwd"`
+	SignupType   SignupType     `json:"signup_type"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {

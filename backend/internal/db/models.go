@@ -18,7 +18,6 @@ type FriendshipStatus string
 const (
 	FriendshipStatusPending  FriendshipStatus = "pending"
 	FriendshipStatusAccepted FriendshipStatus = "accepted"
-	FriendshipStatusRejected FriendshipStatus = "rejected"
 )
 
 func (e *FriendshipStatus) Scan(src interface{}) error {
@@ -54,6 +53,49 @@ func (ns NullFriendshipStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.FriendshipStatus), nil
+}
+
+type MemberRole string
+
+const (
+	MemberRoleMember MemberRole = "member"
+	MemberRoleAdmin  MemberRole = "admin"
+	MemberRoleOwner  MemberRole = "owner"
+)
+
+func (e *MemberRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MemberRole(s)
+	case string:
+		*e = MemberRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MemberRole: %T", src)
+	}
+	return nil
+}
+
+type NullMemberRole struct {
+	MemberRole MemberRole `json:"member_role"`
+	Valid      bool       `json:"valid"` // Valid is true if MemberRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMemberRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.MemberRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MemberRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMemberRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MemberRole), nil
 }
 
 type MessageType string
@@ -280,9 +322,17 @@ type Conversation struct {
 }
 
 type ConversationMember struct {
+	ConversationID    int64      `json:"conversation_id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	Role              MemberRole `json:"role"`
+	LastReadMessageID int64      `json:"last_read_message_id"`
+	JoinedAt          time.Time  `json:"joined_at"`
+}
+
+type DmPeer struct {
+	User1ID        uuid.UUID `json:"user1_id"`
+	User2ID        uuid.UUID `json:"user2_id"`
 	ConversationID int64     `json:"conversation_id"`
-	UserID         uuid.UUID `json:"user_id"`
-	JoinedAt       time.Time `json:"joined_at"`
 }
 
 type Friendship struct {
@@ -295,28 +345,23 @@ type Friendship struct {
 }
 
 type Message struct {
-	ID             int64          `json:"id"`
-	ConversationID int64          `json:"conversation_id"`
-	SenderID       uuid.UUID      `json:"sender_id"`
-	Content        string         `json:"content"`
-	MessageType    MessageType    `json:"message_type"`
-	MediaUrl       sql.NullString `json:"media_url"`
-	IsEdited       bool           `json:"is_edited"`
-	DeletedAt      sql.NullTime   `json:"deleted_at"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-}
-
-type MessageRead struct {
-	MessageID int64     `json:"message_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	ReadAt    time.Time `json:"read_at"`
+	ID               int64          `json:"id"`
+	ConversationID   int64          `json:"conversation_id"`
+	SenderID         uuid.UUID      `json:"sender_id"`
+	ReplyToMessageID sql.NullInt64  `json:"reply_to_message_id"`
+	Content          string         `json:"content"`
+	MessageType      MessageType    `json:"message_type"`
+	MediaUrl         sql.NullString `json:"media_url"`
+	IsEdited         bool           `json:"is_edited"`
+	DeletedAt        sql.NullTime   `json:"deleted_at"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 type Notification struct {
 	ID        int64            `json:"id"`
 	UserID    uuid.UUID        `json:"user_id"`
-	SenderID  uuid.UUID        `json:"sender_id"`
+	SenderID  uuid.NullUUID    `json:"sender_id"`
 	Type      NotificationType `json:"type"`
 	Message   string           `json:"message"`
 	IsRead    bool             `json:"is_read"`
@@ -336,7 +381,7 @@ type Session struct {
 type User struct {
 	UserID       uuid.UUID      `json:"user_id"`
 	UserName     string         `json:"user_name"`
-	HashedPasswd string         `json:"hashed_passwd"`
+	HashedPasswd sql.NullString `json:"hashed_passwd"`
 	SignupType   SignupType     `json:"signup_type"`
 	DisplayName  sql.NullString `json:"display_name"`
 	AvatarUrl    sql.NullString `json:"avatar_url"`

@@ -12,6 +12,23 @@ import (
 	"github.com/google/uuid"
 )
 
+const deleteFriendship = `-- name: DeleteFriendship :exec
+DELETE FROM friendships
+WHERE user1_userid = $1
+  AND user2_userid = $2
+`
+
+type DeleteFriendshipParams struct {
+	User1Userid uuid.UUID `json:"user1_userid"`
+	User2Userid uuid.UUID `json:"user2_userid"`
+}
+
+// Deletes the friendship row (used when a request is rejected).
+func (q *Queries) DeleteFriendship(ctx context.Context, arg DeleteFriendshipParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFriendship, arg.User1Userid, arg.User2Userid)
+	return err
+}
+
 const getFriends = `-- name: GetFriends :many
 SELECT
     CASE
@@ -136,37 +153,6 @@ func (q *Queries) GetPendingRequests(ctx context.Context, user2Userid uuid.UUID)
 		return nil, err
 	}
 	return items, nil
-}
-
-const resetFriendRequest = `-- name: ResetFriendRequest :one
-UPDATE friendships
-SET    status           = 'pending',
-       initiator_userid = $3,
-       updated_at       = NOW()
-WHERE  user1_userid = $1
-  AND  user2_userid = $2
-RETURNING user1_userid, user2_userid, initiator_userid, status, created_at, updated_at
-`
-
-type ResetFriendRequestParams struct {
-	User1Userid     uuid.UUID `json:"user1_userid"`
-	User2Userid     uuid.UUID `json:"user2_userid"`
-	InitiatorUserid uuid.UUID `json:"initiator_userid"`
-}
-
-// Re-activates a previously rejected request as pending, updating the initiator.
-func (q *Queries) ResetFriendRequest(ctx context.Context, arg ResetFriendRequestParams) (Friendship, error) {
-	row := q.db.QueryRowContext(ctx, resetFriendRequest, arg.User1Userid, arg.User2Userid, arg.InitiatorUserid)
-	var i Friendship
-	err := row.Scan(
-		&i.User1Userid,
-		&i.User2Userid,
-		&i.InitiatorUserid,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const sendFriendRequest = `-- name: SendFriendRequest :one

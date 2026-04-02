@@ -52,8 +52,11 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
-	// Verify password
-	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPasswd), []byte(req.Passwd))
+	// Verify password — reject OAuth accounts that have no password set.
+	if !user.HashedPasswd.Valid {
+		return nil, status.Error(codes.Unauthenticated, "invalid username or password")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPasswd.String), []byte(req.Passwd))
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "invalid username or password")
 	}
@@ -109,7 +112,7 @@ func (s *AuthServer) Signup(ctx context.Context, req *auth.SignupRequest) (*auth
 
 	_, err = queries.CreateUser(ctx, db.CreateUserParams{
 		UserName:     req.UserName,
-		HashedPasswd: string(hashedPasswd),
+		HashedPasswd: sql.NullString{String: string(hashedPasswd), Valid: true},
 		SignupType:   db.SignupTypeEmail,
 	})
 	if err != nil {

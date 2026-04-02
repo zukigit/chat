@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/services"
 	pb "github.com/zukigit/chat/backend/proto/notification"
@@ -19,10 +20,13 @@ func TestMarkNotificationRead(t *testing.T) {
 
 	// Create a notification from alice to bob for use in test cases.
 	notification, err := db.New(sqlDB).CreateNotification(context.Background(), db.CreateNotificationParams{
-		UserID:   ids["bob"],
-		SenderID: ids["alice"],
-		Type:     db.NotificationTypeFriendRequest,
-		Message:  "alice sent you a friend request",
+		UserID: ids["bob"],
+		SenderID: uuid.NullUUID{
+			UUID:  ids["alice"],
+			Valid: true,
+		},
+		Type:    db.NotificationTypeFriendRequest,
+		Message: "alice sent you a friend request",
 	})
 	if err != nil {
 		t.Fatalf("setup: CreateNotification: %v", err)

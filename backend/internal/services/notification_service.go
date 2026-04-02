@@ -44,7 +44,7 @@ func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, recipientI
 
 	notification, err := q.CreateNotification(ctx, db.CreateNotificationParams{
 		UserID:   recipientID,
-		SenderID: senderID,
+		SenderID: uuid.NullUUID{UUID: senderID, Valid: true},
 		Type:     notifType,
 		Message:  message,
 	})

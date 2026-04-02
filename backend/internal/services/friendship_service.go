@@ -79,15 +79,6 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		}
 	case err != nil:
 		return nil, status.Errorf(codes.Internal, "SendFriendRequest: get friendship: %v", err)
-	case existing.Status == db.FriendshipStatusRejected:
-		// Previous request was rejected — allow re-sending by resetting to pending.
-		doWrite = func(qt *db.Queries) (db.Friendship, error) {
-			return qt.ResetFriendRequest(ctx, db.ResetFriendRequestParams{
-				User1Userid:     first,
-				User2Userid:     second,
-				InitiatorUserid: callerID,
-			})
-		}
 	default:
 		return nil, status.Errorf(codes.AlreadyExists, "friend request already exists with status: %s", existing.Status)
 	}
@@ -115,15 +106,77 @@ func (s *FriendshipServer) AcceptFriendRequest(ctx context.Context, req *pb.Frie
 	return s.respondToRequest(ctx, req, db.FriendshipStatusAccepted)
 }
 
-// RejectFriendRequest rejects a pending friend request from target_username.
-// Only the addressee may reject it.
+// RejectFriendRequest rejects a pending friend request from target_username
+// by deleting the friendship record.
 func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.FriendRequest) (*pb.FriendResponse, error) {
-	return s.respondToRequest(ctx, req, db.FriendshipStatusRejected)
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	target := req.GetTargetUsername()
+
+	if target == "" {
+		return nil, status.Error(codes.InvalidArgument, "target_username is required")
+	}
+
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		lib.ErrorLog.Printf("RejectFriendRequest: begin tx: %v", err)
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+	defer tx.Rollback()
+
+	q := db.New(tx)
+
+	targetUser, err := q.GetUserByUsername(ctx, target)
+	if err == sql.ErrNoRows {
+		return nil, status.Errorf(codes.InvalidArgument, "user %q not found", target)
+	}
+	if err != nil {
+		lib.ErrorLog.Printf("RejectFriendRequest: get target user: %v", err)
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+	targetID := targetUser.UserID
+
+	first, second := lib.OrderedUUIDPair(callerID, targetID)
+
+	existing, err := q.GetFriendship(ctx, db.GetFriendshipParams{
+		User1Userid: first,
+		User2Userid: second,
+	})
+	if err == sql.ErrNoRows {
+		return nil, status.Error(codes.NotFound, "friend request not found")
+	}
+	if err != nil {
+		lib.ErrorLog.Printf("RejectFriendRequest: get friendship: %v", err)
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
+	if existing.Status != db.FriendshipStatusPending {
+		return nil, status.Error(codes.FailedPrecondition, "friend request is not pending")
+	}
+
+	if callerID == existing.InitiatorUserid {
+		return nil, status.Error(codes.PermissionDenied, "only the recipient can respond to a friend request")
+	}
+
+	if err := q.DeleteFriendship(ctx, db.DeleteFriendshipParams{
+		User1Userid: first,
+		User2Userid: second,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "RejectFriendRequest: delete: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, status.Errorf(codes.Internal, "RejectFriendRequest: commit: %v", err)
+	}
+
+	return &pb.FriendResponse{Status: "rejected"}, nil
 }
 
-// respondToRequest is shared logic for Accept and Reject: it finds the pending
-// friendship, verifies that the caller is the addressee, updates the status,
-// and (on accept) notifies the original requester.
+// respondToRequest is the shared logic for AcceptFriendRequest: it finds the
+// pending friendship, verifies the caller is the addressee, updates status to
+// accepted, and notifies the original requester.
 func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendRequest, newStatus db.FriendshipStatus) (*pb.FriendResponse, error) {
 	callerID, err := lib.CallerUUID(ctx)
 	if err != nil {
@@ -187,11 +240,9 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 		return nil, status.Errorf(codes.Internal, "respondToRequest: update status: %v", err)
 	}
 
-	// On accept: notify the original requester that their request was accepted.
-	if newStatus == db.FriendshipStatusAccepted {
-		if err := s.notif.Send(ctx, q, targetID, callerID, db.NotificationTypeFriendRequest, callerName+" accepted your friend request"); err != nil {
-			return nil, status.Errorf(codes.Internal, "respondToRequest: create notification: %v", err)
-		}
+	// Notify the original requester that their request was accepted.
+	if err := s.notif.Send(ctx, q, targetID, callerID, db.NotificationTypeFriendRequest, callerName+" accepted your friend request"); err != nil {
+		return nil, status.Errorf(codes.Internal, "respondToRequest: create notification: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {

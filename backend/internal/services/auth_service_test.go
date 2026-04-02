@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/zukigit/chat/backend/internal/db"
@@ -19,9 +20,12 @@ func TestLogin(t *testing.T) {
 	}
 
 	_, err = q.CreateUser(t.Context(), db.CreateUserParams{
-		UserName:     "test",
-		HashedPasswd: string(hashPassword),
-		SignupType:   db.SignupTypeEmail,
+		UserName: "test",
+		HashedPasswd: sql.NullString{
+			String: string(hashPassword),
+			Valid:  true,
+		},
+		SignupType: db.SignupTypeEmail,
 	})
 	if err != nil {
 		t.Fatalf("failed to create user: %v", err)

@@ -24,9 +24,15 @@ type AddMemberToConversationParams struct {
 	UserID         uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) AddMemberToConversation(ctx context.Context, arg AddMemberToConversationParams) (ConversationMember, error) {
+type AddMemberToConversationRow struct {
+	ConversationID int64     `json:"conversation_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	JoinedAt       time.Time `json:"joined_at"`
+}
+
+func (q *Queries) AddMemberToConversation(ctx context.Context, arg AddMemberToConversationParams) (AddMemberToConversationRow, error) {
 	row := q.db.QueryRowContext(ctx, addMemberToConversation, arg.ConversationID, arg.UserID)
-	var i ConversationMember
+	var i AddMemberToConversationRow
 	err := row.Scan(&i.ConversationID, &i.UserID, &i.JoinedAt)
 	return i, err
 }

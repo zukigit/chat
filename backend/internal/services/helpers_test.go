@@ -91,9 +91,12 @@ func createTestUsers(t *testing.T, sqlDB *sql.DB, usernames ...string) map[strin
 	ids := make(map[string]uuid.UUID, len(usernames))
 	for _, username := range usernames {
 		u, err := q.CreateUser(t.Context(), db.CreateUserParams{
-			UserName:     username,
-			HashedPasswd: string(hashed),
-			SignupType:   db.SignupTypeEmail,
+			UserName: username,
+			HashedPasswd: sql.NullString{
+				Valid:  true,
+				String: string(hashed),
+			},
+			SignupType: db.SignupTypeEmail,
 		})
 		if err != nil {
 			t.Fatalf("createTestUsers: create %q: %v", username, err)

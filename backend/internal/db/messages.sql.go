@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -27,9 +28,22 @@ type EditMessageParams struct {
 	Content string `json:"content"`
 }
 
-func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Message, error) {
+type EditMessageRow struct {
+	ID             int64          `json:"id"`
+	ConversationID int64          `json:"conversation_id"`
+	SenderID       uuid.UUID      `json:"sender_id"`
+	Content        string         `json:"content"`
+	MessageType    MessageType    `json:"message_type"`
+	MediaUrl       sql.NullString `json:"media_url"`
+	IsEdited       bool           `json:"is_edited"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (EditMessageRow, error) {
 	row := q.db.QueryRowContext(ctx, editMessage, arg.ID, arg.Content)
-	var i Message
+	var i EditMessageRow
 	err := row.Scan(
 		&i.ID,
 		&i.ConversationID,
@@ -60,16 +74,29 @@ type GetConversationMessagesParams struct {
 	Offset         int32 `json:"offset"`
 }
 
+type GetConversationMessagesRow struct {
+	ID             int64          `json:"id"`
+	ConversationID int64          `json:"conversation_id"`
+	SenderID       uuid.UUID      `json:"sender_id"`
+	Content        string         `json:"content"`
+	MessageType    MessageType    `json:"message_type"`
+	MediaUrl       sql.NullString `json:"media_url"`
+	IsEdited       bool           `json:"is_edited"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
 // Returns non-deleted messages in a conversation, oldest first, with pagination.
-func (q *Queries) GetConversationMessages(ctx context.Context, arg GetConversationMessagesParams) ([]Message, error) {
+func (q *Queries) GetConversationMessages(ctx context.Context, arg GetConversationMessagesParams) ([]GetConversationMessagesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getConversationMessages, arg.ConversationID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []GetConversationMessagesRow
 	for rows.Next() {
-		var i Message
+		var i GetConversationMessagesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ConversationID,
@@ -109,7 +136,20 @@ type SendMessageParams struct {
 	MediaUrl       sql.NullString `json:"media_url"`
 }
 
-func (q *Queries) SendMessage(ctx context.Context, arg SendMessageParams) (Message, error) {
+type SendMessageRow struct {
+	ID             int64          `json:"id"`
+	ConversationID int64          `json:"conversation_id"`
+	SenderID       uuid.UUID      `json:"sender_id"`
+	Content        string         `json:"content"`
+	MessageType    MessageType    `json:"message_type"`
+	MediaUrl       sql.NullString `json:"media_url"`
+	IsEdited       bool           `json:"is_edited"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) SendMessage(ctx context.Context, arg SendMessageParams) (SendMessageRow, error) {
 	row := q.db.QueryRowContext(ctx, sendMessage,
 		arg.ConversationID,
 		arg.SenderID,
@@ -117,7 +157,7 @@ func (q *Queries) SendMessage(ctx context.Context, arg SendMessageParams) (Messa
 		arg.MessageType,
 		arg.MediaUrl,
 	)
-	var i Message
+	var i SendMessageRow
 	err := row.Scan(
 		&i.ID,
 		&i.ConversationID,
@@ -141,9 +181,22 @@ WHERE id = $1
 RETURNING id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
 `
 
-func (q *Queries) SoftDeleteMessage(ctx context.Context, id int64) (Message, error) {
+type SoftDeleteMessageRow struct {
+	ID             int64          `json:"id"`
+	ConversationID int64          `json:"conversation_id"`
+	SenderID       uuid.UUID      `json:"sender_id"`
+	Content        string         `json:"content"`
+	MessageType    MessageType    `json:"message_type"`
+	MediaUrl       sql.NullString `json:"media_url"`
+	IsEdited       bool           `json:"is_edited"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) SoftDeleteMessage(ctx context.Context, id int64) (SoftDeleteMessageRow, error) {
 	row := q.db.QueryRowContext(ctx, softDeleteMessage, id)
-	var i Message
+	var i SoftDeleteMessageRow
 	err := row.Scan(
 		&i.ID,
 		&i.ConversationID,
