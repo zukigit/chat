@@ -45,6 +45,15 @@ CREATE TABLE IF NOT EXISTS conversation_members (
     PRIMARY KEY (conversation_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS dm_peers (
+    user1_id        UUID   NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    user2_id        UUID   NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    conversation_id BIGINT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    CHECK (user1_id < user2_id),
+    PRIMARY KEY (user1_id, user2_id),
+    UNIQUE (conversation_id)
+);
+
 -- ── Messages ───────────────────────────────────────────────────────────────────
 CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'audio');
 

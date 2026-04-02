@@ -71,7 +71,16 @@ erDiagram
     users ||--o{ friendships : "requests (user1_userid)"
     users ||--o{ friendships : "receives (user2_userid)"
     users ||--o{ conversation_members : "joins (user_id)"
+    dm_peers {
+        uuid user1_id PK_FK
+        uuid user2_id PK_FK
+        bigint conversation_id FK
+    }
+
     conversations ||--o{ conversation_members : "has members"
+    conversations ||--|| dm_peers : "dm lookup (conversation_id)"
+    users ||--o{ dm_peers : "dm peer (user1_id)"
+    users ||--o{ dm_peers : "dm peer (user2_id)"
     conversations ||--o{ messages : "contains (conversation_id)"
     users ||--o{ messages : "sends (sender_id)"
     messages ||--o{ message_reads : "read receipts"
@@ -125,6 +134,17 @@ A conversation is either a direct message (DM) or a group chat.
 | `name` | `TEXT` | nullable — `NULL` for DMs, required for groups |
 | `created_at` | `TIMESTAMPTZ` | |
 | `updated_at` | `TIMESTAMPTZ` | |
+
+---
+
+### `dm_peers`
+Fast lookup table for DM conversations. Maps a canonical user pair to a `conversation_id`. Only exists for DMs (`is_group = false`). The `CHECK (user1_id < user2_id)` enforces canonical ordering so each pair has exactly one row.
+
+| Column | Type | Notes |
+|---|---|---|
+| `user1_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
+| `user2_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
+| `conversation_id` | `BIGINT` | **FK, UNIQUE** → `conversations.id` (CASCADE) |
 
 ---
 
