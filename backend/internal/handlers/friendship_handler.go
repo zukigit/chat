@@ -5,25 +5,19 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// friendshipClientInterface is the minimal interface FriendshipHandler needs.
-type friendshipClientInterface interface {
-	SendFriendRequest(ctx context.Context, token, targetUsername string) error
-	AcceptFriendRequest(ctx context.Context, token, targetUsername string) error
-	RejectFriendRequest(ctx context.Context, token, targetUsername string) error
-}
-
 // FriendshipHandler holds dependencies for friendship-related HTTP handlers.
 type FriendshipHandler struct {
-	client friendshipClientInterface
+	client *clients.FriendshipClient
 }
 
 // NewFriendshipHandler creates a FriendshipHandler with the given gRPC client.
-func NewFriendshipHandler(client friendshipClientInterface) *FriendshipHandler {
+func NewFriendshipHandler(client *clients.FriendshipClient) *FriendshipHandler {
 	return &FriendshipHandler{client: client}
 }
 

@@ -1,29 +1,22 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// authClientInterface is the minimal interface AuthHandler needs.
-// The concrete *clients.AuthClient satisfies it automatically.
-type authClientInterface interface {
-	Login(ctx context.Context, username, password string) (string, error)
-	Signup(ctx context.Context, username, password string) error
-}
-
 // AuthHandler holds dependencies for auth-related HTTP handlers.
 type AuthHandler struct {
-	authClient authClientInterface
+	authClient *clients.AuthClient
 }
 
 // NewAuthHandler creates an AuthHandler with the given gRPC auth client.
-func NewAuthHandler(authClient authClientInterface) *AuthHandler {
+func NewAuthHandler(authClient *clients.AuthClient) *AuthHandler {
 	return &AuthHandler{authClient: authClient}
 }
 

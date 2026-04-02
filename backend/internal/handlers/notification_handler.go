@@ -1,28 +1,23 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// notificationClientInterface is the minimal interface NotificationHandler needs.
-type notificationClientInterface interface {
-	MarkNotificationRead(ctx context.Context, token, id string) error
-}
-
 // NotificationHandler holds dependencies for notification-related HTTP handlers.
 type NotificationHandler struct {
-	client notificationClientInterface
+	client *clients.NotificationClient
 }
 
 // NewNotificationHandler creates a NotificationHandler with the given gRPC client.
-func NewNotificationHandler(client notificationClientInterface) *NotificationHandler {
+func NewNotificationHandler(client *clients.NotificationClient) *NotificationHandler {
 	return &NotificationHandler{client: client}
 }
 

@@ -9,26 +9,19 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
-	pb "github.com/zukigit/chat/backend/proto/session"
 )
-
-// sessionClientInterface is the minimal interface SessionHandler needs.
-type sessionClientInterface interface {
-	AddSession(ctx context.Context, token, sessionType string) (*pb.AddSessionResponse, error)
-	SetSessionStatus(ctx context.Context, token, sessionID, status string) error
-	DeleteSession(ctx context.Context, token, sessionID string) error
-}
 
 // SessionHandler holds dependencies for session-related HTTP handlers.
 type SessionHandler struct {
-	client sessionClientInterface
+	client *clients.SessionClient
 	stream jetstream.Stream
 }
 
 // NewSessionHandler creates a SessionHandler with the given gRPC client.
-func NewSessionHandler(client sessionClientInterface, stream jetstream.Stream) *SessionHandler {
+func NewSessionHandler(client *clients.SessionClient, stream jetstream.Stream) *SessionHandler {
 	return &SessionHandler{client: client, stream: stream}
 }
 
