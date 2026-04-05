@@ -45,12 +45,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		grpcStatus, _ := status.FromError(err)
 		switch grpcStatus.Code() {
-		case codes.AlreadyExists:
-			lib.WriteJSON(w, http.StatusConflict, lib.Response{
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
 				Success: false,
 				Message: grpcStatus.Message(),
 			})
-		case codes.NotFound, codes.Unauthenticated:
+		case codes.Unauthenticated:
 			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
 				Success: false,
 				Message: grpcStatus.Message(),
@@ -95,6 +95,11 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		lib.ErrorLog.Printf("Signup failed: %v", err)
 		grpcStatus, _ := status.FromError(err)
 		switch grpcStatus.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+				Success: false,
+				Message: grpcStatus.Message(),
+			})
 		case codes.AlreadyExists:
 			lib.WriteJSON(w, http.StatusConflict, lib.Response{
 				Success: false,

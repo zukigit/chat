@@ -12,6 +12,8 @@ import (
 	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // SessionHandler holds dependencies for session-related HTTP handlers.
@@ -40,10 +42,15 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 
 	addSessionResp, err := s.client.AddSession(r.Context(), token, string(db.SessionTypeNotification))
 	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to add session: %v", err),
-		})
+		st, _ := status.FromError(err)
+		switch st.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: st.Message()})
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: st.Message()})
+		}
 		return
 	}
 
@@ -119,10 +126,15 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	// Set session status to active
 	err = s.client.SetSessionStatus(context.Background(), token, addSessionResp.SessionId, string(db.SessionStatusActive))
 	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to set session status active: %v", err),
-		})
+		st, _ := status.FromError(err)
+		switch st.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: st.Message()})
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: st.Message()})
+		}
 		return
 	}
 
