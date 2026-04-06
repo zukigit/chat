@@ -4,14 +4,16 @@ package chat;
 
 option go_package = "proto/chat/";
 
-message SendMessageRequest {
-  string target_username = 1;
-  string message = 2;
+message CreateConversationRequest {
+  bool is_group = 1;
+  string name = 2;
+  repeated  string members_id = 3;
 }
 
-message SendMessageResponse {
+message CreateConversationResponse {
+  string conversation_id = 1;
 }
 
-service chat {
-  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+service Chat {
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
 }

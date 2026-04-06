@@ -33,3 +33,20 @@ WHERE cm.conversation_id = $1;
 DELETE FROM conversation_members
 WHERE conversation_id = $1
   AND user_id         = $2;
+
+-- name: AddMemberWithRole :one
+INSERT INTO conversation_members (conversation_id, user_id, role)
+VALUES ($1, $2, $3)
+RETURNING conversation_id, user_id, joined_at;
+
+-- name: GetDmPeer :one
+SELECT user1_id, user2_id, conversation_id
+FROM dm_peers
+WHERE user1_id = $1
+  AND user2_id = $2
+LIMIT 1;
+
+-- name: CreateDmPeer :one
+INSERT INTO dm_peers (user1_id, user2_id, conversation_id)
+VALUES ($1, $2, $3)
+RETURNING user1_id, user2_id, conversation_id;

@@ -37,6 +37,31 @@ func (q *Queries) AddMemberToConversation(ctx context.Context, arg AddMemberToCo
 	return i, err
 }
 
+const addMemberWithRole = `-- name: AddMemberWithRole :one
+INSERT INTO conversation_members (conversation_id, user_id, role)
+VALUES ($1, $2, $3)
+RETURNING conversation_id, user_id, joined_at
+`
+
+type AddMemberWithRoleParams struct {
+	ConversationID int64      `json:"conversation_id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	Role           MemberRole `json:"role"`
+}
+
+type AddMemberWithRoleRow struct {
+	ConversationID int64     `json:"conversation_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	JoinedAt       time.Time `json:"joined_at"`
+}
+
+func (q *Queries) AddMemberWithRole(ctx context.Context, arg AddMemberWithRoleParams) (AddMemberWithRoleRow, error) {
+	row := q.db.QueryRowContext(ctx, addMemberWithRole, arg.ConversationID, arg.UserID, arg.Role)
+	var i AddMemberWithRoleRow
+	err := row.Scan(&i.ConversationID, &i.UserID, &i.JoinedAt)
+	return i, err
+}
+
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (is_group, name)
 VALUES ($1, $2)
@@ -58,6 +83,25 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const createDmPeer = `-- name: CreateDmPeer :one
+INSERT INTO dm_peers (user1_id, user2_id, conversation_id)
+VALUES ($1, $2, $3)
+RETURNING user1_id, user2_id, conversation_id
+`
+
+type CreateDmPeerParams struct {
+	User1ID        uuid.UUID `json:"user1_id"`
+	User2ID        uuid.UUID `json:"user2_id"`
+	ConversationID int64     `json:"conversation_id"`
+}
+
+func (q *Queries) CreateDmPeer(ctx context.Context, arg CreateDmPeerParams) (DmPeer, error) {
+	row := q.db.QueryRowContext(ctx, createDmPeer, arg.User1ID, arg.User2ID, arg.ConversationID)
+	var i DmPeer
+	err := row.Scan(&i.User1ID, &i.User2ID, &i.ConversationID)
 	return i, err
 }
 
@@ -168,6 +212,26 @@ func (q *Queries) GetConversationsByUser(ctx context.Context, userID uuid.UUID) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const getDmPeer = `-- name: GetDmPeer :one
+SELECT user1_id, user2_id, conversation_id
+FROM dm_peers
+WHERE user1_id = $1
+  AND user2_id = $2
+LIMIT 1
+`
+
+type GetDmPeerParams struct {
+	User1ID uuid.UUID `json:"user1_id"`
+	User2ID uuid.UUID `json:"user2_id"`
+}
+
+func (q *Queries) GetDmPeer(ctx context.Context, arg GetDmPeerParams) (DmPeer, error) {
+	row := q.db.QueryRowContext(ctx, getDmPeer, arg.User1ID, arg.User2ID)
+	var i DmPeer
+	err := row.Scan(&i.User1ID, &i.User2ID, &i.ConversationID)
+	return i, err
 }
 
 const removeMemberFromConversation = `-- name: RemoveMemberFromConversation :exec
