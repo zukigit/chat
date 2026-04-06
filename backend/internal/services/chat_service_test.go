@@ -74,3 +74,146 @@ func TestCreateConversation_Group(t *testing.T) {
 		})
 	}
 }
+
+func TestSendMessage(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	chatServer := services.NewChatServer(sqlDB)
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+
+	// alice↔bob DM
+	convResp, err := chatServer.CreateConversation(
+		ctxWithUser("alice", ids["alice"]),
+		&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+	)
+	if err != nil {
+		t.Fatalf("setup CreateConversation: %v", err)
+	}
+	convID := convResp.ConversationId
+
+	cases := []struct {
+		name        string
+		ctx         context.Context
+		convID      int64
+		content     string
+		messageType string
+		wantErr     codes.Code
+	}{
+		{"valid text", ctxWithUser("alice", ids["alice"]), convID, "hello", "", codes.OK},
+		{"valid explicit type", ctxWithUser("bob", ids["bob"]), convID, "hi back", "text", codes.OK},
+		{"invalid message type", ctxWithUser("alice", ids["alice"]), convID, "hi", "video", codes.InvalidArgument},
+		{"empty content", ctxWithUser("alice", ids["alice"]), convID, "", "text", codes.InvalidArgument},
+		{"zero conversation_id", ctxWithUser("alice", ids["alice"]), 0, "hello", "", codes.InvalidArgument},
+		{"non-member", ctxWithUser("carol", ids["carol"]), convID, "hello", "", codes.PermissionDenied},
+		{"no auth", context.Background(), convID, "hello", "", codes.Internal},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := chatServer.SendMessage(tc.ctx, &pb.SendMessageRequest{
+				ConversationId: tc.convID,
+				Content:        tc.content,
+				MessageType:    tc.messageType,
+			})
+			if got := grpcCode(err); got != tc.wantErr {
+				t.Errorf("got %v, want %v (err: %v)", got, tc.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestGetMessages(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	chatServer := services.NewChatServer(sqlDB)
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+
+	convResp, err := chatServer.CreateConversation(
+		ctxWithUser("alice", ids["alice"]),
+		&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+	)
+	if err != nil {
+		t.Fatalf("setup CreateConversation: %v", err)
+	}
+	convID := convResp.ConversationId
+
+	// seed 3 messages
+	aliceCtx := ctxWithUser("alice", ids["alice"])
+	for _, content := range []string{"msg1", "msg2", "msg3"} {
+		if _, err := chatServer.SendMessage(aliceCtx, &pb.SendMessageRequest{
+			ConversationId: convID,
+			Content:        content,
+		}); err != nil {
+			t.Fatalf("seed SendMessage %q: %v", content, err)
+		}
+	}
+
+	t.Run("valid first page", func(t *testing.T) {
+		resp, err := chatServer.GetMessages(aliceCtx, &pb.GetMessagesRequest{
+			ConversationId: convID,
+		})
+		if err != nil {
+			t.Fatalf("got error: %v", err)
+		}
+		if len(resp.Messages) != 3 {
+			t.Errorf("want 3 messages, got %d", len(resp.Messages))
+		}
+	})
+
+	t.Run("cursor pagination", func(t *testing.T) {
+		// fetch first 2, then use cursor to get the rest
+		resp1, err := chatServer.GetMessages(aliceCtx, &pb.GetMessagesRequest{
+			ConversationId: convID,
+			Limit:          2,
+		})
+		if err != nil {
+			t.Fatalf("page1: %v", err)
+		}
+		if len(resp1.Messages) != 2 {
+			t.Fatalf("want 2, got %d", len(resp1.Messages))
+		}
+		if resp1.NextCursor == 0 {
+			t.Fatal("expected non-zero next_cursor after first page")
+		}
+
+		resp2, err := chatServer.GetMessages(aliceCtx, &pb.GetMessagesRequest{
+			ConversationId: convID,
+			Limit:          2,
+			Cursor:         resp1.NextCursor,
+		})
+		if err != nil {
+			t.Fatalf("page2: %v", err)
+		}
+		if len(resp2.Messages) != 1 {
+			t.Errorf("want 1 remaining message, got %d", len(resp2.Messages))
+		}
+		if resp2.NextCursor != 0 {
+			t.Errorf("want next_cursor=0 on last page, got %d", resp2.NextCursor)
+		}
+	})
+
+	t.Run("non-member denied", func(t *testing.T) {
+		_, err := chatServer.GetMessages(ctxWithUser("carol", ids["carol"]), &pb.GetMessagesRequest{
+			ConversationId: convID,
+		})
+		if got := grpcCode(err); got != codes.PermissionDenied {
+			t.Errorf("got %v, want PermissionDenied", got)
+		}
+	})
+
+	t.Run("no auth", func(t *testing.T) {
+		_, err := chatServer.GetMessages(context.Background(), &pb.GetMessagesRequest{
+			ConversationId: convID,
+		})
+		if got := grpcCode(err); got != codes.Internal {
+			t.Errorf("got %v, want Internal", got)
+		}
+	})
+
+	t.Run("zero conversation_id", func(t *testing.T) {
+		_, err := chatServer.GetMessages(aliceCtx, &pb.GetMessagesRequest{
+			ConversationId: 0,
+		})
+		if got := grpcCode(err); got != codes.InvalidArgument {
+			t.Errorf("got %v, want InvalidArgument", got)
+		}
+	})
+}

@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
@@ -61,7 +61,7 @@ func (s *ChatServer) CreateConversation(ctx context.Context, req *pb.CreateConve
 	}
 
 	return &pb.CreateConversationResponse{
-		ConversationId: fmt.Sprintf("%d", conversationID),
+		ConversationId: conversationID,
 	}, nil
 }
 
@@ -159,4 +159,148 @@ func (s *ChatServer) createOrGetDmConversation(ctx context.Context, q *db.Querie
 	}
 
 	return conv.ID, nil
+}
+
+const (
+defaultMessageLimit = 50
+maxMessageLimit     = 100
+)
+
+// SendMessage posts a message to a conversation on behalf of the authenticated caller.
+// The caller must be a member of the conversation.
+func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
+callerID, err := lib.CallerUUID(ctx)
+if err != nil {
+return nil, err
+}
+
+if req.GetContent() == "" {
+return nil, status.Error(codes.InvalidArgument, "content is required")
+}
+if req.GetConversationId() == 0 {
+return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+}
+
+msgType := db.MessageType(req.GetMessageType())
+if msgType == "" {
+msgType = db.MessageTypeText
+}
+switch msgType {
+case db.MessageTypeText, db.MessageTypeImage, db.MessageTypeFile, db.MessageTypeAudio:
+default:
+return nil, status.Errorf(codes.InvalidArgument, "invalid message_type %q", msgType)
+}
+
+tx, err := s.sqlDB.BeginTx(ctx, nil)
+if err != nil {
+return nil, status.Errorf(codes.Internal, "SendMessage: begin tx: %v", err)
+}
+defer tx.Rollback()
+
+q := db.New(tx)
+
+isMember, err := q.IsMember(ctx, db.IsMemberParams{
+ConversationID: req.GetConversationId(),
+UserID:         callerID,
+})
+if err != nil {
+return nil, status.Errorf(codes.Internal, "SendMessage: check membership: %v", err)
+}
+if !isMember {
+return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
+}
+
+var replyTo sql.NullInt64
+if r := req.GetReplyToMessageId(); r != 0 {
+replyTo = sql.NullInt64{Valid: true, Int64: r}
+}
+
+msg, err := q.SendMessage(ctx, db.SendMessageParams{
+ConversationID:   req.GetConversationId(),
+SenderID:         callerID,
+ReplyToMessageID: replyTo,
+Content:          req.GetContent(),
+MessageType:      msgType,
+MediaUrl:         sql.NullString{},
+})
+if err != nil {
+return nil, status.Errorf(codes.Internal, "SendMessage: insert: %v", err)
+}
+
+if err := tx.Commit(); err != nil {
+return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
+}
+
+return &pb.SendMessageResponse{MessageId: msg.ID}, nil
+}
+
+// GetMessages returns a paginated list of messages in a conversation.
+// The caller must be a member of the conversation.
+// cursor is the last seen message_id (0 for the first page).
+// limit defaults to 50 (max 100).
+func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error) {
+callerID, err := lib.CallerUUID(ctx)
+if err != nil {
+return nil, err
+}
+
+if req.GetConversationId() == 0 {
+return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+}
+
+limit := int32(defaultMessageLimit)
+if req.GetLimit() > 0 {
+limit = req.GetLimit()
+}
+if limit > maxMessageLimit {
+limit = maxMessageLimit
+}
+
+q := db.New(s.sqlDB)
+
+isMember, err := q.IsMember(ctx, db.IsMemberParams{
+ConversationID: req.GetConversationId(),
+UserID:         callerID,
+})
+if err != nil {
+return nil, status.Errorf(codes.Internal, "GetMessages: check membership: %v", err)
+}
+if !isMember {
+return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
+}
+
+rows, err := q.GetConversationMessages(ctx, db.GetConversationMessagesParams{
+ConversationID: req.GetConversationId(),
+ID:             req.GetCursor(),
+Limit:          limit,
+})
+if err != nil {
+return nil, status.Errorf(codes.Internal, "GetMessages: query: %v", err)
+}
+
+messages := make([]*pb.Message, 0, len(rows))
+for _, r := range rows {
+m := &pb.Message{
+MessageId:   r.ID,
+SenderId:    r.SenderID.String(),
+Content:     r.Content,
+MessageType: string(r.MessageType),
+IsEdited:    r.IsEdited,
+CreatedAt:   r.CreatedAt.Format(time.RFC3339),
+}
+if r.ReplyToMessageID.Valid {
+m.ReplyToMessageId = r.ReplyToMessageID.Int64
+}
+messages = append(messages, m)
+}
+
+var nextCursor int64
+if int32(len(rows)) == limit {
+nextCursor = rows[len(rows)-1].ID
+}
+
+return &pb.GetMessagesResponse{
+Messages:   messages,
+NextCursor: nextCursor,
+}, nil
 }

@@ -1,16 +1,18 @@
 -- name: SendMessage :one
-INSERT INTO messages (conversation_id, sender_id, content, message_type, media_url)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;
+INSERT INTO messages (conversation_id, sender_id, reply_to_message_id, content, message_type, media_url)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, conversation_id, sender_id, reply_to_message_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;
 
 -- name: GetConversationMessages :many
--- Returns non-deleted messages in a conversation, oldest first, with pagination.
-SELECT id, conversation_id, sender_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at
+-- Cursor-based pagination: pass the last seen message id as cursor (0 for first page).
+-- Returns non-deleted messages ordered oldest-first.
+SELECT id, conversation_id, sender_id, reply_to_message_id, content, message_type, is_edited, created_at
 FROM messages
 WHERE conversation_id = $1
   AND deleted_at IS NULL
-ORDER BY created_at ASC
-LIMIT $2 OFFSET $3;
+  AND id > $2
+ORDER BY id ASC
+LIMIT $3;
 
 -- name: EditMessage :one
 UPDATE messages

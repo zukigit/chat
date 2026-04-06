@@ -36,14 +36,42 @@ func (c *ChatClient) Close() {
 // CreateConversation forwards a create conversation request to the backend via gRPC.
 // For DMs, membersID must contain exactly one peer user ID.
 // For groups, membersID lists all non-caller members; name must be non-empty.
-func (c *ChatClient) CreateConversation(ctx context.Context, token string, isGroup bool, name string, membersID []string) (string, error) {
+func (c *ChatClient) CreateConversation(ctx context.Context, token string, isGroup bool, name string, membersID []string) (int64, error) {
 	resp, err := c.client.CreateConversation(lib.WithToken(ctx, token), &pb.CreateConversationRequest{
 		IsGroup:   isGroup,
 		Name:      name,
 		MembersId: membersID,
 	})
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 	return resp.GetConversationId(), nil
+}
+
+// SendMessage sends a message to a conversation via gRPC.
+// messageType defaults to "text" if empty. replyToMessageID is 0 if not a reply.
+func (c *ChatClient) SendMessage(ctx context.Context, token string, conversationID int64, content, messageType string, replyToMessageID int64) (int64, error) {
+	req := &pb.SendMessageRequest{
+		ConversationId: conversationID,
+		Content:        content,
+		MessageType:    messageType,
+	}
+	if replyToMessageID != 0 {
+		req.ReplyToMessageId = &replyToMessageID
+	}
+	resp, err := c.client.SendMessage(lib.WithToken(ctx, token), req)
+	if err != nil {
+		return 0, err
+	}
+	return resp.GetMessageId(), nil
+}
+
+// GetMessages retrieves paginated messages from a conversation via gRPC.
+// cursor is the last seen message_id (0 for the first page).
+func (c *ChatClient) GetMessages(ctx context.Context, token string, conversationID int64, limit int32, cursor int64) (*pb.GetMessagesResponse, error) {
+	return c.client.GetMessages(lib.WithToken(ctx, token), &pb.GetMessagesRequest{
+		ConversationId: conversationID,
+		Limit:          limit,
+		Cursor:         cursor,
+	})
 }

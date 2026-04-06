@@ -3,6 +3,12 @@ INSERT INTO conversations (is_group, name)
 VALUES ($1, $2)
 RETURNING id, is_group, name, created_at, updated_at;
 
+-- name: IsMember :one
+SELECT EXISTS (
+  SELECT 1 FROM conversation_members
+  WHERE conversation_id = $1 AND user_id = $2
+) AS is_member;
+
 -- name: GetConversation :one
 SELECT id, is_group, name, created_at, updated_at
 FROM conversations

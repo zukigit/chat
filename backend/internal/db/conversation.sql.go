@@ -234,6 +234,25 @@ func (q *Queries) GetDmPeer(ctx context.Context, arg GetDmPeerParams) (DmPeer, e
 	return i, err
 }
 
+const isMember = `-- name: IsMember :one
+SELECT EXISTS (
+  SELECT 1 FROM conversation_members
+  WHERE conversation_id = $1 AND user_id = $2
+) AS is_member
+`
+
+type IsMemberParams struct {
+	ConversationID int64     `json:"conversation_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) IsMember(ctx context.Context, arg IsMemberParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isMember, arg.ConversationID, arg.UserID)
+	var is_member bool
+	err := row.Scan(&is_member)
+	return is_member, err
+}
+
 const removeMemberFromConversation = `-- name: RemoveMemberFromConversation :exec
 DELETE FROM conversation_members
 WHERE conversation_id = $1
