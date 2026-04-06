@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
@@ -88,8 +90,16 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		return nil, status.Errorf(codes.Internal, "SendFriendRequest: write: %v", err)
 	}
 
-	if err := s.notif.Send(ctx, q, targetID, callerID, db.NotificationTypeFriendRequest, callerName+" sent you a friend request"); err != nil {
-		return nil, status.Errorf(codes.Internal, "SendFriendRequest: create notification: %v", err)
+	if err := s.notif.Send(ctx, q, db.CreateNotificationParams{
+		UserID: targetID,
+		SenderID: uuid.NullUUID{
+			Valid: true,
+			UUID:  callerID,
+		},
+		Type:    db.NotificationTypeFriendRequest,
+		Message: fmt.Sprintf("%s sent a friend request", callerName),
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: create self-notification: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -240,8 +250,15 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 		return nil, status.Errorf(codes.Internal, "respondToRequest: update status: %v", err)
 	}
 
-	// Notify the original requester that their request was accepted.
-	if err := s.notif.Send(ctx, q, targetID, callerID, db.NotificationTypeFriendRequest, callerName+" accepted your friend request"); err != nil {
+	if err := s.notif.Send(ctx, q, db.CreateNotificationParams{
+		UserID: targetID,
+		SenderID: uuid.NullUUID{
+			UUID:  callerID,
+			Valid: true,
+		},
+		Type:    db.NotificationTypeFriendRequest,
+		Message: callerName + " accepted your friend request",
+	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "respondToRequest: create notification: %v", err)
 	}
 
@@ -251,4 +268,3 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 
 	return &pb.FriendResponse{Status: string(updated.Status)}, nil
 }
-

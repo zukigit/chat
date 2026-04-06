@@ -37,17 +37,12 @@ func NewNotificationServer(sqlDB *sql.DB, publisher NatsPublisher) *Notification
 // Send persists a notification using q (which may wrap an active transaction)
 // and pushes a live NATS event to the recipient if they have an active session.
 // It is nil-safe: if s is nil the call is a no-op.
-func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, recipientID, senderID uuid.UUID, notifType db.NotificationType, message string) error {
+func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, notiParams db.CreateNotificationParams) error {
 	if s == nil {
 		return nil
 	}
 
-	notification, err := q.CreateNotification(ctx, db.CreateNotificationParams{
-		UserID:   recipientID,
-		SenderID: uuid.NullUUID{UUID: senderID, Valid: true},
-		Type:     notifType,
-		Message:  message,
-	})
+	notification, err := q.CreateNotification(ctx, notiParams)
 	if err != nil {
 		return err
 	}
@@ -58,7 +53,7 @@ func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, recipientI
 	}
 
 	// Live push — non-fatal if the recipient is offline.
-	s.publishIfOnline(recipientID, notificationBytes)
+	s.publishIfOnline(notiParams.UserID, notificationBytes)
 	return nil
 }
 
