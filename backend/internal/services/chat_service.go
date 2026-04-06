@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,11 +18,13 @@ import (
 type ChatServer struct {
 	pb.UnimplementedChatServer
 	sqlDB *sql.DB
+	notif *NotificationServer // nil disables notifications (e.g. in tests)
 }
 
 // NewChatServer creates a new ChatServer instance.
-func NewChatServer(sqlDB *sql.DB) *ChatServer {
-	return &ChatServer{sqlDB: sqlDB}
+// notif may be nil, in which case notifications are skipped.
+func NewChatServer(sqlDB *sql.DB, notif *NotificationServer) *ChatServer {
+	return &ChatServer{sqlDB: sqlDB, notif: notif}
 }
 
 // CreateConversation creates a new group conversation or a DM between two users.
@@ -215,23 +218,44 @@ if r := req.GetReplyToMessageId(); r != 0 {
 replyTo = sql.NullInt64{Valid: true, Int64: r}
 }
 
-msg, err := q.SendMessage(ctx, db.SendMessageParams{
-ConversationID:   req.GetConversationId(),
-SenderID:         callerID,
-ReplyToMessageID: replyTo,
-Content:          req.GetContent(),
-MessageType:      msgType,
-MediaUrl:         sql.NullString{},
-})
-if err != nil {
-return nil, status.Errorf(codes.Internal, "SendMessage: insert: %v", err)
-}
+	msg, err := q.SendMessage(ctx, db.SendMessageParams{
+		ConversationID:   req.GetConversationId(),
+		SenderID:         callerID,
+		ReplyToMessageID: replyTo,
+		Content:          req.GetContent(),
+		MessageType:      msgType,
+		MediaUrl:         sql.NullString{},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: insert: %v", err)
+	}
 
-if err := tx.Commit(); err != nil {
-return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
-}
+	// Notify all conversation members except the sender.
+	members, err := q.GetConversationMembers(ctx, req.GetConversationId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: get members: %v", err)
+	}
+	callerName := lib.CallerFrom(ctx)
+	for _, m := range members {
+		if m.UserID == callerID {
+			continue
+		}
+		if err := s.notif.Send(ctx, q, db.CreateNotificationParams{
+			UserID:   m.UserID,
+			SenderID: uuid.NullUUID{Valid: true, UUID: callerID},
+			Type:     db.NotificationTypeMessage,
+			Message:  fmt.Sprintf("%s sent a message", callerName),
+			ReferenceID: sql.NullInt64{Valid: true, Int64: req.GetConversationId()},
+		}); err != nil {
+			return nil, status.Errorf(codes.Internal, "SendMessage: notify member: %v", err)
+		}
+	}
 
-return &pb.SendMessageResponse{MessageId: msg.ID}, nil
+	if err := tx.Commit(); err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
+	}
+
+	return &pb.SendMessageResponse{MessageId: msg.ID}, nil
 }
 
 // GetMessages returns a paginated list of messages in a conversation.
@@ -239,68 +263,68 @@ return &pb.SendMessageResponse{MessageId: msg.ID}, nil
 // cursor is the last seen message_id (0 for the first page).
 // limit defaults to 50 (max 100).
 func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error) {
-callerID, err := lib.CallerUUID(ctx)
-if err != nil {
-return nil, err
-}
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-if req.GetConversationId() == 0 {
-return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
-}
+	if req.GetConversationId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+	}
 
-limit := int32(defaultMessageLimit)
-if req.GetLimit() > 0 {
-limit = req.GetLimit()
-}
-if limit > maxMessageLimit {
-limit = maxMessageLimit
-}
+	limit := int32(defaultMessageLimit)
+	if req.GetLimit() > 0 {
+		limit = req.GetLimit()
+	}
+	if limit > maxMessageLimit {
+		limit = maxMessageLimit
+	}
 
-q := db.New(s.sqlDB)
+	q := db.New(s.sqlDB)
 
-isMember, err := q.IsMember(ctx, db.IsMemberParams{
-ConversationID: req.GetConversationId(),
-UserID:         callerID,
-})
-if err != nil {
-return nil, status.Errorf(codes.Internal, "GetMessages: check membership: %v", err)
-}
-if !isMember {
-return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
-}
+	isMember, err := q.IsMember(ctx, db.IsMemberParams{
+		ConversationID: req.GetConversationId(),
+		UserID:         callerID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "GetMessages: check membership: %v", err)
+	}
+	if !isMember {
+		return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
+	}
 
-rows, err := q.GetConversationMessages(ctx, db.GetConversationMessagesParams{
-ConversationID: req.GetConversationId(),
-ID:             req.GetCursor(),
-Limit:          limit,
-})
-if err != nil {
-return nil, status.Errorf(codes.Internal, "GetMessages: query: %v", err)
-}
+	rows, err := q.GetConversationMessages(ctx, db.GetConversationMessagesParams{
+		ConversationID: req.GetConversationId(),
+		ID:             req.GetCursor(),
+		Limit:          limit,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "GetMessages: query: %v", err)
+	}
 
-messages := make([]*pb.Message, 0, len(rows))
-for _, r := range rows {
-m := &pb.Message{
-MessageId:   r.ID,
-SenderId:    r.SenderID.String(),
-Content:     r.Content,
-MessageType: string(r.MessageType),
-IsEdited:    r.IsEdited,
-CreatedAt:   r.CreatedAt.Format(time.RFC3339),
-}
-if r.ReplyToMessageID.Valid {
-m.ReplyToMessageId = r.ReplyToMessageID.Int64
-}
-messages = append(messages, m)
-}
+	messages := make([]*pb.Message, 0, len(rows))
+	for _, r := range rows {
+		m := &pb.Message{
+			MessageId:   r.ID,
+			SenderId:    r.SenderID.String(),
+			Content:     r.Content,
+			MessageType: string(r.MessageType),
+			IsEdited:    r.IsEdited,
+			CreatedAt:   r.CreatedAt.Format(time.RFC3339),
+		}
+		if r.ReplyToMessageID.Valid {
+			m.ReplyToMessageId = r.ReplyToMessageID.Int64
+		}
+		messages = append(messages, m)
+	}
 
-var nextCursor int64
-if int32(len(rows)) == limit {
-nextCursor = rows[len(rows)-1].ID
-}
+	var nextCursor int64
+	if int32(len(rows)) == limit {
+		nextCursor = rows[len(rows)-1].ID
+	}
 
-return &pb.GetMessagesResponse{
-Messages:   messages,
-NextCursor: nextCursor,
-}, nil
+	return &pb.GetMessagesResponse{
+		Messages:   messages,
+		NextCursor: nextCursor,
+	}, nil
 }

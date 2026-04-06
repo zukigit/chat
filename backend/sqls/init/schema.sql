@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     sender_id        UUID              REFERENCES users(user_id) ON DELETE SET NULL,
     type             notification_type NOT NULL,
     message          TEXT              NOT NULL,
+    reference_id     BIGINT,           -- conversation_id for 'message' type; NULL for 'friend_request'
     is_read          BOOLEAN           NOT NULL DEFAULT FALSE,
     created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );

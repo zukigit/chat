@@ -359,13 +359,14 @@ type Message struct {
 }
 
 type Notification struct {
-	ID        int64            `json:"id"`
-	UserID    uuid.UUID        `json:"user_id"`
-	SenderID  uuid.NullUUID    `json:"sender_id"`
-	Type      NotificationType `json:"type"`
-	Message   string           `json:"message"`
-	IsRead    bool             `json:"is_read"`
-	CreatedAt time.Time        `json:"created_at"`
+	ID          int64            `json:"id"`
+	UserID      uuid.UUID        `json:"user_id"`
+	SenderID    uuid.NullUUID    `json:"sender_id"`
+	Type        NotificationType `json:"type"`
+	Message     string           `json:"message"`
+	ReferenceID sql.NullInt64    `json:"reference_id"`
+	IsRead      bool             `json:"is_read"`
+	CreatedAt   time.Time        `json:"created_at"`
 }
 
 type Session struct {

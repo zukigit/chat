@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/services"
 	pb "github.com/zukigit/chat/backend/proto/chat"
 	"google.golang.org/grpc/codes"
@@ -11,7 +12,7 @@ import (
 
 func TestCreateConversation_DM(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	chatServer := services.NewChatServer(sqlDB)
+	chatServer := services.NewChatServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
 
 	cases := []struct {
@@ -44,7 +45,7 @@ func TestCreateConversation_DM(t *testing.T) {
 
 func TestCreateConversation_Group(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	chatServer := services.NewChatServer(sqlDB)
+	chatServer := services.NewChatServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 
 	cases := []struct {
@@ -77,7 +78,7 @@ func TestCreateConversation_Group(t *testing.T) {
 
 func TestSendMessage(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	chatServer := services.NewChatServer(sqlDB)
+	chatServer := services.NewChatServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
 
 	// alice↔bob DM
@@ -123,7 +124,7 @@ func TestSendMessage(t *testing.T) {
 
 func TestGetMessages(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	chatServer := services.NewChatServer(sqlDB)
+	chatServer := services.NewChatServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
 
 	convResp, err := chatServer.CreateConversation(
@@ -214,6 +215,110 @@ func TestGetMessages(t *testing.T) {
 		})
 		if got := grpcCode(err); got != codes.InvalidArgument {
 			t.Errorf("got %v, want InvalidArgument", got)
+		}
+	})
+}
+
+// TestSendMessage_Notifications verifies that sending a message creates the
+// correct notifications for all conversation members except the sender.
+func TestSendMessage_Notifications(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	notifServer := services.NewNotificationServer(sqlDB, nil) // nil = no NATS push
+	chatServer := services.NewChatServer(sqlDB, notifServer)
+	q := db.New(sqlDB)
+
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+
+	t.Run("DM: only peer gets notification", func(t *testing.T) {
+		convResp, err := chatServer.CreateConversation(
+			ctxWithUser("alice", ids["alice"]),
+			&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+		)
+		if err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		convID := convResp.ConversationId
+
+		if _, err := chatServer.SendMessage(
+			ctxWithUser("alice", ids["alice"]),
+			&pb.SendMessageRequest{ConversationId: convID, Content: "hey bob"},
+		); err != nil {
+			t.Fatalf("SendMessage: %v", err)
+		}
+
+		// Bob must receive exactly one notification.
+		bobNotifs, err := q.GetNotificationsForUser(context.Background(), ids["bob"])
+		if err != nil {
+			t.Fatalf("GetNotificationsForUser bob: %v", err)
+		}
+		if len(bobNotifs) != 1 {
+			t.Fatalf("bob: want 1 notification, got %d", len(bobNotifs))
+		}
+		n := bobNotifs[0]
+		if n.Type != db.NotificationTypeMessage {
+			t.Errorf("type: got %q, want %q", n.Type, db.NotificationTypeMessage)
+		}
+		if !n.ReferenceID.Valid || n.ReferenceID.Int64 != convID {
+			t.Errorf("reference_id: got %v, want %d", n.ReferenceID, convID)
+		}
+		if !n.SenderID.Valid || n.SenderID.UUID != ids["alice"] {
+			t.Errorf("sender_id: got %v, want alice (%s)", n.SenderID, ids["alice"])
+		}
+
+		// Alice (sender) must receive no notification.
+		aliceNotifs, err := q.GetNotificationsForUser(context.Background(), ids["alice"])
+		if err != nil {
+			t.Fatalf("GetNotificationsForUser alice: %v", err)
+		}
+		if len(aliceNotifs) != 0 {
+			t.Errorf("alice: want 0 notifications, got %d", len(aliceNotifs))
+		}
+	})
+
+	t.Run("group: all members except sender get notification", func(t *testing.T) {
+		convResp, err := chatServer.CreateConversation(
+			ctxWithUser("alice", ids["alice"]),
+			&pb.CreateConversationRequest{
+				IsGroup:   true,
+				Name:      "test-group",
+				MembersId: []string{ids["bob"].String(), ids["carol"].String()},
+			},
+		)
+		if err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		convID := convResp.ConversationId
+
+		if _, err := chatServer.SendMessage(
+			ctxWithUser("alice", ids["alice"]),
+			&pb.SendMessageRequest{ConversationId: convID, Content: "hello group"},
+		); err != nil {
+			t.Fatalf("SendMessage: %v", err)
+		}
+
+		for _, recipient := range []string{"bob", "carol"} {
+			notifs, err := q.GetNotificationsForUser(context.Background(), ids[recipient])
+			if err != nil {
+				t.Fatalf("GetNotificationsForUser %s: %v", recipient, err)
+			}
+			// Filter to this conversation's notifications only (bob may have one from the DM sub-test above).
+			var groupNotifs []db.Notification
+			for _, n := range notifs {
+				if n.ReferenceID.Valid && n.ReferenceID.Int64 == convID {
+					groupNotifs = append(groupNotifs, n)
+				}
+			}
+			if len(groupNotifs) != 1 {
+				t.Errorf("%s: want 1 group notification, got %d", recipient, len(groupNotifs))
+				continue
+			}
+			n := groupNotifs[0]
+			if n.Type != db.NotificationTypeMessage {
+				t.Errorf("%s type: got %q, want %q", recipient, n.Type, db.NotificationTypeMessage)
+			}
+			if !n.SenderID.Valid || n.SenderID.UUID != ids["alice"] {
+				t.Errorf("%s sender_id: got %v, want alice", recipient, n.SenderID)
+			}
 		}
 	})
 }

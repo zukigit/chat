@@ -7,21 +7,23 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createNotification = `-- name: CreateNotification :one
-INSERT INTO notifications (user_id, sender_id, type, message)
-VALUES ($1, $2, $3, $4)
-RETURNING id, user_id, sender_id, type, message, is_read, created_at
+INSERT INTO notifications (user_id, sender_id, type, message, reference_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, user_id, sender_id, type, message, reference_id, is_read, created_at
 `
 
 type CreateNotificationParams struct {
-	UserID   uuid.UUID        `json:"user_id"`
-	SenderID uuid.NullUUID    `json:"sender_id"`
-	Type     NotificationType `json:"type"`
-	Message  string           `json:"message"`
+	UserID      uuid.UUID        `json:"user_id"`
+	SenderID    uuid.NullUUID    `json:"sender_id"`
+	Type        NotificationType `json:"type"`
+	Message     string           `json:"message"`
+	ReferenceID sql.NullInt64    `json:"reference_id"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
@@ -30,6 +32,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		arg.SenderID,
 		arg.Type,
 		arg.Message,
+		arg.ReferenceID,
 	)
 	var i Notification
 	err := row.Scan(
@@ -38,6 +41,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.SenderID,
 		&i.Type,
 		&i.Message,
+		&i.ReferenceID,
 		&i.IsRead,
 		&i.CreatedAt,
 	)
@@ -45,7 +49,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 }
 
 const getNotificationsForUser = `-- name: GetNotificationsForUser :many
-SELECT id, user_id, sender_id, type, message, is_read, created_at
+SELECT id, user_id, sender_id, type, message, reference_id, is_read, created_at
 FROM notifications
 WHERE user_id = $1
 ORDER BY created_at DESC
@@ -67,6 +71,7 @@ func (q *Queries) GetNotificationsForUser(ctx context.Context, userID uuid.UUID)
 			&i.SenderID,
 			&i.Type,
 			&i.Message,
+			&i.ReferenceID,
 			&i.IsRead,
 			&i.CreatedAt,
 		); err != nil {
@@ -113,7 +118,7 @@ const markNotificationAsRead = `-- name: MarkNotificationAsRead :one
 UPDATE notifications
 SET is_read = TRUE
 WHERE id = $1
-RETURNING id, user_id, sender_id, type, message, is_read, created_at
+RETURNING id, user_id, sender_id, type, message, reference_id, is_read, created_at
 `
 
 func (q *Queries) MarkNotificationAsRead(ctx context.Context, id int64) (Notification, error) {
@@ -125,6 +130,7 @@ func (q *Queries) MarkNotificationAsRead(ctx context.Context, id int64) (Notific
 		&i.SenderID,
 		&i.Type,
 		&i.Message,
+		&i.ReferenceID,
 		&i.IsRead,
 		&i.CreatedAt,
 	)
