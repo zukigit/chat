@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -165,58 +166,58 @@ func (s *ChatServer) createOrGetDmConversation(ctx context.Context, q *db.Querie
 }
 
 const (
-defaultMessageLimit = 50
-maxMessageLimit     = 100
+	defaultMessageLimit = 50
+	maxMessageLimit     = 100
 )
 
 // SendMessage posts a message to a conversation on behalf of the authenticated caller.
 // The caller must be a member of the conversation.
 func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
-callerID, err := lib.CallerUUID(ctx)
-if err != nil {
-return nil, err
-}
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-if req.GetContent() == "" {
-return nil, status.Error(codes.InvalidArgument, "content is required")
-}
-if req.GetConversationId() == 0 {
-return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
-}
+	if req.GetContent() == "" {
+		return nil, status.Error(codes.InvalidArgument, "content is required")
+	}
+	if req.GetConversationId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+	}
 
-msgType := db.MessageType(req.GetMessageType())
-if msgType == "" {
-msgType = db.MessageTypeText
-}
-switch msgType {
-case db.MessageTypeText, db.MessageTypeImage, db.MessageTypeFile, db.MessageTypeAudio:
-default:
-return nil, status.Errorf(codes.InvalidArgument, "invalid message_type %q", msgType)
-}
+	msgType := db.MessageType(req.GetMessageType())
+	if msgType == "" {
+		msgType = db.MessageTypeText
+	}
+	switch msgType {
+	case db.MessageTypeText, db.MessageTypeImage, db.MessageTypeFile, db.MessageTypeAudio:
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "invalid message_type %q", msgType)
+	}
 
-tx, err := s.sqlDB.BeginTx(ctx, nil)
-if err != nil {
-return nil, status.Errorf(codes.Internal, "SendMessage: begin tx: %v", err)
-}
-defer tx.Rollback()
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: begin tx: %v", err)
+	}
+	defer tx.Rollback()
 
-q := db.New(tx)
+	q := db.New(tx)
 
-isMember, err := q.IsMember(ctx, db.IsMemberParams{
-ConversationID: req.GetConversationId(),
-UserID:         callerID,
-})
-if err != nil {
-return nil, status.Errorf(codes.Internal, "SendMessage: check membership: %v", err)
-}
-if !isMember {
-return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
-}
+	isMember, err := q.IsMember(ctx, db.IsMemberParams{
+		ConversationID: req.GetConversationId(),
+		UserID:         callerID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: check membership: %v", err)
+	}
+	if !isMember {
+		return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
+	}
 
-var replyTo sql.NullInt64
-if r := req.GetReplyToMessageId(); r != 0 {
-replyTo = sql.NullInt64{Valid: true, Int64: r}
-}
+	var replyTo sql.NullInt64
+	if r := req.GetReplyToMessageId(); r != 0 {
+		replyTo = sql.NullInt64{Valid: true, Int64: r}
+	}
 
 	msg, err := q.SendMessage(ctx, db.SendMessageParams{
 		ConversationID:   req.GetConversationId(),
@@ -241,10 +242,10 @@ replyTo = sql.NullInt64{Valid: true, Int64: r}
 			continue
 		}
 		if err := s.notif.Send(ctx, q, db.CreateNotificationParams{
-			UserID:   m.UserID,
-			SenderID: uuid.NullUUID{Valid: true, UUID: callerID},
-			Type:     db.NotificationTypeMessage,
-			Message:  fmt.Sprintf("%s sent a message", callerName),
+			UserID:      m.UserID,
+			SenderID:    uuid.NullUUID{Valid: true, UUID: callerID},
+			Type:        db.NotificationTypeMessage,
+			Message:     fmt.Sprintf("%s sent a message", callerName),
 			ReferenceID: sql.NullInt64{Valid: true, Int64: req.GetConversationId()},
 		}); err != nil {
 			return nil, status.Errorf(codes.Internal, "SendMessage: notify member: %v", err)
@@ -253,6 +254,26 @@ replyTo = sql.NullInt64{Valid: true, Int64: r}
 
 	if err := tx.Commit(); err != nil {
 		return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
+	}
+
+	// Publish the message params to each member's chat session via NATS.
+	if s.notif != nil {
+		msgParamsBytes, err := json.Marshal(db.SendMessageParams{
+			ConversationID:   req.GetConversationId(),
+			SenderID:         callerID,
+			ReplyToMessageID: replyTo,
+			Content:          req.GetContent(),
+			MessageType:      msgType,
+			MediaUrl:         sql.NullString{},
+		})
+		if err == nil {
+			for _, m := range members {
+				if m.UserID == callerID {
+					continue
+				}
+				s.notif.publishIfOnline(m.UserID, db.SessionTypeChat, msgParamsBytes)
+			}
+		}
 	}
 
 	return &pb.SendMessageResponse{MessageId: msg.ID}, nil

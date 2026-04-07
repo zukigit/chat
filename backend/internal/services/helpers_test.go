@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"github.com/nats-io/nats.go"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/zukigit/chat/backend/internal/db"
@@ -118,4 +119,41 @@ func grpcCode(err error) codes.Code {
 	}
 	st, _ := status.FromError(err)
 	return st.Code()
+}
+
+// setupTestNats starts a throwaway NATS container and returns a connected
+// *nats.Conn. The container and connection are cleaned up when the test ends.
+func setupTestNats(t *testing.T) *nats.Conn {
+	t.Helper()
+	ctx := context.Background()
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "nats:latest",
+			ExposedPorts: []string{"4222/tcp"},
+			WaitingFor:   wait.ForLog("Server is ready"),
+		},
+		Started: true,
+	})
+	if err != nil {
+		t.Fatalf("setupTestNats: start container: %v", err)
+	}
+	t.Cleanup(func() { _ = container.Terminate(ctx) })
+
+	host, err := container.Host(ctx)
+	if err != nil {
+		t.Fatalf("setupTestNats: get host: %v", err)
+	}
+	port, err := container.MappedPort(ctx, "4222")
+	if err != nil {
+		t.Fatalf("setupTestNats: get port: %v", err)
+	}
+
+	nc, err := nats.Connect(fmt.Sprintf("nats://%s:%s", host, port.Port()))
+	if err != nil {
+		t.Fatalf("setupTestNats: connect: %v", err)
+	}
+	t.Cleanup(nc.Close)
+
+	return nc
 }

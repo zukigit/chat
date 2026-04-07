@@ -53,7 +53,7 @@ func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, notiParams
 	}
 
 	// Live push — non-fatal if the recipient is offline.
-	s.publishIfOnline(notiParams.UserID, notificationBytes)
+	s.publishIfOnline(notiParams.UserID, db.SessionTypeNotification, notificationBytes)
 	return nil
 }
 
@@ -75,10 +75,10 @@ func (s *NotificationServer) MarkNotificationRead(ctx context.Context, req *pb.M
 	return &pb.MarkNotificationReadResponse{}, nil
 }
 
-// publishIfOnline looks up active notification sessions for userID and publishes
-// notificationBytes to each session's listen_path via NATS.
+// publishIfOnline looks up active sessions of the given sessionType for userID
+// and publishes payload to each session's listen_path via NATS.
 // All errors are logged and swallowed — an offline user is normal.
-func (s *NotificationServer) publishIfOnline(userID uuid.UUID, notificationBytes []byte) {
+func (s *NotificationServer) publishIfOnline(userID uuid.UUID, sessionType db.SessionType, payload []byte) {
 	if s.publisher == nil {
 		return
 	}
@@ -96,7 +96,7 @@ func (s *NotificationServer) publishIfOnline(userID uuid.UUID, notificationBytes
 
 	sessions, err := q.GetSession(ctx, db.GetSessionParams{
 		UserUserid: userID,
-		Type:       db.SessionTypeNotification,
+		Type:       sessionType,
 	})
 	if err != nil {
 		lib.ErrorLog.Printf("publishIfOnline: get session: %v", err)
@@ -108,7 +108,7 @@ func (s *NotificationServer) publishIfOnline(userID uuid.UUID, notificationBytes
 
 	for _, session := range sessions {
 		subject := session.ListenPath.String
-		if err := s.publisher.Publish(subject, notificationBytes); err != nil {
+		if err := s.publisher.Publish(subject, payload); err != nil {
 			lib.ErrorLog.Printf("publishIfOnline: publish to %s: %v", subject, err)
 			continue
 		}
