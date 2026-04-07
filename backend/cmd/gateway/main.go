@@ -64,10 +64,16 @@ func main() {
 	}
 	defer notiClient.Close()
 
+	chatClient, err := clients.NewChatClient(backendAddr)
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to connect to backend (chat): %v", err)
+	}
+	defer chatClient.Close()
+
 	// handlers preparation
 	authHandler := handlers.NewAuthHandler(authClient)
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
-	sessionHandler := handlers.NewSessionHandler(sessionClient, sessionsStream)
+	sessionHandler := handlers.NewSessionHandler(sessionClient, chatClient, sessionsStream)
 	notificationHandler := handlers.NewNotificationHandler(notiClient)
 
 	r := mux.NewRouter()

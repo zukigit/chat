@@ -30,6 +30,15 @@ type notificationRequest struct {
 	ID string `json:"id"`
 }
 
+// chatSendRequest is the JSON payload a client sends over the chat WebSocket
+// to post a message to a conversation.
+type chatSendRequest struct {
+	ConversationID   int64  `json:"conversation_id"`
+	Content          string `json:"content"`
+	MessageType      string `json:"message_type,omitempty"`
+	ReplyToMessageID int64  `json:"reply_to_message_id,omitempty"`
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
