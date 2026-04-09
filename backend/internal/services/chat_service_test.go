@@ -18,7 +18,10 @@ import (
 func TestCreateConversation_DM(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	chatServer := services.NewChatServer(sqlDB, nil)
-	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol", "dave")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
+	makeFriends(t, sqlDB, ids["alice"], ids["carol"])
+	// dave is intentionally NOT friends with alice
 
 	cases := []struct {
 		name      string
@@ -33,6 +36,7 @@ func TestCreateConversation_DM(t *testing.T) {
 		{"too many members", ctxWithUser("alice", ids["alice"]), []string{ids["bob"].String(), ids["carol"].String()}, codes.InvalidArgument},
 		{"invalid uuid", ctxWithUser("alice", ids["alice"]), []string{"not-a-uuid"}, codes.InvalidArgument},
 		{"self dm", ctxWithUser("alice", ids["alice"]), []string{ids["alice"].String()}, codes.InvalidArgument},
+		{"not friends", ctxWithUser("alice", ids["alice"]), []string{ids["dave"].String()}, codes.PermissionDenied},
 	}
 
 	for _, tc := range cases {
@@ -51,7 +55,9 @@ func TestCreateConversation_DM(t *testing.T) {
 func TestCreateConversation_Group(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	chatServer := services.NewChatServer(sqlDB, nil)
-	ids := createTestUsers(t, sqlDB, "alice", "bob")
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
+	// carol is intentionally NOT friends with alice
 
 	cases := []struct {
 		name      string
@@ -65,6 +71,7 @@ func TestCreateConversation_Group(t *testing.T) {
 		{"missing name", ctxWithUser("alice", ids["alice"]), "", []string{ids["bob"].String()}, codes.InvalidArgument},
 		{"invalid uuid", ctxWithUser("alice", ids["alice"]), "team-chat", []string{"not-a-uuid"}, codes.InvalidArgument},
 		{"empty members", ctxWithUser("alice", ids["alice"]), "solo", []string{}, codes.InvalidArgument},
+		{"not friends", ctxWithUser("alice", ids["alice"]), "team-chat", []string{ids["carol"].String()}, codes.PermissionDenied},
 	}
 
 	for _, tc := range cases {
@@ -85,6 +92,7 @@ func TestSendMessage(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	chatServer := services.NewChatServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
 
 	// alice↔bob DM
 	convResp, err := chatServer.CreateConversation(
@@ -131,6 +139,7 @@ func TestGetMessages(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	chatServer := services.NewChatServer(sqlDB, nil)
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
 
 	convResp, err := chatServer.CreateConversation(
 		ctxWithUser("alice", ids["alice"]),
@@ -235,6 +244,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 	q := db.New(sqlDB)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
 
 	convResp, err := chatServer.CreateConversation(
 		ctxWithUser("alice", ids["alice"]),
@@ -319,6 +329,8 @@ func TestSendMessage_Notifications(t *testing.T) {
 	q := db.New(sqlDB)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
+	makeFriends(t, sqlDB, ids["alice"], ids["carol"])
 
 	t.Run("DM: only peer gets notification", func(t *testing.T) {
 		convResp, err := chatServer.CreateConversation(

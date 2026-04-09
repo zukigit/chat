@@ -41,6 +41,29 @@ func (s *ChatServer) CreateConversation(ctx context.Context, req *pb.CreateConve
 		return nil, status.Error(codes.InvalidArgument, "members_id must not be empty")
 	}
 
+	// Verify each requested member has an accepted friendship with the caller.
+	q0 := db.New(s.sqlDB)
+	for _, memberIDStr := range req.GetMembersId() {
+		memberID, err := uuid.Parse(memberIDStr)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid member_id %q: %v", memberIDStr, err)
+		}
+		if memberID == callerID {
+			continue // self-as-member is validated downstream
+		}
+		first, second := lib.OrderedUUIDPair(callerID, memberID)
+		friendship, err := q0.GetFriendship(ctx, db.GetFriendshipParams{
+			User1Userid: first,
+			User2Userid: second,
+		})
+		if err == sql.ErrNoRows || (err == nil && friendship.Status != db.FriendshipStatusAccepted) {
+			return nil, status.Errorf(codes.PermissionDenied, "user %s is not a friend", memberIDStr)
+		}
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "CreateConversation: check friendship: %v", err)
+		}
+	}
+
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "CreateConversation: begin tx: %v", err)

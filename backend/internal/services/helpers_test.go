@@ -107,6 +107,27 @@ func createTestUsers(t *testing.T, sqlDB *sql.DB, usernames ...string) map[strin
 	return ids
 }
 
+// makeFriends creates an accepted friendship between two users directly via the DB.
+func makeFriends(t *testing.T, sqlDB *sql.DB, id1, id2 uuid.UUID) {
+	t.Helper()
+	q := db.New(sqlDB)
+	first, second := lib.OrderedUUIDPair(id1, id2)
+	if _, err := q.SendFriendRequest(context.Background(), db.SendFriendRequestParams{
+		User1Userid:     first,
+		User2Userid:     second,
+		InitiatorUserid: id1,
+	}); err != nil {
+		t.Fatalf("makeFriends: send request: %v", err)
+	}
+	if _, err := q.UpdateFriendshipStatus(context.Background(), db.UpdateFriendshipStatusParams{
+		User1Userid: first,
+		User2Userid: second,
+		Status:      db.FriendshipStatusAccepted,
+	}); err != nil {
+		t.Fatalf("makeFriends: accept: %v", err)
+	}
+}
+
 func ctxWithUser(username string, userID uuid.UUID) context.Context {
 	ctx := context.WithValue(context.Background(), lib.ContextKeyUsername, username)
 	ctx = context.WithValue(ctx, lib.ContextKeyUserID, userID.String())
