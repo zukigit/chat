@@ -1,0 +1,23 @@
+meta {
+  name: sessions_notification_user2
+  type: ws
+  seq: 8
+}
+
+ws {
+  url: {{GATEWAY_URL}}/sessions/notification
+  body: ws
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN_USER2}}
+}
+
+body:ws {
+  name: message 1
+  type: json
+  content: '''
+    {}
+  '''
+}

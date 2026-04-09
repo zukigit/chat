@@ -1,0 +1,26 @@
+meta {
+  name: friends_accept_user1
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{GATEWAY_URL}}/friends/accept
+  body: json
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{TOKEN_USER1}}
+}
+
+body:json {
+  {
+    "username": "{{USER_NAME_USER2}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

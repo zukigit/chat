@@ -1,0 +1,23 @@
+meta {
+  name: login_user2
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{GATEWAY_URL}}/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "{{USER_NAME_USER2}}",
+    "password": "{{USER_PASSWD_USER2}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,24 @@
+meta {
+  name: signup_user1
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{GATEWAY_URL}}/signup
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "email",
+    "username": "{{USER_NAME_USER1}}",
+    "passwd": "{{USER_PASSWD_USER1}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
