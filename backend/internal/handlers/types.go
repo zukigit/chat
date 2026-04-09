@@ -30,6 +30,13 @@ type notificationRequest struct {
 	ID string `json:"id"`
 }
 
+// createConversationRequest is the request body for POST /conversations.
+type createConversationRequest struct {
+	IsGroup   bool     `json:"is_group"`
+	Name      string   `json:"name,omitempty"`
+	MembersID []string `json:"members_id"`
+}
+
 // chatSendRequest is the JSON payload a client sends over the chat WebSocket
 // to post a message to a conversation.
 type chatSendRequest struct {

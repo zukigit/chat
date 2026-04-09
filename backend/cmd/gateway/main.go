@@ -75,6 +75,7 @@ func main() {
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
 	sessionHandler := handlers.NewSessionHandler(sessionClient, chatClient, sessionsStream)
 	notificationHandler := handlers.NewNotificationHandler(notiClient)
+	chatHandler := handlers.NewChatHandler(chatClient)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
@@ -86,6 +87,8 @@ func main() {
 	r.HandleFunc("/notifications/read", notificationHandler.MarkNotificationRead).Methods(http.MethodPost)
 	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodGet)
 	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodPost)
+	r.HandleFunc("/conversations", chatHandler.CreateConversation).Methods(http.MethodPost)
+	r.HandleFunc("/conversations/messages", chatHandler.GetMessages).Methods(http.MethodGet)
 
 	cors := gorhandlers.CORS(
 		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "http://localhost:5173")}),
