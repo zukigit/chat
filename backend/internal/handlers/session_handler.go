@@ -232,14 +232,14 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 				return // don't ack the message if we failed to write to the client, so it can be retried
 			}
 
-			// notify sender that message was delivered
-			var message db.SendMessageParams
+			// Notify the backend that the message was delivered to this user.
+			var message db.Message
 			if err := json.Unmarshal(msg.Data(), &message); err != nil {
-				lib.ErrorLog.Printf("Error unmarshaling message: sessionId: %s, err: %v", addSessionResp.SessionId, err)
-				goto EndHandler
+				lib.ErrorLog.Printf("chat session: unmarshal delivered message: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+			} else if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID); err != nil {
+				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: sessionId: %s, err: %v", addSessionResp.SessionId, err)
 			}
 
-		EndHandler:
 			msg.Ack()
 		},
 		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {

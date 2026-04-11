@@ -279,22 +279,15 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
 	}
 
-	// Publish the message params to each member's chat session via NATS.
+	// Publish the saved message (including its ID) to each member's chat session via NATS.
 	if s.notif != nil {
-		msgParamsBytes, err := json.Marshal(db.SendMessageParams{
-			ConversationID:   req.GetConversationId(),
-			SenderID:         callerID,
-			ReplyToMessageID: replyTo,
-			Content:          req.GetContent(),
-			MessageType:      msgType,
-			MediaUrl:         sql.NullString{},
-		})
+		msgBytes, err := json.Marshal(msg)
 		if err == nil {
 			for _, m := range members {
 				if m.UserID == callerID {
 					continue
 				}
-				s.notif.publishIfOnline(m.UserID, db.SessionTypeChat, msgParamsBytes)
+				s.notif.publishIfOnline(m.UserID, db.SessionTypeChat, msgBytes)
 			}
 		}
 	}
@@ -371,4 +364,30 @@ func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest
 		Messages:   messages,
 		NextCursor: nextCursor,
 	}, nil
+}
+
+// UpdateLastDeliveredMessage marks a message as delivered for the calling user.
+func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.UpdateMessageRequest) (*pb.UpdateMessageResponse, error) {
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.GetConversationId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+	}
+	if req.GetMessageId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "message_id is required")
+	}
+
+	q := db.New(s.sqlDB)
+	if err := q.UpdateLastDeliveredMessageID(ctx, db.UpdateLastDeliveredMessageIDParams{
+		ConversationID:         req.GetConversationId(),
+		UserID:                 callerID,
+		LastDeliveredMessageID: req.GetMessageId(),
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "UpdateLastDeliveredMessage: %v", err)
+	}
+
+	return &pb.UpdateMessageResponse{}, nil
 }

@@ -19,9 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Chat_CreateConversation_FullMethodName = "/chat.Chat/CreateConversation"
-	Chat_SendMessage_FullMethodName        = "/chat.Chat/SendMessage"
-	Chat_GetMessages_FullMethodName        = "/chat.Chat/GetMessages"
+	Chat_CreateConversation_FullMethodName         = "/chat.Chat/CreateConversation"
+	Chat_SendMessage_FullMethodName                = "/chat.Chat/SendMessage"
+	Chat_GetMessages_FullMethodName                = "/chat.Chat/GetMessages"
+	Chat_UpdateLastReadMessage_FullMethodName      = "/chat.Chat/UpdateLastReadMessage"
+	Chat_UpdateLastDeliveredMessage_FullMethodName = "/chat.Chat/UpdateLastDeliveredMessage"
 )
 
 // ChatClient is the client API for Chat service.
@@ -31,6 +33,8 @@ type ChatClient interface {
 	CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...grpc.CallOption) (*CreateConversationResponse, error)
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*GetMessagesResponse, error)
+	UpdateLastReadMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error)
+	UpdateLastDeliveredMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error)
 }
 
 type chatClient struct {
@@ -71,6 +75,26 @@ func (c *chatClient) GetMessages(ctx context.Context, in *GetMessagesRequest, op
 	return out, nil
 }
 
+func (c *chatClient) UpdateLastReadMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMessageResponse)
+	err := c.cc.Invoke(ctx, Chat_UpdateLastReadMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) UpdateLastDeliveredMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMessageResponse)
+	err := c.cc.Invoke(ctx, Chat_UpdateLastDeliveredMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServer is the server API for Chat service.
 // All implementations must embed UnimplementedChatServer
 // for forward compatibility.
@@ -78,6 +102,8 @@ type ChatServer interface {
 	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error)
+	UpdateLastReadMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error)
+	UpdateLastDeliveredMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error)
 	mustEmbedUnimplementedChatServer()
 }
 
@@ -96,6 +122,12 @@ func (UnimplementedChatServer) SendMessage(context.Context, *SendMessageRequest)
 }
 func (UnimplementedChatServer) GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMessages not implemented")
+}
+func (UnimplementedChatServer) UpdateLastReadMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateLastReadMessage not implemented")
+}
+func (UnimplementedChatServer) UpdateLastDeliveredMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateLastDeliveredMessage not implemented")
 }
 func (UnimplementedChatServer) mustEmbedUnimplementedChatServer() {}
 func (UnimplementedChatServer) testEmbeddedByValue()              {}
@@ -172,6 +204,42 @@ func _Chat_GetMessages_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Chat_UpdateLastReadMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).UpdateLastReadMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_UpdateLastReadMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).UpdateLastReadMessage(ctx, req.(*UpdateMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_UpdateLastDeliveredMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).UpdateLastDeliveredMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_UpdateLastDeliveredMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).UpdateLastDeliveredMessage(ctx, req.(*UpdateMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Chat_ServiceDesc is the grpc.ServiceDesc for Chat service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +258,14 @@ var Chat_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMessages",
 			Handler:    _Chat_GetMessages_Handler,
+		},
+		{
+			MethodName: "UpdateLastReadMessage",
+			Handler:    _Chat_UpdateLastReadMessage_Handler,
+		},
+		{
+			MethodName: "UpdateLastDeliveredMessage",
+			Handler:    _Chat_UpdateLastDeliveredMessage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

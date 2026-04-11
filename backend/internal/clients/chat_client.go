@@ -75,3 +75,12 @@ func (c *ChatClient) GetMessages(ctx context.Context, token string, conversation
 		Cursor:         cursor,
 	})
 }
+
+// UpdateLastDeliveredMessage tells the backend that the given message was delivered to the caller.
+func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token string, conversationID, messageID int64) error {
+	_, err := c.client.UpdateLastDeliveredMessage(lib.WithToken(ctx, token), &pb.UpdateMessageRequest{
+		ConversationId: conversationID,
+		MessageId:      messageID,
+	})
+	return err
+}
