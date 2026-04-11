@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -281,7 +280,7 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 
 	// Publish the saved message (including its ID) to each member's chat session via NATS.
 	if s.notif != nil {
-		msgBytes, err := json.Marshal(msg)
+		msgBytes, err := lib.NewChatEnvelope(lib.ChatEventMessage, msg)
 		if err == nil {
 			for _, m := range members {
 				if m.UserID == callerID {
@@ -366,7 +365,8 @@ func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest
 	}, nil
 }
 
-// UpdateLastDeliveredMessage marks a message as delivered for the calling user.
+// UpdateLastDeliveredMessage marks a message as delivered for the calling user
+// and notifies the original sender via NATS.
 func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.UpdateMessageRequest) (*pb.UpdateMessageResponse, error) {
 	callerID, err := lib.CallerUUID(ctx)
 	if err != nil {
@@ -387,6 +387,20 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 		LastDeliveredMessageID: req.GetMessageId(),
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "UpdateLastDeliveredMessage: %v", err)
+	}
+
+	// Notify the original sender that their message was delivered.
+	if s.notif != nil && req.GetUserId() != "" {
+		senderID, err := uuid.Parse(req.GetUserId())
+		if err == nil {
+			receiptBytes, err := lib.NewChatEnvelope(lib.ChatEventDelivered, lib.DeliveredEvent{
+				ConversationID: req.GetConversationId(),
+				MessageID:      req.GetMessageId(),
+			})
+			if err == nil {
+				s.notif.publishIfOnline(senderID, db.SessionTypeChat, receiptBytes)
+			}
+		}
 	}
 
 	return &pb.UpdateMessageResponse{}, nil

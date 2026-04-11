@@ -233,13 +233,27 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Notify the backend that the message was delivered to this user.
+			var env lib.ChatEnvelope
 			var message db.Message
-			if err := json.Unmarshal(msg.Data(), &message); err != nil {
-				lib.ErrorLog.Printf("chat session: unmarshal delivered message: sessionId: %s, err: %v", addSessionResp.SessionId, err)
-			} else if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID); err != nil {
+			if err := json.Unmarshal(msg.Data(), &env); err != nil {
+				lib.ErrorLog.Printf("chat session: unmarshal envelope: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+				goto ack
+			}
+
+			if env.Type != lib.ChatEventMessage {
+				goto ack
+			}
+
+			if err := json.Unmarshal(env.Data, &message); err != nil {
+				lib.ErrorLog.Printf("chat session: unmarshal message: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+				goto ack
+			}
+
+			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
 				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: sessionId: %s, err: %v", addSessionResp.SessionId, err)
 			}
 
+		ack:
 			msg.Ack()
 		},
 		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {
