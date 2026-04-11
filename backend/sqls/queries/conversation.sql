@@ -56,3 +56,17 @@ LIMIT 1;
 INSERT INTO dm_peers (user1_id, user2_id, conversation_id)
 VALUES ($1, $2, $3)
 RETURNING user1_id, user2_id, conversation_id;
+
+-- name: UpdateLastReadMessageID :exec
+UPDATE conversation_members
+SET last_read_message_id = $3
+WHERE conversation_id = $1
+  AND user_id = $2
+  AND last_read_message_id < $3;
+
+-- name: UpdateLastDeliveredMessageID :exec
+UPDATE conversation_members
+SET last_delivered_message_id = $3
+WHERE conversation_id = $1
+  AND user_id = $2
+  AND last_delivered_message_id < $3;

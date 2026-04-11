@@ -322,11 +322,12 @@ type Conversation struct {
 }
 
 type ConversationMember struct {
-	ConversationID    int64      `json:"conversation_id"`
-	UserID            uuid.UUID  `json:"user_id"`
-	Role              MemberRole `json:"role"`
-	LastReadMessageID int64      `json:"last_read_message_id"`
-	JoinedAt          time.Time  `json:"joined_at"`
+	ConversationID         int64      `json:"conversation_id"`
+	UserID                 uuid.UUID  `json:"user_id"`
+	Role                   MemberRole `json:"role"`
+	LastReadMessageID      int64      `json:"last_read_message_id"`
+	LastDeliveredMessageID int64      `json:"last_delivered_message_id"`
+	JoinedAt               time.Time  `json:"joined_at"`
 }
 
 type DmPeer struct {
