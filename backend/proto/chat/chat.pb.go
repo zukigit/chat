@@ -22,12 +22,12 @@ const (
 )
 
 type CreateConversationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsGroup       bool                   `protobuf:"varint,1,opt,name=is_group,json=isGroup,proto3" json:"is_group,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	MembersId     []string               `protobuf:"bytes,3,rep,name=members_id,json=membersId,proto3" json:"members_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	IsGroup         bool                   `protobuf:"varint,1,opt,name=is_group,json=isGroup,proto3" json:"is_group,omitempty"`
+	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	MembersUsername []string               `protobuf:"bytes,3,rep,name=members_username,json=membersUsername,proto3" json:"members_username,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateConversationRequest) Reset() {
@@ -74,9 +74,9 @@ func (x *CreateConversationRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateConversationRequest) GetMembersId() []string {
+func (x *CreateConversationRequest) GetMembersUsername() []string {
 	if x != nil {
-		return x.MembersId
+		return x.MembersUsername
 	}
 	return nil
 }
@@ -448,12 +448,11 @@ var File_proto_chat_chat_proto protoreflect.FileDescriptor
 
 const file_proto_chat_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x15proto/chat/chat.proto\x12\x04chat\"i\n" +
+	"\x15proto/chat/chat.proto\x12\x04chat\"u\n" +
 	"\x19CreateConversationRequest\x12\x19\n" +
 	"\bis_group\x18\x01 \x01(\bR\aisGroup\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
-	"\n" +
-	"members_id\x18\x03 \x03(\tR\tmembersId\"E\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12)\n" +
+	"\x10members_username\x18\x03 \x03(\tR\x0fmembersUsername\"E\n" +
 	"\x1aCreateConversationResponse\x12'\n" +
 	"\x0fconversation_id\x18\x01 \x01(\x03R\x0econversationId\"\xc6\x01\n" +
 	"\x12SendMessageRequest\x12'\n" +

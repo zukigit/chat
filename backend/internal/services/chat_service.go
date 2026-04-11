@@ -37,18 +37,24 @@ func (s *ChatServer) CreateConversation(ctx context.Context, req *pb.CreateConve
 		return nil, err
 	}
 
-	if len(req.GetMembersId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "members_id must not be empty")
+	if len(req.GetMembersUsername()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "members_username must not be empty")
 	}
 
-	// Verify each requested member has an accepted friendship with the caller.
+	// Resolve usernames to UUIDs and verify each member is an accepted friend.
 	q0 := db.New(s.sqlDB)
-	for _, memberIDStr := range req.GetMembersId() {
-		memberID, err := uuid.Parse(memberIDStr)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid member_id %q: %v", memberIDStr, err)
+	memberIDs := make([]uuid.UUID, 0, len(req.GetMembersUsername()))
+	for _, username := range req.GetMembersUsername() {
+		user, err := q0.GetUserByUsername(ctx, username)
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "user %q not found", username)
 		}
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "CreateConversation: lookup user %q: %v", username, err)
+		}
+		memberID := user.UserID
 		if memberID == callerID {
+			memberIDs = append(memberIDs, memberID)
 			continue // self-as-member is validated downstream
 		}
 		first, second := lib.OrderedUUIDPair(callerID, memberID)
@@ -57,11 +63,12 @@ func (s *ChatServer) CreateConversation(ctx context.Context, req *pb.CreateConve
 			User2Userid: second,
 		})
 		if err == sql.ErrNoRows || (err == nil && friendship.Status != db.FriendshipStatusAccepted) {
-			return nil, status.Errorf(codes.PermissionDenied, "user %s is not a friend", memberIDStr)
+			return nil, status.Errorf(codes.PermissionDenied, "user %q is not a friend", username)
 		}
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "CreateConversation: check friendship: %v", err)
 		}
+		memberIDs = append(memberIDs, memberID)
 	}
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
@@ -75,9 +82,9 @@ func (s *ChatServer) CreateConversation(ctx context.Context, req *pb.CreateConve
 	var conversationID int64
 
 	if req.GetIsGroup() {
-		conversationID, err = s.createGroupConversation(ctx, q, callerID, req)
+		conversationID, err = s.createGroupConversation(ctx, q, callerID, req, memberIDs)
 	} else {
-		conversationID, err = s.createOrGetDmConversation(ctx, q, callerID, req)
+		conversationID, err = s.createOrGetDmConversation(ctx, q, callerID, memberIDs)
 	}
 	if err != nil {
 		return nil, err
@@ -92,7 +99,7 @@ func (s *ChatServer) CreateConversation(ctx context.Context, req *pb.CreateConve
 	}, nil
 }
 
-func (s *ChatServer) createGroupConversation(ctx context.Context, q *db.Queries, callerID uuid.UUID, req *pb.CreateConversationRequest) (int64, error) {
+func (s *ChatServer) createGroupConversation(ctx context.Context, q *db.Queries, callerID uuid.UUID, req *pb.CreateConversationRequest, memberIDs []uuid.UUID) (int64, error) {
 	if req.GetName() == "" {
 		return 0, status.Error(codes.InvalidArgument, "name is required for group conversations")
 	}
@@ -115,32 +122,25 @@ func (s *ChatServer) createGroupConversation(ctx context.Context, q *db.Queries,
 	}
 
 	// Add each requested member as a regular member.
-	for _, memberIDStr := range req.GetMembersId() {
-		memberID, err := uuid.Parse(memberIDStr)
-		if err != nil {
-			return 0, status.Errorf(codes.InvalidArgument, "invalid member_id %q: %v", memberIDStr, err)
-		}
+	for _, memberID := range memberIDs {
 		if _, err := q.AddMemberWithRole(ctx, db.AddMemberWithRoleParams{
 			ConversationID: conv.ID,
 			UserID:         memberID,
 			Role:           db.MemberRoleMember,
 		}); err != nil {
-			return 0, status.Errorf(codes.Internal, "createGroupConversation: add member %s: %v", memberIDStr, err)
+			return 0, status.Errorf(codes.Internal, "createGroupConversation: add member %s: %v", memberID, err)
 		}
 	}
 
 	return conv.ID, nil
 }
 
-func (s *ChatServer) createOrGetDmConversation(ctx context.Context, q *db.Queries, callerID uuid.UUID, req *pb.CreateConversationRequest) (int64, error) {
-	if len(req.GetMembersId()) != 1 {
-		return 0, status.Error(codes.InvalidArgument, "DM conversations require exactly one member_id")
+func (s *ChatServer) createOrGetDmConversation(ctx context.Context, q *db.Queries, callerID uuid.UUID, memberIDs []uuid.UUID) (int64, error) {
+	if len(memberIDs) != 1 {
+		return 0, status.Error(codes.InvalidArgument, "DM conversations require exactly one member_username")
 	}
 
-	peerID, err := uuid.Parse(req.GetMembersId()[0])
-	if err != nil {
-		return 0, status.Errorf(codes.InvalidArgument, "invalid member_id %q: %v", req.GetMembersId()[0], err)
-	}
+	peerID := memberIDs[0]
 	if callerID == peerID {
 		return 0, status.Error(codes.InvalidArgument, "cannot create a DM with yourself")
 	}

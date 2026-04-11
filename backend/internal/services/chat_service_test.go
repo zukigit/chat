@@ -24,26 +24,26 @@ func TestCreateConversation_DM(t *testing.T) {
 	// dave is intentionally NOT friends with alice
 
 	cases := []struct {
-		name      string
-		ctx       context.Context
-		membersID []string
-		wantErr   codes.Code
+		name            string
+		ctx             context.Context
+		membersUsername []string
+		wantErr         codes.Code
 	}{
-		{"valid", ctxWithUser("alice", ids["alice"]), []string{ids["bob"].String()}, codes.OK},
-		{"idempotent", ctxWithUser("alice", ids["alice"]), []string{ids["bob"].String()}, codes.OK},
-		{"no auth", context.Background(), []string{ids["bob"].String()}, codes.Internal},
+		{"valid", ctxWithUser("alice", ids["alice"]), []string{"bob"}, codes.OK},
+		{"idempotent", ctxWithUser("alice", ids["alice"]), []string{"bob"}, codes.OK},
+		{"no auth", context.Background(), []string{"bob"}, codes.Internal},
 		{"empty members", ctxWithUser("alice", ids["alice"]), []string{}, codes.InvalidArgument},
-		{"too many members", ctxWithUser("alice", ids["alice"]), []string{ids["bob"].String(), ids["carol"].String()}, codes.InvalidArgument},
-		{"invalid uuid", ctxWithUser("alice", ids["alice"]), []string{"not-a-uuid"}, codes.InvalidArgument},
-		{"self dm", ctxWithUser("alice", ids["alice"]), []string{ids["alice"].String()}, codes.InvalidArgument},
-		{"not friends", ctxWithUser("alice", ids["alice"]), []string{ids["dave"].String()}, codes.PermissionDenied},
+		{"too many members", ctxWithUser("alice", ids["alice"]), []string{"bob", "carol"}, codes.InvalidArgument},
+		{"unknown user", ctxWithUser("alice", ids["alice"]), []string{"nobody"}, codes.NotFound},
+		{"self dm", ctxWithUser("alice", ids["alice"]), []string{"alice"}, codes.InvalidArgument},
+		{"not friends", ctxWithUser("alice", ids["alice"]), []string{"dave"}, codes.PermissionDenied},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := chatServer.CreateConversation(tc.ctx, &pb.CreateConversationRequest{
-				IsGroup:   false,
-				MembersId: tc.membersID,
+				IsGroup:         false,
+				MembersUsername: tc.membersUsername,
 			})
 			if got := grpcCode(err); got != tc.wantErr {
 				t.Errorf("got %v, want %v (err: %v)", got, tc.wantErr, err)
@@ -60,26 +60,26 @@ func TestCreateConversation_Group(t *testing.T) {
 	// carol is intentionally NOT friends with alice
 
 	cases := []struct {
-		name      string
-		ctx       context.Context
-		groupName string
-		membersID []string
-		wantErr   codes.Code
+		name            string
+		ctx             context.Context
+		groupName       string
+		membersUsername []string
+		wantErr         codes.Code
 	}{
-		{"valid", ctxWithUser("alice", ids["alice"]), "team-chat", []string{ids["bob"].String()}, codes.OK},
-		{"no auth", context.Background(), "team-chat", []string{ids["bob"].String()}, codes.Internal},
-		{"missing name", ctxWithUser("alice", ids["alice"]), "", []string{ids["bob"].String()}, codes.InvalidArgument},
-		{"invalid uuid", ctxWithUser("alice", ids["alice"]), "team-chat", []string{"not-a-uuid"}, codes.InvalidArgument},
+		{"valid", ctxWithUser("alice", ids["alice"]), "team-chat", []string{"bob"}, codes.OK},
+		{"no auth", context.Background(), "team-chat", []string{"bob"}, codes.Internal},
+		{"missing name", ctxWithUser("alice", ids["alice"]), "", []string{"bob"}, codes.InvalidArgument},
+		{"unknown user", ctxWithUser("alice", ids["alice"]), "team-chat", []string{"nobody"}, codes.NotFound},
 		{"empty members", ctxWithUser("alice", ids["alice"]), "solo", []string{}, codes.InvalidArgument},
-		{"not friends", ctxWithUser("alice", ids["alice"]), "team-chat", []string{ids["carol"].String()}, codes.PermissionDenied},
+		{"not friends", ctxWithUser("alice", ids["alice"]), "team-chat", []string{"carol"}, codes.PermissionDenied},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := chatServer.CreateConversation(tc.ctx, &pb.CreateConversationRequest{
-				IsGroup:   true,
-				Name:      tc.groupName,
-				MembersId: tc.membersID,
+				IsGroup:         true,
+				Name:            tc.groupName,
+				MembersUsername: tc.membersUsername,
 			})
 			if got := grpcCode(err); got != tc.wantErr {
 				t.Errorf("got %v, want %v (err: %v)", got, tc.wantErr, err)
@@ -97,7 +97,7 @@ func TestSendMessage(t *testing.T) {
 	// alice↔bob DM
 	convResp, err := chatServer.CreateConversation(
 		ctxWithUser("alice", ids["alice"]),
-		&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+		&pb.CreateConversationRequest{IsGroup: false, MembersUsername: []string{"bob"}},
 	)
 	if err != nil {
 		t.Fatalf("setup CreateConversation: %v", err)
@@ -143,7 +143,7 @@ func TestGetMessages(t *testing.T) {
 
 	convResp, err := chatServer.CreateConversation(
 		ctxWithUser("alice", ids["alice"]),
-		&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+		&pb.CreateConversationRequest{IsGroup: false, MembersUsername: []string{"bob"}},
 	)
 	if err != nil {
 		t.Fatalf("setup CreateConversation: %v", err)
@@ -248,7 +248,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 
 	convResp, err := chatServer.CreateConversation(
 		ctxWithUser("alice", ids["alice"]),
-		&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+		&pb.CreateConversationRequest{IsGroup: false, MembersUsername: []string{"bob"}},
 	)
 	if err != nil {
 		t.Fatalf("setup CreateConversation: %v", err)
@@ -335,7 +335,7 @@ func TestSendMessage_Notifications(t *testing.T) {
 	t.Run("DM: only peer gets notification", func(t *testing.T) {
 		convResp, err := chatServer.CreateConversation(
 			ctxWithUser("alice", ids["alice"]),
-			&pb.CreateConversationRequest{IsGroup: false, MembersId: []string{ids["bob"].String()}},
+			&pb.CreateConversationRequest{IsGroup: false, MembersUsername: []string{"bob"}},
 		)
 		if err != nil {
 			t.Fatalf("setup: %v", err)
@@ -382,9 +382,9 @@ func TestSendMessage_Notifications(t *testing.T) {
 		convResp, err := chatServer.CreateConversation(
 			ctxWithUser("alice", ids["alice"]),
 			&pb.CreateConversationRequest{
-				IsGroup:   true,
-				Name:      "test-group",
-				MembersId: []string{ids["bob"].String(), ids["carol"].String()},
+				IsGroup:         true,
+				Name:            "test-group",
+				MembersUsername: []string{"bob", "carol"},
 			},
 		)
 		if err != nil {

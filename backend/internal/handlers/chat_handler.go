@@ -41,7 +41,7 @@ func (h *ChatHandler) CreateConversation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	conversationID, err := h.client.CreateConversation(r.Context(), token, req.IsGroup, req.Name, req.MembersID)
+	conversationID, err := h.client.CreateConversation(r.Context(), token, req.IsGroup, req.Name, req.MembersUsername)
 	if err != nil {
 		st, _ := status.FromError(err)
 		switch st.Code() {

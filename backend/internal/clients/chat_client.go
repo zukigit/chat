@@ -34,13 +34,13 @@ func (c *ChatClient) Close() {
 }
 
 // CreateConversation forwards a create conversation request to the backend via gRPC.
-// For DMs, membersID must contain exactly one peer user ID.
-// For groups, membersID lists all non-caller members; name must be non-empty.
-func (c *ChatClient) CreateConversation(ctx context.Context, token string, isGroup bool, name string, membersID []string) (int64, error) {
+// For DMs, membersUsername must contain exactly one peer username.
+// For groups, membersUsername lists all non-caller members; name must be non-empty.
+func (c *ChatClient) CreateConversation(ctx context.Context, token string, isGroup bool, name string, membersUsername []string) (int64, error) {
 	resp, err := c.client.CreateConversation(lib.WithToken(ctx, token), &pb.CreateConversationRequest{
-		IsGroup:   isGroup,
-		Name:      name,
-		MembersId: membersID,
+		IsGroup:         isGroup,
+		Name:            name,
+		MembersUsername: membersUsername,
 	})
 	if err != nil {
 		return 0, err

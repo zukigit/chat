@@ -32,9 +32,9 @@ type notificationRequest struct {
 
 // createConversationRequest is the request body for POST /conversations.
 type createConversationRequest struct {
-	IsGroup   bool     `json:"is_group"`
-	Name      string   `json:"name,omitempty"`
-	MembersID []string `json:"members_id"`
+	IsGroup         bool     `json:"is_group"`
+	Name            string   `json:"name,omitempty"`
+	MembersUsername []string `json:"members_username"`
 }
 
 // chatSendRequest is the JSON payload a client sends over the chat WebSocket

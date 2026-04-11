@@ -7,7 +7,7 @@ option go_package = "proto/chat/";
 message CreateConversationRequest {
   bool is_group = 1;
   string name = 2;
-  repeated  string members_id = 3;
+  repeated string members_username = 3;
 }
 
 message CreateConversationResponse {
