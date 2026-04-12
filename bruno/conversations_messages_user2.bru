@@ -1,0 +1,31 @@
+meta {
+  name: conversations_messages_user2
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{GATEWAY_URL}}/conversations/messages?conversation_id=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  conversation_id: 1
+}
+
+headers {
+  Authorization: Bearer {{TOKEN_USER2}}
+}
+
+body:json {
+  {
+    "is_group": false,
+    "members_username": ["{{USER_NAME_USER2}}"]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

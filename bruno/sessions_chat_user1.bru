@@ -1,0 +1,27 @@
+meta {
+  name: sessions_chat_user1
+  type: ws
+  seq: 16
+}
+
+ws {
+  url: {{GATEWAY_URL}}/sessions/chat
+  body: ws
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN_USER1}}
+}
+
+body:ws {
+  name: message 1
+  type: json
+  content: '''
+    {
+      "conversation_id": 1,
+      "content": "hello world",
+      "message_type": "string"
+    }
+  '''
+}

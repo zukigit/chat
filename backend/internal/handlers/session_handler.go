@@ -146,6 +146,8 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
+	lib.InfoLog.Printf("new chat session request from %s", r.RemoteAddr)
+
 	token, ok := lib.BearerToken(r)
 	if !ok {
 		token = r.URL.Query().Get("token")
@@ -186,6 +188,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		conn.Close()
 	}()
+	lib.InfoLog.Printf("chat session established: sessionId: %s", addSessionResp.SessionId)
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()

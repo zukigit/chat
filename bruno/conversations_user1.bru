@@ -1,0 +1,27 @@
+meta {
+  name: conversations_user1
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{GATEWAY_URL}}/conversations
+  body: json
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{TOKEN_USER1}}
+}
+
+body:json {
+  {
+    "is_group": false,
+    "members_username": ["{{USER_NAME_USER2}}"]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
