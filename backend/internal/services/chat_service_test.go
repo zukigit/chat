@@ -10,6 +10,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/zukigit/chat/backend/internal/db"
+	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/internal/services"
 	pb "github.com/zukigit/chat/backend/proto/chat"
 	"google.golang.org/grpc/codes"
@@ -284,18 +285,25 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 	t.Run("bob receives message params via NATS", func(t *testing.T) {
 		select {
 		case msg := <-bobMsgs:
-			var params db.SendMessageParams
-			if err := json.Unmarshal(msg.Data, &params); err != nil {
-				t.Fatalf("unmarshal payload: %v", err)
+			var envelope lib.ChatEnvelope
+			if err := json.Unmarshal(msg.Data, &envelope); err != nil {
+				t.Fatalf("unmarshal envelope: %v", err)
 			}
-			if params.ConversationID != convID {
-				t.Errorf("conversation_id: got %d, want %d", params.ConversationID, convID)
+			if envelope.Type != lib.ChatEventMessage {
+				t.Fatalf("envelope type: got %q, want %q", envelope.Type, lib.ChatEventMessage)
 			}
-			if params.SenderID != ids["alice"] {
-				t.Errorf("sender_id: got %s, want alice (%s)", params.SenderID, ids["alice"])
+			var message db.Message
+			if err := json.Unmarshal(envelope.Data, &message); err != nil {
+				t.Fatalf("unmarshal message data: %v", err)
 			}
-			if params.Content != "hello bob" {
-				t.Errorf("content: got %q, want %q", params.Content, "hello bob")
+			if message.ConversationID != convID {
+				t.Errorf("conversation_id: got %d, want %d", message.ConversationID, convID)
+			}
+			if message.SenderID != ids["alice"] {
+				t.Errorf("sender_id: got %s, want alice (%s)", message.SenderID, ids["alice"])
+			}
+			if message.Content != "hello bob" {
+				t.Errorf("content: got %q, want %q", message.Content, "hello bob")
 			}
 		case <-time.After(5 * time.Second):
 			t.Fatal("timeout: expected NATS message on bob's chat subject")

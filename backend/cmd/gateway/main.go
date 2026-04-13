@@ -86,7 +86,7 @@ func main() {
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/notifications/read", notificationHandler.MarkNotificationRead).Methods(http.MethodPost)
 	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodGet)
-	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodPost)
+	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodGet)
 	r.HandleFunc("/conversations", chatHandler.CreateConversation).Methods(http.MethodPost)
 	r.HandleFunc("/conversations/messages", chatHandler.GetMessages).Methods(http.MethodGet)
 

@@ -11,6 +11,7 @@ import (
 	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/internal/services"
 	"github.com/zukigit/chat/backend/proto/auth"
+	"github.com/zukigit/chat/backend/proto/chat"
 	"github.com/zukigit/chat/backend/proto/friendship"
 	"github.com/zukigit/chat/backend/proto/notification"
 	"github.com/zukigit/chat/backend/proto/session"
@@ -51,6 +52,7 @@ func main() {
 	notification.RegisterNotificationServer(srv, notifServer)
 	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB, notifServer))
 	session.RegisterSessionServer(srv, services.NewSessionServer(sqlDB))
+	chat.RegisterChatServer(srv, services.NewChatServer(sqlDB, notifServer))
 
 	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 	listener, err := net.Listen("tcp", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))

@@ -59,11 +59,12 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TYPE member_role AS ENUM ('member', 'admin', 'owner');
 
 CREATE TABLE IF NOT EXISTS conversation_members (
-    conversation_id      BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    user_id              UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
-    role                 member_role NOT NULL DEFAULT 'member',
-    last_read_message_id BIGINT NOT NULL DEFAULT 0,
-    joined_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    conversation_id             BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id                     UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
+    role                        member_role NOT NULL DEFAULT 'member',
+    last_read_message_id        BIGINT NOT NULL DEFAULT 0,
+    last_delivered_message_id   BIGINT NOT NULL DEFAULT 0,
+    joined_at                   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (conversation_id, user_id)
 );
 

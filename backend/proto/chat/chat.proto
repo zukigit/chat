@@ -49,8 +49,23 @@ message GetMessagesResponse {
   int64 next_cursor         = 2;
 }
 
+message UpdateLastReadMessageRequest {
+  int64 conversation_id = 1;
+  int64 message_id       = 2;
+}
+
+message UpdateMessageRequest {
+  int64   conversation_id = 1;
+  int64   message_id      = 2;
+  string  user_id      = 3;
+}
+
+message UpdateMessageResponse {}
+
 service Chat {
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+  rpc UpdateLastReadMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
+  rpc UpdateLastDeliveredMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
 }

@@ -146,6 +146,8 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
+	lib.InfoLog.Printf("new chat session request from %s", r.RemoteAddr)
+
 	token, ok := lib.BearerToken(r)
 	if !ok {
 		token = r.URL.Query().Get("token")
@@ -186,6 +188,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		conn.Close()
 	}()
+	lib.InfoLog.Printf("chat session established: sessionId: %s", addSessionResp.SessionId)
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
@@ -229,7 +232,31 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		func(msg jetstream.Msg) {
 			if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
 				lib.ErrorLog.Printf("Error writing to websocket: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+				return // don't ack the message if we failed to write to the client, so it can be retried
 			}
+
+			// Notify the backend that the message was delivered to this user.
+			var env lib.ChatEnvelope
+			var message db.Message
+			if err := json.Unmarshal(msg.Data(), &env); err != nil {
+				lib.ErrorLog.Printf("chat session: unmarshal envelope: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+				goto ack
+			}
+
+			if env.Type != lib.ChatEventMessage {
+				goto ack
+			}
+
+			if err := json.Unmarshal(env.Data, &message); err != nil {
+				lib.ErrorLog.Printf("chat session: unmarshal message: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+				goto ack
+			}
+
+			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
+				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: sessionId: %s, err: %v", addSessionResp.SessionId, err)
+			}
+
+		ack:
 			msg.Ack()
 		},
 		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {
