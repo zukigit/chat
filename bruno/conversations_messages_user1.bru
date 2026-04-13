@@ -1,25 +1,18 @@
 meta {
   name: conversations_messages_user1
   type: http
-  seq: 14
+  seq: 16
 }
 
 get {
-<<<<<<< HEAD
   url: {{GATEWAY_URL}}/conversations/messages?conversation_id=1&limit=20
-=======
-  url: {{GATEWAY_URL}}/conversations/messages?conversation_id=1
->>>>>>> 7f14cbb5314e09bef925f48903e95b23cdf0f78d
   body: none
   auth: inherit
 }
 
 params:query {
   conversation_id: 1
-<<<<<<< HEAD
   limit: 20
-=======
->>>>>>> 7f14cbb5314e09bef925f48903e95b23cdf0f78d
 }
 
 headers {
@@ -29,10 +22,7 @@ headers {
 body:json {
   {
     "is_group": false,
-<<<<<<< HEAD
     "name": "",
-=======
->>>>>>> 7f14cbb5314e09bef925f48903e95b23cdf0f78d
     "members_username": ["{{USER_NAME_USER2}}"]
   }
 }
