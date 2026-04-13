@@ -1,11 +1,11 @@
 meta {
-  name: sessions_notification_user2
+  name: sessions_chat_user2
   type: ws
-  seq: 7
+  seq: 17
 }
 
 ws {
-  url: {{GATEWAY_URL}}/sessions/notification
+  url: {{GATEWAY_URL}}/sessions/chat
   body: ws
   auth: none
 }
@@ -18,6 +18,9 @@ body:ws {
   name: message 1
   type: json
   content: '''
-    {}
+    {
+      "conversation_id": 1,
+      "content": "hello user 1"
+    }
   '''
 }

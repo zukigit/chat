@@ -1,11 +1,11 @@
 meta {
-  name: friends_request_user2
+  name: conversations_user2
   type: http
-  seq: 9
+  seq: 13
 }
 
 post {
-  url: {{GATEWAY_URL}}/friends/request
+  url: {{GATEWAY_URL}}/conversations
   body: json
   auth: inherit
 }
@@ -16,7 +16,9 @@ headers {
 
 body:json {
   {
-    "username": "{{USER_NAME_USER1}}"
+    "is_group": false,
+    "name": "",
+    "members_username": ["{{USER_NAME_USER1}}"]
   }
 }
 
