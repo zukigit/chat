@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
@@ -36,16 +37,6 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 		return nil, status.Error(codes.Unauthenticated, "Failed to get caller UUID")
 	}
 
-	// Build a stable per-user subject so JetStream retains messages while the
-	// user is offline and delivers them to any device that reconnects.
-	var subjectPrefix string
-	if db.SessionType(request.Type) == db.SessionTypeNotification {
-		subjectPrefix = lib.NotiSubjectPrefix
-	} else {
-		subjectPrefix = lib.ChatSubjectPrefix
-	}
-	listenPath := subjectPrefix + callerID.String()
-
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to begin transaction: %v", err)
@@ -60,11 +51,23 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 		Status:     db.SessionStatusNew,
 		ListenPath: sql.NullString{
 			Valid:  true,
-			String: listenPath,
+			String: fmt.Sprintf("SESSIONS.noti.%s", uuid.NewString()),
 		},
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to create session: %v", err)
+	}
+
+	// update listen_path
+	err = quries.UpdateListenPath(ctx, db.UpdateListenPathParams{
+		ID: row.ID,
+		ListenPath: sql.NullString{
+			Valid:  true,
+			String: fmt.Sprintf("%s%s", lib.NotiSubjectPrefix, row.ID.String()),
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to update listen path: %v", err)
 	}
 
 	err = tx.Commit()
@@ -74,7 +77,7 @@ func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSess
 
 	return &session.AddSessionResponse{
 		SessionId:  row.ID.String(),
-		ListenPath: listenPath,
+		ListenPath: fmt.Sprintf("sessions.noti.%s", row.ID.String()),
 	}, nil
 }
 

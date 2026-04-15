@@ -211,7 +211,6 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 	if msgType == "" {
 		msgType = db.MessageTypeText
 	}
-
 	switch msgType {
 	case db.MessageTypeText, db.MessageTypeImage, db.MessageTypeFile, db.MessageTypeAudio:
 	default:
@@ -287,7 +286,7 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 				if m.UserID == callerID {
 					continue
 				}
-				s.notif.publish(m.UserID, db.SessionTypeChat, msgBytes)
+				s.notif.publishIfOnline(m.UserID, db.SessionTypeChat, msgBytes)
 			}
 		}
 	}
@@ -382,20 +381,12 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 	}
 
 	q := db.New(s.sqlDB)
-	result, err := q.UpdateLastDeliveredMessageID(ctx, db.UpdateLastDeliveredMessageIDParams{
+	if err := q.UpdateLastDeliveredMessageID(ctx, db.UpdateLastDeliveredMessageIDParams{
 		ConversationID:         req.GetConversationId(),
 		UserID:                 callerID,
 		LastDeliveredMessageID: req.GetMessageId(),
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "UpdateLastDeliveredMessage: %v", err)
-	}
-
-	// Skip the delivery receipt if the DB row was not updated — meaning
-	// last_delivered_message_id was already >= req.GetMessageId().
-	rowsAffected, err := result.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		return &pb.UpdateMessageResponse{}, nil
 	}
 
 	// Notify the original sender that their message was delivered.
@@ -407,7 +398,7 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 				MessageID:      req.GetMessageId(),
 			})
 			if err == nil {
-				s.notif.publish(senderID, db.SessionTypeChat, receiptBytes)
+				s.notif.publishIfOnline(senderID, db.SessionTypeChat, receiptBytes)
 			}
 		}
 	}
