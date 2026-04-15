@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
-	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/proto/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,8 +37,7 @@ func (s *SessionServer) ValidateSession(ctx context.Context, req *session.Valida
 		return nil, status.Error(codes.Unauthenticated, "session not found or expired")
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("ValidateSession: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "ValidateSession: %v", err)
 	}
 
 	return &session.ValidateSessionResponse{UserId: userID.String()}, nil

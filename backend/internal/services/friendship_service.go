@@ -99,7 +99,7 @@ func (s *FriendshipServer) SendFriendRequest(ctx context.Context, req *pb.Friend
 		Type:    db.NotificationTypeFriendRequest,
 		Message: fmt.Sprintf("%s sent a friend request", callerName),
 	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "SendFriendRequest: create self-notification: %v", err)
+		return nil, status.Errorf(codes.Internal, "SendFriendRequest: create notification: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -131,8 +131,7 @@ func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.Frie
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		lib.ErrorLog.Printf("RejectFriendRequest: begin tx: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "RejectFriendRequest: begin tx: %v", err)
 	}
 	defer tx.Rollback()
 
@@ -143,8 +142,7 @@ func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.Frie
 		return nil, status.Errorf(codes.InvalidArgument, "user %q not found", target)
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("RejectFriendRequest: get target user: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "RejectFriendRequest: get target user: %v", err)
 	}
 	targetID := targetUser.UserID
 
@@ -158,8 +156,7 @@ func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.Frie
 		return nil, status.Error(codes.NotFound, "friend request not found")
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("RejectFriendRequest: get friendship: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "RejectFriendRequest: get friendship: %v", err)
 	}
 
 	if existing.Status != db.FriendshipStatusPending {
@@ -201,8 +198,7 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		lib.ErrorLog.Printf("respondToRequest: begin tx: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "respondToRequest: begin tx: %v", err)
 	}
 	defer tx.Rollback()
 
@@ -213,8 +209,7 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 		return nil, status.Errorf(codes.InvalidArgument, "user %q not found", target)
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("respondToRequest: get target user: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "respondToRequest: get target user: %v", err)
 	}
 	targetID := targetUser.UserID
 
@@ -228,8 +223,7 @@ func (s *FriendshipServer) respondToRequest(ctx context.Context, req *pb.FriendR
 		return nil, status.Error(codes.NotFound, "friend request not found")
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("respondToRequest: get friendship: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "respondToRequest: get friendship: %v", err)
 	}
 
 	if existing.Status != db.FriendshipStatusPending {

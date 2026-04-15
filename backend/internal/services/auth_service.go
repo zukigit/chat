@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
@@ -50,8 +49,7 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 		return nil, status.Error(codes.Unauthenticated, "invalid username or password")
 	}
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to get user: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "login: get user: %v", err)
 	}
 
 	// Verify password — reject OAuth accounts that have no password set.
@@ -66,21 +64,18 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 	// Generate JWT token (contains a fresh login_id UUID)
 	token, err := lib.GenerateToken(user.UserID.String(), req.UserName)
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to generate JWT token: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "login: generate token: %v", err)
 	}
 
 	// Parse the claims back to get the login_id we embedded.
 	claims, err := lib.ValidateToken(token)
 	if err != nil {
-		err = fmt.Errorf("failed to re-parse token claims: %w", err)
-		return nil, status.Errorf(codes.Internal, "internal server error: %s", err)
+		return nil, status.Errorf(codes.Internal, "login: validate token: %v", err)
 	}
 
 	loginID, err := uuid.Parse(claims.LoginID)
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to parse login_id: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "login: parse login_id: %v", err)
 	}
 
 	// Record this login session so ValidateSession and publishIfOnline can find it.
@@ -89,8 +84,7 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 		UserUserid: user.UserID,
 		LoginID:    loginID,
 	}); err != nil {
-		lib.ErrorLog.Printf("Failed to create session: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "login: create session: %v", err)
 	}
 
 	return &auth.LoginResponse{Token: token}, nil
@@ -109,8 +103,7 @@ func (s *AuthServer) Signup(ctx context.Context, req *auth.SignupRequest) (*auth
 	// Start a database transaction
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to begin transaction: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "signup: begin tx: %v", err)
 	}
 	defer tx.Rollback()
 
@@ -123,14 +116,12 @@ func (s *AuthServer) Signup(ctx context.Context, req *auth.SignupRequest) (*auth
 	}
 
 	if err != sql.ErrNoRows {
-		lib.ErrorLog.Printf("Failed to check user existence: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "signup: check username: %v", err)
 	}
 
 	hashedPasswd, err := bcrypt.GenerateFromPassword([]byte(req.Passwd), bcrypt.DefaultCost)
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to hash password: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "signup: hash password: %v", err)
 	}
 
 	_, err = queries.CreateUser(ctx, db.CreateUserParams{
@@ -139,14 +130,11 @@ func (s *AuthServer) Signup(ctx context.Context, req *auth.SignupRequest) (*auth
 		SignupType:   db.SignupTypeEmail,
 	})
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to create user: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "signup: create user: %v", err)
 	}
 
-	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		lib.ErrorLog.Printf("Failed to commit transaction: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "signup: commit: %v", err)
 	}
 
 	return &auth.SignupResponse{}, nil
@@ -164,8 +152,7 @@ func (s *AuthServer) Logout(ctx context.Context, _ *auth.LogoutRequest) (*auth.L
 
 	q := db.New(s.sqlDB)
 	if err := q.DeleteSessionByLoginID(ctx, loginID); err != nil && err != sql.ErrNoRows {
-		lib.ErrorLog.Printf("Logout: delete session: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, status.Errorf(codes.Internal, "logout: delete session: %v", err)
 	}
 
 	return &auth.LogoutResponse{}, nil

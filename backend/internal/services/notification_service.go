@@ -83,7 +83,5 @@ func (s *NotificationServer) publishIfOnline(userID uuid.UUID, subjectPrefix str
 		return
 	}
 	subject := subjectPrefix + userID.String()
-	if err := s.publisher.Publish(subject, payload); err != nil {
-		lib.ErrorLog.Printf("publishIfOnline: publish to %s: %v", subject, err)
-	}
+	s.publisher.Publish(subject, payload) //nolint:errcheck
 }
