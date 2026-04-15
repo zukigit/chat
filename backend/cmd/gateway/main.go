@@ -33,11 +33,10 @@ func main() {
 	}
 
 	sessionsStream, err := js.CreateOrUpdateStream(context.Background(), jetstream.StreamConfig{
-		Name:      "SESSIONS",
-		Subjects:  []string{lib.NotiSubjectPrefix + ">", lib.ChatSubjectPrefix + ">"},
-		MaxAge:    24 * time.Hour,
-		Retention: jetstream.InterestPolicy,
-		Storage:   jetstream.FileStorage,
+		Name:     "SESSIONS",
+		Subjects: []string{lib.NotiSubjectPrefix + ">", lib.ChatSubjectPrefix + ">"},
+		MaxAge:   24 * time.Hour,
+		Storage:  jetstream.FileStorage,
 	})
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to create sessions stream: %v", err)

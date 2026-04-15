@@ -66,7 +66,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		Durable:           "noti-" + claims.LoginID,
 		FilterSubjects:    []string{lib.NotiSubjectPrefix + claims.UserID},
 		AckPolicy:         jetstream.AckExplicitPolicy,
-		DeliverPolicy:     jetstream.DeliverNewPolicy,
 		InactiveThreshold: 24 * time.Hour,
 	})
 	if err != nil {
