@@ -381,12 +381,20 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 	}
 
 	q := db.New(s.sqlDB)
-	if err := q.UpdateLastDeliveredMessageID(ctx, db.UpdateLastDeliveredMessageIDParams{
+	result, err := q.UpdateLastDeliveredMessageID(ctx, db.UpdateLastDeliveredMessageIDParams{
 		ConversationID:         req.GetConversationId(),
 		UserID:                 callerID,
 		LastDeliveredMessageID: req.GetMessageId(),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "UpdateLastDeliveredMessage: %v", err)
+	}
+
+	// No rows affected means last_delivered_message_id is already >= req.GetMessageId()
+	// (the SQL guard `AND last_delivered_message_id < $3` prevented the update).
+	// Nothing changed, so skip the delivery receipt.
+	if n, _ := result.RowsAffected(); n == 0 {
+		return &pb.UpdateMessageResponse{}, nil
 	}
 
 	// Notify the original sender that their message was delivered.

@@ -204,6 +204,12 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
 		return
 	}
+	defer func() {
+		deleteCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		s.stream.DeleteConsumer(deleteCtx, consumer.CachedInfo().Name)
+	}()
 
 	// Read messages from the WS client and forward them to the chat backend.
 	go func() {

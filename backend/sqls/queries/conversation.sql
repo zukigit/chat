@@ -64,7 +64,7 @@ WHERE conversation_id = $1
   AND user_id = $2
   AND last_read_message_id < $3;
 
--- name: UpdateLastDeliveredMessageID :exec
+-- name: UpdateLastDeliveredMessageID :execresult
 UPDATE conversation_members
 SET last_delivered_message_id = $3
 WHERE conversation_id = $1
