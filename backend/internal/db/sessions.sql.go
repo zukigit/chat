@@ -7,92 +7,54 @@ package db
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
 
-const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (
-    user_userid,
-    type,
-    status,
-    listen_path
-) VALUES (
-    $1, $2, $3, $4
-)
-RETURNING id, user_userid, type, status, listen_path, created_at, updated_at
+const createSession = `-- name: CreateSession :exec
+INSERT INTO sessions (user_userid, login_id)
+VALUES ($1, $2)
 `
 
 type CreateSessionParams struct {
-	UserUserid uuid.UUID      `json:"user_userid"`
-	Type       SessionType    `json:"type"`
-	Status     SessionStatus  `json:"status"`
-	ListenPath sql.NullString `json:"listen_path"`
+	UserUserid uuid.UUID `json:"user_userid"`
+	LoginID    uuid.UUID `json:"login_id"`
 }
 
-func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, createSession,
-		arg.UserUserid,
-		arg.Type,
-		arg.Status,
-		arg.ListenPath,
-	)
-	var i Session
-	err := row.Scan(
-		&i.ID,
-		&i.UserUserid,
-		&i.Type,
-		&i.Status,
-		&i.ListenPath,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const deleteSession = `-- name: DeleteSession :exec
-DELETE FROM sessions
-WHERE id = $1
-`
-
-func (q *Queries) DeleteSession(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteSession, id)
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
+	_, err := q.db.ExecContext(ctx, createSession, arg.UserUserid, arg.LoginID)
 	return err
 }
 
-const getSession = `-- name: GetSession :many
-SELECT id, user_userid, type, status, listen_path, created_at, updated_at
-FROM sessions
-WHERE user_userid = $1 AND type = $2 AND status = 'active'
+const deleteSessionByLoginID = `-- name: DeleteSessionByLoginID :exec
+DELETE FROM sessions
+WHERE login_id = $1
 `
 
-type GetSessionParams struct {
-	UserUserid uuid.UUID   `json:"user_userid"`
-	Type       SessionType `json:"type"`
+func (q *Queries) DeleteSessionByLoginID(ctx context.Context, loginID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionByLoginID, loginID)
+	return err
 }
 
-func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) ([]Session, error) {
-	rows, err := q.db.QueryContext(ctx, getSession, arg.UserUserid, arg.Type)
+const getLoginIDsByUserID = `-- name: GetLoginIDsByUserID :many
+SELECT login_id
+FROM sessions
+WHERE user_userid = $1
+`
+
+func (q *Queries) GetLoginIDsByUserID(ctx context.Context, userUserid uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getLoginIDsByUserID, userUserid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Session
+	var items []uuid.UUID
 	for rows.Next() {
-		var i Session
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserUserid,
-			&i.Type,
-			&i.Status,
-			&i.ListenPath,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
+		var login_id uuid.UUID
+		if err := rows.Scan(&login_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, login_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -103,34 +65,15 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) ([]Sessi
 	return items, nil
 }
 
-const updateListenPath = `-- name: UpdateListenPath :exec
-UPDATE sessions
-SET listen_path = $2, updated_at = NOW()
-WHERE id = $1
+const validateSession = `-- name: ValidateSession :one
+SELECT user_userid
+FROM sessions
+WHERE login_id = $1
 `
 
-type UpdateListenPathParams struct {
-	ID         uuid.UUID      `json:"id"`
-	ListenPath sql.NullString `json:"listen_path"`
-}
-
-func (q *Queries) UpdateListenPath(ctx context.Context, arg UpdateListenPathParams) error {
-	_, err := q.db.ExecContext(ctx, updateListenPath, arg.ID, arg.ListenPath)
-	return err
-}
-
-const updateSessionStatus = `-- name: UpdateSessionStatus :exec
-UPDATE sessions
-SET status = $2, updated_at = NOW()
-WHERE id = $1
-`
-
-type UpdateSessionStatusParams struct {
-	ID     uuid.UUID     `json:"id"`
-	Status SessionStatus `json:"status"`
-}
-
-func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateSessionStatus, arg.ID, arg.Status)
-	return err
+func (q *Queries) ValidateSession(ctx context.Context, loginID uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, validateSession, loginID)
+	var user_userid uuid.UUID
+	err := row.Scan(&user_userid)
+	return user_userid, err
 }

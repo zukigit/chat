@@ -64,6 +64,7 @@ func UnaryJWTInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryS
 
 	ctx = context.WithValue(ctx, lib.ContextKeyUsername, claims.Username)
 	ctx = context.WithValue(ctx, lib.ContextKeyUserID, claims.UserID)
+	ctx = context.WithValue(ctx, lib.ContextKeyLoginID, claims.LoginID)
 	return handler(ctx, req)
 }
 
@@ -87,6 +88,7 @@ func StreamJWTInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.Stre
 
 	ctx = context.WithValue(ctx, lib.ContextKeyUsername, claims.Username)
 	ctx = context.WithValue(ctx, lib.ContextKeyUserID, claims.UserID)
+	ctx = context.WithValue(ctx, lib.ContextKeyLoginID, claims.LoginID)
 	return handler(srv, &wrappedStream{ServerStream: ss, ctx: ctx})
 }
 

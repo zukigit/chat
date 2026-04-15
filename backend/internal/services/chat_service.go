@@ -286,7 +286,7 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 				if m.UserID == callerID {
 					continue
 				}
-				s.notif.publishIfOnline(m.UserID, db.SessionTypeChat, msgBytes)
+				s.notif.publishIfOnline(m.UserID, lib.ChatSubjectPrefix, msgBytes)
 			}
 		}
 	}
@@ -406,7 +406,7 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 				MessageID:      req.GetMessageId(),
 			})
 			if err == nil {
-				s.notif.publishIfOnline(senderID, db.SessionTypeChat, receiptBytes)
+				s.notif.publishIfOnline(senderID, lib.ChatSubjectPrefix, receiptBytes)
 			}
 		}
 	}

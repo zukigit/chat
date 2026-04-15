@@ -91,17 +91,11 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );
 -- ── Sessions ───────────────────────────────────────────────────────────────────
-CREATE TYPE session_type AS ENUM ('notification', 'chat');
-CREATE TYPE session_status AS ENUM ('active', 'idle', 'terminate', 'new');
-
 CREATE TABLE IF NOT EXISTS sessions (
-    id           UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_userid  UUID           NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    type         session_type   NOT NULL,
-    status       session_status NOT NULL DEFAULT 'new',
-    listen_path  TEXT,
-    created_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_userid  UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    login_id     UUID        NOT NULL UNIQUE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── Indexes ────────────────────────────────────────────────────────────────────
@@ -142,6 +136,6 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user2_status_time
 CREATE INDEX IF NOT EXISTS idx_friendships_initiator
     ON friendships (initiator_userid);
 
--- sessions: lookup by user and type
-CREATE INDEX IF NOT EXISTS idx_sessions_user_type
-    ON sessions (user_userid, type);
+-- sessions: look up active sessions for a user
+CREATE INDEX IF NOT EXISTS idx_sessions_user
+    ON sessions (user_userid);

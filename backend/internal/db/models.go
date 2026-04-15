@@ -184,92 +184,6 @@ func (ns NullNotificationType) Value() (driver.Value, error) {
 	return string(ns.NotificationType), nil
 }
 
-type SessionStatus string
-
-const (
-	SessionStatusActive    SessionStatus = "active"
-	SessionStatusIdle      SessionStatus = "idle"
-	SessionStatusTerminate SessionStatus = "terminate"
-	SessionStatusNew       SessionStatus = "new"
-)
-
-func (e *SessionStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = SessionStatus(s)
-	case string:
-		*e = SessionStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for SessionStatus: %T", src)
-	}
-	return nil
-}
-
-type NullSessionStatus struct {
-	SessionStatus SessionStatus `json:"session_status"`
-	Valid         bool          `json:"valid"` // Valid is true if SessionStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullSessionStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.SessionStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.SessionStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullSessionStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.SessionStatus), nil
-}
-
-type SessionType string
-
-const (
-	SessionTypeNotification SessionType = "notification"
-	SessionTypeChat         SessionType = "chat"
-)
-
-func (e *SessionType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = SessionType(s)
-	case string:
-		*e = SessionType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for SessionType: %T", src)
-	}
-	return nil
-}
-
-type NullSessionType struct {
-	SessionType SessionType `json:"session_type"`
-	Valid       bool        `json:"valid"` // Valid is true if SessionType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullSessionType) Scan(value interface{}) error {
-	if value == nil {
-		ns.SessionType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.SessionType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullSessionType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.SessionType), nil
-}
-
 type SignupType string
 
 const (
@@ -371,13 +285,10 @@ type Notification struct {
 }
 
 type Session struct {
-	ID         uuid.UUID      `json:"id"`
-	UserUserid uuid.UUID      `json:"user_userid"`
-	Type       SessionType    `json:"type"`
-	Status     SessionStatus  `json:"status"`
-	ListenPath sql.NullString `json:"listen_path"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	ID         uuid.UUID `json:"id"`
+	UserUserid uuid.UUID `json:"user_userid"`
+	LoginID    uuid.UUID `json:"login_id"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type User struct {

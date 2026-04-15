@@ -35,6 +35,10 @@ const ContextKeyUsername contextKey = "username"
 // after JWT validation by the interceptor.
 const ContextKeyUserID contextKey = "user_id"
 
+// ContextKeyLoginID is the context key used to store the login_id from the JWT
+// after validation by the interceptor.
+const ContextKeyLoginID contextKey = "login_id"
+
 const NotiSubjectPrefix = "sessions.noti."
 const ChatSubjectPrefix = "sessions.chat."
 
@@ -76,6 +80,12 @@ func CallerUUID(ctx context.Context) (uuid.UUID, error) {
 		return uuid.Nil, status.Errorf(codes.Internal, "invalid caller user_id in context: %v", err)
 	}
 	return id, nil
+}
+
+// CallerLoginID returns the login_id string stored in the context by the JWT interceptor.
+func CallerLoginID(ctx context.Context) string {
+	loginID, _ := ctx.Value(ContextKeyLoginID).(string)
+	return loginID
 }
 
 // OrderedUUIDPair returns the two UUIDs sorted lexicographically so that

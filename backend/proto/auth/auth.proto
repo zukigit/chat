@@ -20,7 +20,11 @@ message SignupRequest {
 
 message SignupResponse {}
 
+message LogoutRequest {}
+message LogoutResponse {}
+
 service Auth {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Signup(SignupRequest) returns (SignupResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
 }

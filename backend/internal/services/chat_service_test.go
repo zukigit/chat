@@ -2,9 +2,7 @@ package services_test
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -242,7 +240,6 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 
 	notifServer := services.NewNotificationServer(sqlDB, nc)
 	chatServer := services.NewChatServer(sqlDB, notifServer)
-	q := db.New(sqlDB)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
 	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
@@ -256,16 +253,8 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 	}
 	convID := convResp.ConversationId
 
-	// Register bob's active chat session with a known listen_path.
-	bobSubject := fmt.Sprintf("chat.%s", ids["bob"])
-	if _, err := q.CreateSession(context.Background(), db.CreateSessionParams{
-		UserUserid: ids["bob"],
-		Type:       db.SessionTypeChat,
-		Status:     db.SessionStatusActive,
-		ListenPath: sql.NullString{Valid: true, String: bobSubject},
-	}); err != nil {
-		t.Fatalf("setup CreateSession for bob: %v", err)
-	}
+	// Subject where publishIfOnline will deliver bob's messages.
+	bobSubject := lib.ChatSubjectPrefix + ids["bob"].String()
 
 	// Subscribe to bob's chat subject before sending.
 	bobMsgs := make(chan *nats.Msg, 1)
@@ -313,7 +302,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 	t.Run("alice (sender) receives no chat publish", func(t *testing.T) {
 		// Alice has no chat session, so nothing should be published for her.
 		// Verify by checking there are no pending messages on an alice subject.
-		aliceSubject := fmt.Sprintf("chat.%s", ids["alice"])
+		aliceSubject := lib.ChatSubjectPrefix + ids["alice"].String()
 		aliceMsgs := make(chan *nats.Msg, 1)
 		aliceSub, err := nc.ChanSubscribe(aliceSubject, aliceMsgs)
 		if err != nil {

@@ -4,30 +4,14 @@ package session;
 
 option go_package = "proto/session/";
 
-message AddSessionRequest {
-  string type = 1;
+message ValidateSessionRequest {
+  string login_id = 1;
 }
 
-message AddSessionResponse {
-  string session_id = 1;
-  string listen_path = 2;
+message ValidateSessionResponse {
+  string user_id = 1;
 }
-
-message SetSessionStatusRequest {
-  string session_id = 1;
-  string status = 2;
-}
-
-message SetSessionStatusResponse {}
-
-message DeleteSessionRequest {
-  string session_id = 1;
-}
-
-message DeleteSessionResponse {}
 
 service Session {
-  rpc AddSession(AddSessionRequest) returns (AddSessionResponse);
-  rpc SetSessionStatus(SetSessionStatusRequest) returns (SetSessionStatusResponse);
-  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
+  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
 }

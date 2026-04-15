@@ -1,147 +1,46 @@
 package services
 
 import (
-	"context"
-	"database/sql"
-	"fmt"
+"context"
+"database/sql"
 
-	"github.com/google/uuid"
-	"github.com/zukigit/chat/backend/internal/db"
-	"github.com/zukigit/chat/backend/internal/lib"
-	"github.com/zukigit/chat/backend/proto/session"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+"github.com/google/uuid"
+"github.com/zukigit/chat/backend/internal/db"
+"github.com/zukigit/chat/backend/internal/lib"
+"github.com/zukigit/chat/backend/proto/session"
+"google.golang.org/grpc/codes"
+"google.golang.org/grpc/status"
 )
 
 type SessionServer struct {
-	sqlDB *sql.DB
-	session.UnimplementedSessionServer
+sqlDB *sql.DB
+session.UnimplementedSessionServer
 }
 
 func NewSessionServer(sqlDB *sql.DB) *SessionServer {
-	if sqlDB != nil {
-		return &SessionServer{
-			sqlDB: sqlDB,
-		}
-	}
-	return nil
+if sqlDB == nil {
+return nil
+}
+return &SessionServer{sqlDB: sqlDB}
 }
 
-func (s *SessionServer) AddSession(ctx context.Context, request *session.AddSessionRequest) (*session.AddSessionResponse, error) {
-	if request.GetType() == "" {
-		return nil, status.Error(codes.InvalidArgument, "Type is required")
-	}
-
-	callerID, err := lib.CallerUUID(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "Failed to get caller UUID")
-	}
-
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-
-	quries := db.New(tx)
-
-	row, err := quries.CreateSession(ctx, db.CreateSessionParams{
-		UserUserid: callerID,
-		Type:       db.SessionType(request.Type),
-		Status:     db.SessionStatusNew,
-		ListenPath: sql.NullString{
-			Valid:  true,
-			String: fmt.Sprintf("SESSIONS.noti.%s", uuid.NewString()),
-		},
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to create session: %v", err)
-	}
-
-	// update listen_path
-	err = quries.UpdateListenPath(ctx, db.UpdateListenPathParams{
-		ID: row.ID,
-		ListenPath: sql.NullString{
-			Valid:  true,
-			String: fmt.Sprintf("%s%s", lib.NotiSubjectPrefix, row.ID.String()),
-		},
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to update listen path: %v", err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
-	}
-
-	return &session.AddSessionResponse{
-		SessionId:  row.ID.String(),
-		ListenPath: fmt.Sprintf("sessions.noti.%s", row.ID.String()),
-	}, nil
+// ValidateSession checks that login_id exists in the sessions table and returns
+// the owning user_id. The JWT itself is already verified by the gRPC interceptor.
+func (s *SessionServer) ValidateSession(ctx context.Context, req *session.ValidateSessionRequest) (*session.ValidateSessionResponse, error) {
+loginID, err := uuid.Parse(req.GetLoginId())
+if err != nil {
+return nil, status.Error(codes.InvalidArgument, "invalid login_id")
 }
 
-func (s *SessionServer) SetSessionStatus(ctx context.Context, request *session.SetSessionStatusRequest) (*session.SetSessionStatusResponse, error) {
-	if request.GetStatus() == "" {
-		return nil, status.Error(codes.InvalidArgument, "Status is required")
-	}
-
-	sessionID, err := uuid.Parse(request.GetSessionId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Invalid session ID")
-	}
-
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-
-	quries := db.New(tx)
-
-	err = quries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
-		ID:     sessionID,
-		Status: db.SessionStatus(request.Status),
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to update session status: %v", err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
-	}
-
-	return &session.SetSessionStatusResponse{}, nil
+q := db.New(s.sqlDB)
+userID, err := q.ValidateSession(ctx, loginID)
+if err == sql.ErrNoRows {
+return nil, status.Error(codes.Unauthenticated, "session not found or expired")
+}
+if err != nil {
+lib.ErrorLog.Printf("ValidateSession: %v", err)
+return nil, status.Error(codes.Internal, "internal server error")
 }
 
-func (s *SessionServer) DeleteSession(ctx context.Context, request *session.DeleteSessionRequest) (*session.DeleteSessionResponse, error) {
-	if request.GetSessionId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "Session ID is required")
-	}
-
-	sessionID, err := uuid.Parse(request.GetSessionId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Invalid session ID")
-	}
-
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-
-	quries := db.New(tx)
-
-	err = quries.DeleteSession(ctx, sessionID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to delete session: %v", err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to commit transaction: %v", err)
-	}
-
-	return &session.DeleteSessionResponse{}, nil
+return &session.ValidateSessionResponse{UserId: userID.String()}, nil
 }
