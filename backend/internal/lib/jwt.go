@@ -5,14 +5,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 // Claims holds the data embedded inside a JWT.
 type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
-	LoginID  string `json:"login_id"`
 	jwt.RegisteredClaims
 }
 
@@ -27,13 +25,10 @@ func jwtSecret() []byte {
 }
 
 // GenerateToken signs a JWT for the given userID and username with a 24-hour expiry.
-// A fresh login_id UUID is embedded so the gateway can use it as a stable durable
-// consumer name for the lifetime of this token.
 func GenerateToken(userID, username string) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
-		LoginID:  uuid.NewString(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -62,18 +57,5 @@ func ValidateToken(tokenStr string) (*Claims, error) {
 		return nil, errors.New("invalid token")
 	}
 
-	return claims, nil
-}
-
-// ParseTokenUnverified decodes the JWT claims without checking the signature.
-// Safe for use in the gateway, which has no JWT secret — signature verification
-// is the backend's responsibility via the gRPC interceptor.
-func ParseTokenUnverified(tokenStr string) (*Claims, error) {
-	claims := &Claims{}
-	p := jwt.NewParser()
-	_, _, err := p.ParseUnverified(tokenStr, claims)
-	if err != nil {
-		return nil, err
-	}
 	return claims, nil
 }

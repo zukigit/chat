@@ -56,14 +56,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Extract LoginID from the token without verifying the signature — the
-	// backend already validated it. Used to name the durable consumer so
-	// this login session resumes from where it left off on reconnect.
-	var notiConsumerName string
-	if claims, err := lib.ParseTokenUnverified(token); err == nil && claims.LoginID != "" {
-		notiConsumerName = "noti-" + claims.LoginID
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
@@ -83,11 +75,10 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	defer cancel()
 
 	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Durable:           notiConsumerName,
+		Durable:           addSessionResp.SessionId,
 		FilterSubjects:    []string{addSessionResp.ListenPath},
 		AckPolicy:         jetstream.AckExplicitPolicy,
-		DeliverPolicy:     jetstream.DeliverNewPolicy,
-		InactiveThreshold: 24 * time.Hour,
+		InactiveThreshold: 24 * time.Hour, // auto-delete consumer if no client is consuming
 	})
 	if err != nil {
 		closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, fmt.Sprintf("Failed to create consumer: %v", err))
@@ -183,14 +174,6 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract LoginID from the token without verifying the signature — the
-	// backend already validated it. Used to name the durable consumer so
-	// this login session resumes from where it left off on reconnect.
-	var chatConsumerName string
-	if claims, err := lib.ParseTokenUnverified(token); err == nil && claims.LoginID != "" {
-		chatConsumerName = "chat-" + claims.LoginID
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
@@ -211,11 +194,10 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Durable:           chatConsumerName,
+		Durable:           addSessionResp.SessionId,
 		FilterSubjects:    []string{addSessionResp.ListenPath},
 		AckPolicy:         jetstream.AckExplicitPolicy,
-		DeliverPolicy:     jetstream.DeliverNewPolicy,
-		InactiveThreshold: 72 * time.Hour,
+		InactiveThreshold: 24 * time.Hour,
 	})
 	if err != nil {
 		closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, fmt.Sprintf("Failed to create consumer: %v", err))
