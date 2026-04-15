@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
@@ -69,11 +70,11 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
-	// Parse the claims back to get the login_id we just embedded.
+	// Parse the claims back to get the login_id we embedded.
 	claims, err := lib.ValidateToken(token)
 	if err != nil {
-		lib.ErrorLog.Printf("Failed to re-parse token claims: %v", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		err = fmt.Errorf("failed to re-parse token claims: %w", err)
+		return nil, status.Errorf(codes.Internal, "internal server error: %s", err)
 	}
 
 	loginID, err := uuid.Parse(claims.LoginID)

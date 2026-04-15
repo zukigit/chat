@@ -123,22 +123,22 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 // Logout handles POST /logout
 // Deletes the caller's session from the backend, invalidating the login_id.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-token, ok := lib.BearerToken(r)
-if !ok || token == "" {
-lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Missing token"})
-return
-}
+	token, ok := lib.BearerToken(r)
+	if !ok || token == "" {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Missing token"})
+		return
+	}
 
-if err := h.authClient.Logout(r.Context(), token); err != nil {
-grpcStatus, _ := status.FromError(err)
-switch grpcStatus.Code() {
-case codes.Unauthenticated:
-lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: grpcStatus.Message()})
-default:
-lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
-}
-return
-}
+	if err := h.authClient.Logout(r.Context(), token); err != nil {
+		grpcStatus, _ := status.FromError(err)
+		switch grpcStatus.Code() {
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: grpcStatus.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
+		}
+		return
+	}
 
-lib.WriteJSON(w, http.StatusOK, lib.Response{Success: true, Message: "logged out"})
+	lib.WriteJSON(w, http.StatusOK, lib.Response{Success: true, Message: "logged out"})
 }
