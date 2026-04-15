@@ -52,8 +52,8 @@ func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, notiParams
 		return err
 	}
 
-	// Live push — non-fatal if the recipient is offline.
-	s.publishIfOnline(notiParams.UserID, db.SessionTypeNotification, notificationBytes)
+	// Live push — retained by JetStream for offline delivery.
+	s.publish(notiParams.UserID, db.SessionTypeNotification, notificationBytes)
 	return nil
 }
 
@@ -75,42 +75,23 @@ func (s *NotificationServer) MarkNotificationRead(ctx context.Context, req *pb.M
 	return &pb.MarkNotificationReadResponse{}, nil
 }
 
-// publishIfOnline looks up active sessions of the given sessionType for userID
-// and publishes payload to each session's listen_path via NATS.
-// All errors are logged and swallowed — an offline user is normal.
-func (s *NotificationServer) publishIfOnline(userID uuid.UUID, sessionType db.SessionType, payload []byte) {
+// publish constructs the stable per-user NATS subject for the given sessionType
+// and delivers payload unconditionally. Messages published while the user is
+// offline are retained by JetStream and delivered when any of their devices
+// reconnects.
+func (s *NotificationServer) publish(userID uuid.UUID, sessionType db.SessionType, payload []byte) {
 	if s.publisher == nil {
 		return
 	}
 
-	ctx := context.Background()
-
-	conn, err := s.sqlDB.Conn(ctx)
-	if err != nil {
-		lib.ErrorLog.Printf("publishIfOnline: get conn: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	q := db.New(conn)
-
-	sessions, err := q.GetSession(ctx, db.GetSessionParams{
-		UserUserid: userID,
-		Type:       sessionType,
-	})
-	if err != nil {
-		lib.ErrorLog.Printf("publishIfOnline: get session: %v", err)
-		return
-	}
-	if len(sessions) == 0 {
-		return
+	var subject string
+	if sessionType == db.SessionTypeNotification {
+		subject = lib.NotiSubjectPrefix + userID.String()
+	} else {
+		subject = lib.ChatSubjectPrefix + userID.String()
 	}
 
-	for _, session := range sessions {
-		subject := session.ListenPath.String
-		if err := s.publisher.Publish(subject, payload); err != nil {
-			lib.ErrorLog.Printf("publishIfOnline: publish to %s: %v", subject, err)
-			continue
-		}
+	if err := s.publisher.Publish(subject, payload); err != nil {
+		lib.ErrorLog.Printf("publish: publish to %s: %v", subject, err)
 	}
 }

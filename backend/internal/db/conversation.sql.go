@@ -269,7 +269,7 @@ func (q *Queries) RemoveMemberFromConversation(ctx context.Context, arg RemoveMe
 	return err
 }
 
-const updateLastDeliveredMessageID = `-- name: UpdateLastDeliveredMessageID :exec
+const updateLastDeliveredMessageID = `-- name: UpdateLastDeliveredMessageID :execresult
 UPDATE conversation_members
 SET last_delivered_message_id = $3
 WHERE conversation_id = $1
@@ -283,9 +283,8 @@ type UpdateLastDeliveredMessageIDParams struct {
 	LastDeliveredMessageID int64     `json:"last_delivered_message_id"`
 }
 
-func (q *Queries) UpdateLastDeliveredMessageID(ctx context.Context, arg UpdateLastDeliveredMessageIDParams) error {
-	_, err := q.db.ExecContext(ctx, updateLastDeliveredMessageID, arg.ConversationID, arg.UserID, arg.LastDeliveredMessageID)
-	return err
+func (q *Queries) UpdateLastDeliveredMessageID(ctx context.Context, arg UpdateLastDeliveredMessageIDParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateLastDeliveredMessageID, arg.ConversationID, arg.UserID, arg.LastDeliveredMessageID)
 }
 
 const updateLastReadMessageID = `-- name: UpdateLastReadMessageID :exec
