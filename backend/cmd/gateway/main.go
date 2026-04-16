@@ -96,7 +96,8 @@ func main() {
 	r.HandleFunc("/conversations/messages", chatHandler.GetMessages).Methods(http.MethodGet)
 
 	cors := gorhandlers.CORS(
-		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "http://localhost:5173")}),
+		// frontend url is dynamic
+		gorhandlers.AllowedOrigins([]string{"*"}),
 		gorhandlers.AllowedMethods([]string{"GET", "POST"}),
 		gorhandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)
