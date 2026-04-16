@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveConfig } from '../config'
+import SetupPageView from './SetupPageView'
 
 export default function SetupPage() {
   const [gatewayUrl, setGatewayUrl] = useState('')
@@ -21,28 +22,28 @@ export default function SetupPage() {
       saveConfig({ gatewayUrl: url, version })
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connection failed')
+      if (err instanceof TypeError) {
+        setError(`Could not reach server at "${gatewayUrl.replace(/\/$/, '')}". Check the URL and try again.`)
+      } else {
+        setError(err instanceof Error ? err.message : 'Connection failed')
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  const disabled = loading || !gatewayUrl.trim()
+
   return (
-    <div>
-      <h1>Setup</h1>
-      <label>
-        Gateway URL
-        <input
-          type="text"
-          placeholder="http://localhost:8080"
-          value={gatewayUrl}
-          onChange={e => setGatewayUrl(e.target.value)}
-        />
-      </label>
-      <button onClick={handleConnect} disabled={loading || !gatewayUrl}>
-        {loading ? 'Connecting...' : 'Connect'}
-      </button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-    </div>
+    <SetupPageView
+      gatewayUrl={gatewayUrl}
+      loading={loading}
+      error={error}
+      disabled={disabled}
+      onUrlChange={setGatewayUrl}
+      onConnect={handleConnect}
+      onKeyDown={e => e.key === 'Enter' && !disabled && handleConnect()}
+    />
   )
 }
+
