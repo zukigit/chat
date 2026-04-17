@@ -97,7 +97,7 @@ func main() {
 
 	cors := gorhandlers.CORS(
 		// frontend url is dynamic
-		gorhandlers.AllowedOrigins([]string{"*"}),
+		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "")}),
 		gorhandlers.AllowedMethods([]string{"GET", "POST"}),
 		gorhandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)
