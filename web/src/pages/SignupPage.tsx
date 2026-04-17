@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loadConfig } from '../config'
 import './auth.css'
@@ -10,6 +10,11 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const config = loadConfig()
+  
+  useEffect(() => {
+    if (!config) navigate('/setup')
+  }, [])
 
   async function handleSignup() {
     setError('')
