@@ -5,6 +5,7 @@ WORKDIR /app
 
 COPY ./web .
 
+ARG VITE_GATEWAY_URL
 RUN npm ci
 RUN npm run build
 

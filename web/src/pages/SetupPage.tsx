@@ -4,7 +4,7 @@ import { saveConfig } from '../config'
 import SetupPageView from './SetupPageView'
 
 export default function SetupPage() {
-  const [gatewayUrl, setGatewayUrl] = useState('')
+  const [gatewayUrl, setGatewayUrl] = useState(import.meta.env.VITE_GATEWAY_URL ?? '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()

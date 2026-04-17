@@ -7,6 +7,10 @@ on:
         description: 'Version tag'
         required: true
         default: 'latest'
+      gateway_url:
+        description: 'Gateway URL (VITE_GATEWAY_URL)'
+        required: false
+        default: ''
   workflow_call:
     inputs:
       tag:
@@ -14,6 +18,11 @@ on:
         required: true
         type: string
         default: 'latest'
+      gateway_url:
+        description: 'Gateway URL (VITE_GATEWAY_URL)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -35,3 +44,5 @@ jobs:
           file: ./web/Dockerfile
           push: true
           tags: zukidocker/chat-web:${{ inputs.tag || 'latest' }}
+          build-args: |
+            VITE_GATEWAY_URL=${{ inputs.gateway_url }}
