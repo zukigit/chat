@@ -8,6 +8,7 @@ import '../components/chat.css'
 import {
   FAKE_CONVERSATIONS,
   FAKE_FRIENDS,
+  FAKE_FRIEND_REQUESTS,
   FAKE_MESSAGES,
   type Conversation,
   type Friend,
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
 
   async function handleLogout() {
+    if (!confirm('Are you sure you want to logout?')) return
     const token = getToken()
     if (token) {
       const config = JSON.parse(localStorage.getItem('chat_config') ?? '{}')
@@ -69,7 +71,7 @@ export default function HomePage() {
             👥 Friends
           </button>
           <button className="logout-btn" onClick={handleLogout} title="Logout" style={{ margin: '0 8px' }}>
-            ⏻
+            🚪
           </button>
         </div>
 
@@ -82,6 +84,7 @@ export default function HomePage() {
         ) : (
           <FriendsList
             friends={FAKE_FRIENDS}
+            friendRequests={FAKE_FRIEND_REQUESTS}
             onStartChat={handleStartChat}
           />
         )}

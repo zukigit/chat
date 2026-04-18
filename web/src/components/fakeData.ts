@@ -6,6 +6,13 @@ export interface Friend {
   avatarColor: string
 }
 
+export interface FriendRequest {
+  id: string
+  username: string
+  displayName: string
+  avatarColor: string
+}
+
 export interface Conversation {
   id: string
   name: string
@@ -24,6 +31,12 @@ export interface Message {
   time: string
   own: boolean
 }
+
+export const FAKE_FRIEND_REQUESTS: FriendRequest[] = [
+  { id: 'r1', username: 'grace',  displayName: 'Grace Lee',     avatarColor: '#1565c0' },
+  { id: 'r2', username: 'henry',  displayName: 'Henry Wilson',  avatarColor: '#6a1b9a' },
+  { id: 'r3', username: 'isla',   displayName: 'Isla Turner',   avatarColor: '#00695c' },
+]
 
 export const FAKE_FRIENDS: Friend[] = [
   { id: '1', username: 'alice',   displayName: 'Alice Smith',    online: true,  avatarColor: '#5288c1' },
