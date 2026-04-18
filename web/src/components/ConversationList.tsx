@@ -1,14 +1,11 @@
 import './chat.css'
+import { avatarColor, avatarInitials } from './avatarUtils'
 import type { Conversation } from './fakeData'
 
 interface Props {
   conversations: Conversation[]
   activeId: string | null
   onSelect: (conv: Conversation) => void
-}
-
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 export default function ConversationList({ conversations, activeId, onSelect }: Props) {
@@ -25,13 +22,13 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
             className={`list-item${activeId === c.id ? ' active' : ''}`}
             onClick={() => onSelect(c)}
           >
-            <div className="avatar" style={{ background: c.avatarColor }}>
-              {initials(c.name)}
+            <div className="avatar" style={{ background: avatarColor(c.username) }}>
+              {avatarInitials(c.name, c.username)}
               {c.online && <span className="online-dot" />}
             </div>
             <div className="item-body">
               <div className="item-top">
-                <span className="item-name">{c.name}</span>
+                <span className="item-name">{c.name || `@${c.username}`}</span>
                 <span className="item-time">{c.time}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

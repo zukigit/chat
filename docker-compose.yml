@@ -45,9 +45,9 @@ services:
       - FRONTEND_URL=*
       - NATS_URL=nats://nats:4222
 
-  web:
-    image: zukidocker/chat-web:latest
-    ports:
-      - "80:80"
-    depends_on:
-      - gateway
+  # web:
+  #   image: zukidocker/chat-web:latest
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - gateway

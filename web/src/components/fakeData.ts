@@ -3,14 +3,12 @@ export interface Friend {
   username: string
   displayName: string
   online: boolean
-  avatarColor: string
 }
 
 export interface FriendRequest {
   id: string
   username: string
   displayName: string
-  avatarColor: string
 }
 
 export interface Conversation {
@@ -21,7 +19,6 @@ export interface Conversation {
   time: string
   unread: number
   online: boolean
-  avatarColor: string
 }
 
 export interface Message {
@@ -33,26 +30,26 @@ export interface Message {
 }
 
 export const FAKE_FRIEND_REQUESTS: FriendRequest[] = [
-  { id: 'r1', username: 'grace',  displayName: 'Grace Lee',     avatarColor: '#1565c0' },
-  { id: 'r2', username: 'henry',  displayName: 'Henry Wilson',  avatarColor: '#6a1b9a' },
-  { id: 'r3', username: 'isla',   displayName: 'Isla Turner',   avatarColor: '#00695c' },
+  { id: 'r1', username: 'grace',  displayName: 'Grace Lee'    },
+  { id: 'r2', username: 'henry',  displayName: 'Henry Wilson' },
+  { id: 'r3', username: 'isla',   displayName: 'Isla Turner'  },
 ]
 
 export const FAKE_FRIENDS: Friend[] = [
-  { id: '1', username: 'alice',   displayName: 'Alice Smith',    online: true,  avatarColor: '#5288c1' },
-  { id: '2', username: 'bob',     displayName: 'Bob Johnson',    online: false, avatarColor: '#9c27b0' },
-  { id: '3', username: 'carol',   displayName: 'Carol Williams', online: true,  avatarColor: '#2e7d32' },
-  { id: '4', username: 'dave',    displayName: 'Dave Brown',     online: false, avatarColor: '#e65100' },
-  { id: '5', username: 'emma',    displayName: 'Emma Davis',     online: true,  avatarColor: '#ad1457' },
-  { id: '6', username: 'frank',   displayName: 'Frank Miller',   online: false, avatarColor: '#00695c' },
+  { id: '1', username: 'alice',   displayName: '',    online: true  },
+  { id: '2', username: 'bob',     displayName: 'Bob Johnson',    online: false },
+  { id: '3', username: 'carol',   displayName: 'Carol Williams', online: true  },
+  { id: '4', username: 'dave',    displayName: 'Dave Brown',     online: false },
+  { id: '5', username: 'emma',    displayName: 'Emma Davis',     online: true  },
+  { id: '6', username: 'frank',   displayName: 'Frank Miller',   online: false },
 ]
 
 export const FAKE_CONVERSATIONS: Conversation[] = [
-  { id: '1', name: 'Alice Smith',    username: 'alice',  lastMessage: 'See you tomorrow! 👋',      time: '09:41', unread: 3, online: true,  avatarColor: '#5288c1' },
-  { id: '2', name: 'Bob Johnson',    username: 'bob',    lastMessage: 'Sounds good to me',          time: 'Mon',   unread: 0, online: false, avatarColor: '#9c27b0' },
-  { id: '3', name: 'Carol Williams', username: 'carol',  lastMessage: 'Did you see the latest PR?', time: '09:12', unread: 1, online: true,  avatarColor: '#2e7d32' },
-  { id: '4', name: 'Dave Brown',     username: 'dave',   lastMessage: 'Let me check and get back',  time: 'Sun',   unread: 0, online: false, avatarColor: '#e65100' },
-  { id: '5', name: 'Emma Davis',     username: 'emma',   lastMessage: '😂 That\'s hilarious',       time: '08:55', unread: 7, online: true,  avatarColor: '#ad1457' },
+  { id: '1', name: '',    username: 'alice',  lastMessage: 'See you tomorrow! 👋',      time: '09:41', unread: 3, online: true  },
+  { id: '2', name: 'Bob Johnson',    username: 'bob',    lastMessage: 'Sounds good to me',          time: 'Mon',   unread: 0, online: false },
+  { id: '3', name: 'Carol Williams', username: 'carol',  lastMessage: 'Did you see the latest PR?', time: '09:12', unread: 1, online: true  },
+  { id: '4', name: 'Dave Brown',     username: 'dave',   lastMessage: 'Let me check and get back',  time: 'Sun',   unread: 0, online: false },
+  { id: '5', name: 'Emma Davis',     username: 'emma',   lastMessage: '😂 That\'s hilarious',       time: '08:55', unread: 7, online: true  },
 ]
 
 export const FAKE_MESSAGES: Record<string, Message[]> = {

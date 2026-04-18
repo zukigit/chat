@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import './chat.css'
+import { avatarColor, avatarInitials } from './avatarUtils'
 import type { Conversation, Message } from './fakeData'
 
 interface Props {
   conversation: Conversation | null
   messages: Message[]
-}
-
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 export default function MessagePanel({ conversation, messages }: Props) {
@@ -34,12 +31,12 @@ export default function MessagePanel({ conversation, messages }: Props) {
     <div className="chat-main">
       {/* Header */}
       <div className="chat-header">
-        <div className="avatar avatar-sm" style={{ background: conversation.avatarColor }}>
-          {initials(conversation.name)}
+        <div className="avatar avatar-sm" style={{ background: avatarColor(conversation.username) }}>
+          {avatarInitials(conversation.name, conversation.username)}
           {conversation.online && <span className="online-dot" style={{ borderColor: 'var(--bg-header)' }} />}
         </div>
         <div className="chat-header-info">
-          <div className="chat-header-name">{conversation.name}</div>
+          <div className="chat-header-name">{conversation.name || `@${conversation.username}`}</div>
           <div className={`chat-header-status${conversation.online ? ' online' : ''}`}>
             {conversation.online ? 'online' : 'last seen recently'}
           </div>

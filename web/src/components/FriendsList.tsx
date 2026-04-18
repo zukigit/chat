@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './chat.css'
+import { avatarColor, avatarInitials } from './avatarUtils'
 import type { Friend, FriendRequest } from './fakeData'
 
 interface Props {
@@ -8,10 +9,6 @@ interface Props {
   onStartChat: (friend: Friend) => void
   onAcceptRequest?: (req: FriendRequest) => void
   onDeclineRequest?: (req: FriendRequest) => void
-}
-
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 export default function FriendsList({ friends, friendRequests, onStartChat, onAcceptRequest, onDeclineRequest }: Props) {
@@ -39,12 +36,12 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
             ? <div className="section-empty">No pending requests</div>
             : friendRequests.map(req => (
               <div key={req.id} className="list-item request-item">
-                <div className="avatar" style={{ background: req.avatarColor }}>
-                  {initials(req.displayName)}
+                <div className="avatar" style={{ background: avatarColor(req.username) }}>
+                  {avatarInitials(req.displayName, req.username)}
                 </div>
                 <div className="item-body">
                   <div className="item-top">
-                    <span className="item-name">{req.displayName}</span>
+                    <span className="item-name">{req.displayName || `@${req.username}`}</span>
                   </div>
                   <div className="item-preview">
                     <span className="item-username">@{req.username}</span>
@@ -74,13 +71,13 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
             onClick={() => onStartChat(f)}
             title="Start chat"
           >
-            <div className="avatar" style={{ background: f.avatarColor }}>
-              {initials(f.displayName)}
+            <div className="avatar" style={{ background: avatarColor(f.username) }}>
+              {avatarInitials(f.displayName, f.username)}
               {f.online && <span className="online-dot" />}
             </div>
             <div className="item-body">
               <div className="item-top">
-                <span className="item-name">{f.displayName}</span>
+                <span className="item-name">{f.displayName || `@${f.username}`}</span>
               </div>
               <div className="item-preview">
                 <span className="item-username">@{f.username}</span>
