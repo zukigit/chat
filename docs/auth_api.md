@@ -8,7 +8,7 @@ Base path: `http://<GATEWAY_ADDRESS>:8080` (or as configured by `GATEWAY_LISTEN_
 
 ## 1. Login
 
-Authenticates a user and returns a JSON Web Token (JWT).
+Authenticates a user and returns a JSON Web Token (JWT). The JWT contains the user's `user_id` and a unique `login_id` (UUID generated per login), which identifies the session on the server.
 
 - **URL path:** `/login`
 - **Method:** `POST`
@@ -38,7 +38,7 @@ Authenticates a user and returns a JSON Web Token (JWT).
 ```
 
 #### 400 Bad Request
-Returned when the request body is malformed or invalid JSON.
+Returned when the request body is malformed, invalid JSON, or a required field is missing.
 ```json
 {
   "success": false,
@@ -48,15 +48,6 @@ Returned when the request body is malformed or invalid JSON.
 
 #### 401 Unauthorized
 Returned when the username does not exist or the password is incorrect.
-```json
-{
-  "success": false,
-  "message": "<error detail from backend>"
-}
-```
-
-#### 409 Conflict
-Returned when attempting to log in while already having an active/valid session (if enforced by the backend).
 ```json
 {
   "success": false,
@@ -104,7 +95,7 @@ Registers a new user account.
 ```
 
 #### 400 Bad Request
-Returned when the request body is malformed or invalid JSON.
+Returned when the request body is malformed, invalid JSON, or a required field is missing.
 ```json
 {
   "success": false,
@@ -123,6 +114,48 @@ Returned when a user with the specified `username` already exists.
 
 #### 500 Internal Server Error
 Returned on unexpected server errors or backend unavailability.
+```json
+{
+  "success": false,
+  "message": "<error detail>"
+}
+```
+
+---
+
+## 3. Logout
+
+Invalidates the caller's current session by deleting it from the server. The `login_id` embedded in the JWT is used to identify which session to remove. Multiple devices (each with their own `login_id`) are unaffected.
+
+- **URL path:** `/logout`
+- **Method:** `POST`
+- **Authorization:** `Bearer <JWT_STRING>`
+
+### Request Body
+
+None.
+
+### Responses
+
+#### 200 OK (Success)
+
+```json
+{
+  "success": true,
+  "message": "logged out"
+}
+```
+
+#### 401 Unauthorized
+Returned when the `Authorization` header is missing, or the token is invalid/expired.
+```json
+{
+  "success": false,
+  "message": "Missing token"
+}
+```
+
+#### 500 Internal Server Error
 ```json
 {
   "success": false,
