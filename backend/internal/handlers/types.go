@@ -16,7 +16,7 @@ type loginRequest struct {
 type signupRequest struct {
 	Type     string `json:"type"`
 	Username string `json:"username"`
-	Password string `json:"passwd,omitempty"` // required for email signup
+	Password string `json:"password"` // required for email signup
 	Code     string `json:"code,omitempty"`   // required for google signup
 }
 
