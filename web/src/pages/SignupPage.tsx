@@ -8,6 +8,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const config = loadConfig()
@@ -18,6 +19,7 @@ export default function SignupPage() {
 
   async function handleSignup() {
     setError('')
+    setSuccess('')
     if (password !== confirm) {
       setError('Passwords do not match')
       return
@@ -39,7 +41,7 @@ export default function SignupPage() {
         setError(json?.message ?? 'Signup failed')
         return
       }
-      navigate('/login')
+      setSuccess(json?.message ?? 'Account created successfully')
     } catch {
       setError('Could not reach server. Check your connection.')
     } finally {
@@ -95,7 +97,8 @@ export default function SignupPage() {
           {loading && <span className="auth-spinner" />}
           {loading ? 'Creating account...' : 'Create Account'}
         </button>
-        <p className="auth-error">{error}</p>
+        {success && <p className="auth-success">{success}</p>}
+        {error && <p className="auth-error">{error}</p>}
         <p className="auth-switch">
           Already have an account? <Link to="/login">Log in</Link>
         </p>

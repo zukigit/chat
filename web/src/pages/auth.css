@@ -129,6 +129,13 @@
   min-height: 18px;
 }
 
+.auth-success {
+  margin: 0;
+  font-size: 13px;
+  color: #43a047;
+  text-align: center;
+}
+
 .auth-switch {
   font-size: 14px;
   color: #7d8d9e;
