@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loadConfig } from '../config'
+import { getToken, setToken } from '../auth'
 import './auth.css'
 
 export default function LoginPage() {
@@ -13,6 +14,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!config) navigate('/setup')
+    else if (getToken()) navigate('/')
   }, [])
 
   async function handleLogin() {
@@ -34,7 +36,7 @@ export default function LoginPage() {
         setError(json?.message ?? 'Login failed')
         return
       }
-      localStorage.setItem('token', json.data.token)
+      setToken(json.data.token)
       navigate('/')
     } catch {
       setError('Could not reach server. Check your connection.')
@@ -81,7 +83,7 @@ export default function LoginPage() {
           {loading && <span className="auth-spinner" />}
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
-        <p className="auth-error">{error}</p>
+        {error && <p className="auth-error">{error}</p>}
         <p className="auth-switch">
           Don't have an account? <Link to="/signup">Sign up</Link>
         </p>
