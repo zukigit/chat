@@ -28,7 +28,7 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
             </div>
             <div className="item-body">
               <div className="item-top">
-                <span className="item-name">{c.name || `@${c.username}`}</span>
+                <span className="item-name">{c.name || c.username}</span>
                 <span className="item-time">{c.time}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

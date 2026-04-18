@@ -19,6 +19,7 @@ message Friend {
   string username   = 2;
   string display_name = 3;
   string avatar_url = 4;
+  string status     = 5;
 }
 
 message GetFriendsResponse {

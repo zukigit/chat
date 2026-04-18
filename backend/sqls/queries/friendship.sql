@@ -29,7 +29,7 @@ WHERE user1_userid = $1
 LIMIT 1;
 
 -- name: GetFriends :many
--- Returns all accepted friends for a user, including their user_id, username, display_name, and avatar_url.
+-- Returns all friends (accepted or pending) for a user, including their user_id, username, display_name, avatar_url, and status.
 SELECT
     CASE
         WHEN f.user1_userid = $1 THEN f.user2_userid
@@ -49,7 +49,7 @@ JOIN users u ON u.user_id = (
     END
 )
 WHERE (f.user1_userid = $1 OR f.user2_userid = $1)
-  AND f.status = 'accepted';
+  AND f.status IN ('accepted', 'pending');
 
 -- name: GetPendingRequests :many
 -- Returns incoming friend requests pending for a user.

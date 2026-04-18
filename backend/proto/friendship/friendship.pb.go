@@ -151,6 +151,7 @@ type Friend struct {
 	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -213,6 +214,13 @@ func (x *Friend) GetAvatarUrl() string {
 	return ""
 }
 
+func (x *Friend) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 type GetFriendsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Friends       []*Friend              `protobuf:"bytes,1,rep,name=friends,proto3" json:"friends,omitempty"`
@@ -267,13 +275,14 @@ const file_proto_friendship_friendship_proto_rawDesc = "" +
 	"\x0ftarget_username\x18\x01 \x01(\tR\x0etargetUsername\"(\n" +
 	"\x0eFriendResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"\x13\n" +
-	"\x11GetFriendsRequest\"\x7f\n" +
+	"\x11GetFriendsRequest\"\x97\x01\n" +
 	"\x06Friend\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\"B\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"B\n" +
 	"\x12GetFriendsResponse\x12,\n" +
 	"\afriends\x18\x01 \x03(\v2\x12.friendship.FriendR\afriends2\xc1\x02\n" +
 	"\n" +

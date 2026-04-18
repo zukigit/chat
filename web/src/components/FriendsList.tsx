@@ -41,7 +41,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
                 </div>
                 <div className="item-body">
                   <div className="item-top">
-                    <span className="item-name">{req.displayName || `@${req.username}`}</span>
+                    <span className="item-name">{req.displayName || req.username}</span>
                   </div>
                   <div className="item-preview">
                     <span className="item-username">@{req.username}</span>
@@ -77,7 +77,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
             </div>
             <div className="item-body">
               <div className="item-top">
-                <span className="item-name">{f.displayName || `@${f.username}`}</span>
+                <span className="item-name">{f.displayName || f.username}</span>
               </div>
               <div className="item-preview">
                 <span className="item-username">@{f.username}</span>

@@ -50,7 +50,7 @@ JOIN users u ON u.user_id = (
     END
 )
 WHERE (f.user1_userid = $1 OR f.user2_userid = $1)
-  AND f.status = 'accepted'
+  AND f.status IN ('accepted', 'pending')
 `
 
 type GetFriendsRow struct {
@@ -63,7 +63,7 @@ type GetFriendsRow struct {
 	UpdatedAt         time.Time        `json:"updated_at"`
 }
 
-// Returns all accepted friends for a user, including their user_id, username, display_name, and avatar_url.
+// Returns all friends (accepted or pending) for a user, including their user_id, username, display_name, avatar_url, and status.
 func (q *Queries) GetFriends(ctx context.Context, user1Userid uuid.UUID) ([]GetFriendsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFriends, user1Userid)
 	if err != nil {

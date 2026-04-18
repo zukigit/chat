@@ -199,6 +199,7 @@ func (s *FriendshipServer) GetFriends(ctx context.Context, _ *pb.GetFriendsReque
 		f := &pb.Friend{
 			UserId:   r.FriendUserid.String(),
 			Username: r.FriendUsername,
+			Status:   string(r.Status),
 		}
 		if r.FriendDisplayName.Valid {
 			f.DisplayName = r.FriendDisplayName.String

@@ -36,7 +36,7 @@ export default function MessagePanel({ conversation, messages }: Props) {
           {conversation.online && <span className="online-dot" style={{ borderColor: 'var(--bg-header)' }} />}
         </div>
         <div className="chat-header-info">
-          <div className="chat-header-name">{conversation.name || `@${conversation.username}`}</div>
+          <div className="chat-header-name">{conversation.name || conversation.username}</div>
           <div className={`chat-header-status${conversation.online ? ' online' : ''}`}>
             {conversation.online ? 'online' : 'last seen recently'}
           </div>

@@ -28,7 +28,7 @@ If the header is missing, malformed, or the token is expired/invalid, the API wi
 
 ## 1. Get Friends
 
-Returns the list of accepted friends for the authenticated user.
+Returns all friends (accepted) and pending friend requests for the authenticated user.
 
 - **URL path:** `/friends`
 - **Method:** `GET`
@@ -42,13 +42,28 @@ Returns the list of accepted friends for the authenticated user.
   "success": true,
   "data": [
     {
+      "user_id": "b3d1f...",
       "username": "alice",
-      "display_name": "Alice Smith"
+      "display_name": "Alice Smith",
+      "avatar_url": "",
+      "status": "accepted"
+    },
+    {
+      "user_id": "c9e2a...",
+      "username": "bob",
+      "display_name": "Bob Johnson",
+      "avatar_url": "",
+      "status": "pending"
     }
   ]
 }
 ```
-*(Empty array if the user has no friends yet)*
+
+`status` is one of:
+- `"accepted"` — confirmed friend
+- `"pending"` — friend request not yet accepted
+
+*(Empty array if the user has no friends or requests)*
 
 #### 401 Unauthorized
 Returned when the token is missing, malformed, or invalid.
