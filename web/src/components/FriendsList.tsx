@@ -73,7 +73,6 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
           >
             <div className="avatar" style={{ background: avatarColor(f.username) }}>
               {avatarInitials(f.displayName, f.username)}
-              {f.online && <span className="online-dot" />}
             </div>
             <div className="item-body">
               <div className="item-top">
@@ -81,7 +80,6 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
               </div>
               <div className="item-preview">
                 <span className="item-username">@{f.username}</span>
-                {f.online && <span className="online-label" style={{ marginLeft: 8 }}>● online</span>}
               </div>
             </div>
           </div>

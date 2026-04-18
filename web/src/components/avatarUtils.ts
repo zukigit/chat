@@ -5,10 +5,11 @@ const AVATAR_COLORS = [
 ]
 
 /** Deterministic color derived from username so it stays consistent. */
-export function avatarColor(username: string): string {
+export function avatarColor(username: string | undefined): string {
+  const u = username ?? ''
   let hash = 0
-  for (let i = 0; i < username.length; i++) {
-    hash = (hash * 31 + username.charCodeAt(i)) >>> 0
+  for (let i = 0; i < u.length; i++) {
+    hash = (hash * 31 + u.charCodeAt(i)) >>> 0
   }
   return AVATAR_COLORS[hash % AVATAR_COLORS.length]
 }
@@ -17,8 +18,8 @@ export function avatarColor(username: string): string {
  * Returns 2-character initials.
  * Uses displayName if provided, otherwise falls back to username.
  */
-export function avatarInitials(displayName: string, username: string): string {
-  const name = displayName.trim() || username.trim()
+export function avatarInitials(displayName: string | undefined, username: string | undefined): string {
+  const name = (displayName ?? '').trim() || (username ?? '').trim()
   if (!name) return '?'
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }

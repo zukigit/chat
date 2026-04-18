@@ -2,7 +2,6 @@ export interface Friend {
   id: string
   username: string
   displayName: string
-  online: boolean
 }
 
 export interface FriendRequest {
@@ -36,12 +35,12 @@ export const FAKE_FRIEND_REQUESTS: FriendRequest[] = [
 ]
 
 export const FAKE_FRIENDS: Friend[] = [
-  { id: '1', username: 'alice',   displayName: '',    online: true  },
-  { id: '2', username: 'bob',     displayName: 'Bob Johnson',    online: false },
-  { id: '3', username: 'carol',   displayName: 'Carol Williams', online: true  },
-  { id: '4', username: 'dave',    displayName: 'Dave Brown',     online: false },
-  { id: '5', username: 'emma',    displayName: 'Emma Davis',     online: true  },
-  { id: '6', username: 'frank',   displayName: 'Frank Miller',   online: false },
+  { id: '1', username: 'alice',   displayName: ''               },
+  { id: '2', username: 'bob',     displayName: 'Bob Johnson'    },
+  { id: '3', username: 'carol',   displayName: 'Carol Williams' },
+  { id: '4', username: 'dave',    displayName: 'Dave Brown'     },
+  { id: '5', username: 'emma',    displayName: 'Emma Davis'     },
+  { id: '6', username: 'frank',   displayName: 'Frank Miller'   },
 ]
 
 export const FAKE_CONVERSATIONS: Conversation[] = [

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getToken, removeToken } from '../auth'
 import ConversationList from '../components/ConversationList'
@@ -7,12 +7,12 @@ import MessagePanel from '../components/MessagePanel'
 import '../components/chat.css'
 import {
   FAKE_CONVERSATIONS,
-  FAKE_FRIENDS,
-  FAKE_FRIEND_REQUESTS,
   FAKE_MESSAGES,
   type Conversation,
   type Friend,
+  type FriendRequest,
 } from '../components/fakeData'
+import { fetchFriends } from '../api/friendsApi'
 
 type Tab = 'conversations' | 'friends'
 
@@ -20,6 +20,25 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('conversations')
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
+
+  useEffect(() => {
+    fetchFriends()
+      .then(data => {
+        setFriends(
+          data
+            .filter(f => f.status === 'accepted')
+            .map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name }))
+        )
+        setFriendRequests(
+          data
+            .filter(f => f.status === 'pending')
+            .map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name }))
+        )
+      })
+      .catch(console.error)
+  }, [])
 
   async function handleLogout() {
     if (!confirm('Are you sure you want to logout?')) return
@@ -83,8 +102,8 @@ export default function HomePage() {
           />
         ) : (
           <FriendsList
-            friends={FAKE_FRIENDS}
-            friendRequests={FAKE_FRIEND_REQUESTS}
+            friends={friends}
+            friendRequests={friendRequests}
             onStartChat={handleStartChat}
           />
         )}
