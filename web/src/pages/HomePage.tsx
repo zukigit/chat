@@ -23,22 +23,22 @@ export default function HomePage() {
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
 
-  useEffect(() => {
-    fetchFriends()
-      .then(data => {
-        setFriends(
-          data
-            .filter(f => f.status === 'accepted')
-            .map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name }))
-        )
-        setFriendRequests(
-          data
-            .filter(f => f.status === 'pending')
-            .map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name }))
-        )
-      })
-      .catch(console.error)
-  }, [])
+  useEffect(() => { loadFriends().catch(console.error) }, [])
+
+  async function loadFriends() {
+    const data = await fetchFriends()
+    setFriends(data.filter(f => f.status === 'accepted').map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name })))
+    setFriendRequests(data.filter(f => f.status === 'pending').map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name })))
+  }
+
+  function handleAccepted(req: FriendRequest) {
+    setFriendRequests(prev => prev.filter(r => r.id !== req.id))
+    setFriends(prev => [...prev, { id: req.id, username: req.username, displayName: req.displayName }])
+  }
+
+  function handleDeclined(req: FriendRequest) {
+    setFriendRequests(prev => prev.filter(r => r.id !== req.id))
+  }
 
   async function handleLogout() {
     if (!confirm('Are you sure you want to logout?')) return
@@ -105,6 +105,9 @@ export default function HomePage() {
             friends={friends}
             friendRequests={friendRequests}
             onStartChat={handleStartChat}
+            onAccepted={handleAccepted}
+            onDeclined={handleDeclined}
+            onRefresh={loadFriends}
           />
         )}
       </div>
