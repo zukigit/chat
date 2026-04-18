@@ -12,8 +12,22 @@ message FriendResponse {
   string status = 1;
 }
 
+message GetFriendsRequest {}
+
+message Friend {
+  string user_id    = 1;
+  string username   = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+}
+
+message GetFriendsResponse {
+  repeated Friend friends = 1;
+}
+
 service Friendship {
   rpc SendFriendRequest(FriendRequest) returns (FriendResponse);
   rpc AcceptFriendRequest(FriendRequest) returns (FriendResponse);
   rpc RejectFriendRequest(FriendRequest) returns (FriendResponse);
+  rpc GetFriends(GetFriendsRequest) returns (GetFriendsResponse);
 }

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,8 +35,10 @@ SELECT
     CASE
         WHEN f.user1_userid = $1 THEN f.user2_userid
         ELSE f.user1_userid
-    END AS friend_userid,
+    END::uuid AS friend_userid,
     u.user_name AS friend_username,
+    u.display_name AS friend_display_name,
+    u.avatar_url AS friend_avatar_url,
     f.status,
     f.created_at,
     f.updated_at
@@ -51,14 +54,16 @@ WHERE (f.user1_userid = $1 OR f.user2_userid = $1)
 `
 
 type GetFriendsRow struct {
-	FriendUserid   interface{}      `json:"friend_userid"`
-	FriendUsername string           `json:"friend_username"`
-	Status         FriendshipStatus `json:"status"`
-	CreatedAt      time.Time        `json:"created_at"`
-	UpdatedAt      time.Time        `json:"updated_at"`
+	FriendUserid      uuid.UUID        `json:"friend_userid"`
+	FriendUsername    string           `json:"friend_username"`
+	FriendDisplayName sql.NullString   `json:"friend_display_name"`
+	FriendAvatarUrl   sql.NullString   `json:"friend_avatar_url"`
+	Status            FriendshipStatus `json:"status"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at"`
 }
 
-// Returns all accepted friends for a user, including their user_id and username.
+// Returns all accepted friends for a user, including their user_id, username, display_name, and avatar_url.
 func (q *Queries) GetFriends(ctx context.Context, user1Userid uuid.UUID) ([]GetFriendsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFriends, user1Userid)
 	if err != nil {
@@ -71,6 +76,8 @@ func (q *Queries) GetFriends(ctx context.Context, user1Userid uuid.UUID) ([]GetF
 		if err := rows.Scan(
 			&i.FriendUserid,
 			&i.FriendUsername,
+			&i.FriendDisplayName,
+			&i.FriendAvatarUrl,
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,

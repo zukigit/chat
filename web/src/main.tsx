@@ -5,6 +5,7 @@ import PrivateRoute from './components/PrivateRoute'
 import SetupPage from './pages/SetupPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import HomePage from './pages/HomePage'
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
@@ -16,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
 
       {/* Private routes */}
       <Route element={<PrivateRoute />}>
-        <Route path="/" element={<div>Chat (coming soon)</div>} />
+        <Route path="/" element={<HomePage />} />
       </Route>
     </Routes>
   </BrowserRouter>

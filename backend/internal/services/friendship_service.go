@@ -181,6 +181,37 @@ func (s *FriendshipServer) RejectFriendRequest(ctx context.Context, req *pb.Frie
 	return &pb.FriendResponse{Status: "rejected"}, nil
 }
 
+// GetFriends returns all accepted friends for the authenticated caller.
+func (s *FriendshipServer) GetFriends(ctx context.Context, _ *pb.GetFriendsRequest) (*pb.GetFriendsResponse, error) {
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	q := db.New(s.sqlDB)
+	rows, err := q.GetFriends(ctx, callerID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "GetFriends: %v", err)
+	}
+
+	friends := make([]*pb.Friend, 0, len(rows))
+	for _, r := range rows {
+		f := &pb.Friend{
+			UserId:   r.FriendUserid.String(),
+			Username: r.FriendUsername,
+		}
+		if r.FriendDisplayName.Valid {
+			f.DisplayName = r.FriendDisplayName.String
+		}
+		if r.FriendAvatarUrl.Valid {
+			f.AvatarUrl = r.FriendAvatarUrl.String
+		}
+		friends = append(friends, f)
+	}
+
+	return &pb.GetFriendsResponse{Friends: friends}, nil
+}
+
 // respondToRequest is the shared logic for AcceptFriendRequest: it finds the
 // pending friendship, verifies the caller is the addressee, updates status to
 // accepted, and notifies the original requester.
