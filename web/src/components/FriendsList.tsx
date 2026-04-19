@@ -49,7 +49,6 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
 
   return (
     <>
-      <input className="sidebar-search" placeholder="Search friends…" readOnly style={{ marginTop: 10 }} />
       <div className="sidebar-list">
 
         {/* ── Friend Requests section ── */}

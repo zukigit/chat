@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getToken, removeToken } from '../auth'
 import ConversationList from '../components/ConversationList'
@@ -22,8 +22,20 @@ export default function HomePage() {
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { loadFriends().catch(console.error) }, [])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
 
   async function loadFriends() {
     const data = await fetchFriends()
@@ -75,23 +87,58 @@ export default function HomePage() {
     <div className="chat-layout">
       {/* Sidebar */}
       <div className="chat-sidebar">
-        {/* Tab bar */}
-        <div className="sidebar-tabs">
-          <button
-            className={`sidebar-tab${tab === 'conversations' ? ' active' : ''}`}
-            onClick={() => setTab('conversations')}
-          >
-            💬 Chats
-          </button>
-          <button
-            className={`sidebar-tab${tab === 'friends' ? ' active' : ''}`}
-            onClick={() => setTab('friends')}
-          >
-            👥 Friends
-          </button>
-          <button className="logout-btn" onClick={handleLogout} title="Logout" style={{ margin: '0 8px' }}>
-            🚪
-          </button>
+        {/* Sidebar header with hamburger menu */}
+        <div className="sidebar-header-bar">
+          <div className="sidebar-menu-wrap" ref={menuRef}>
+            {tab === 'friends' ? (
+              <button
+                className="hamburger-btn"
+                onClick={() => setTab('conversations')}
+                aria-label="Back"
+              >
+                <svg className="back-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                className="hamburger-btn"
+                onClick={() => setMenuOpen(o => !o)}
+                aria-label="Menu"
+              >
+                <span className="hamburger-icon">
+                  <span /><span /><span />
+                </span>
+              </button>
+            )}
+            {menuOpen && tab !== 'friends' && (
+              <div className="menu-dropdown">
+                <button className="menu-item" onClick={() => { setMenuOpen(false); setTab('friends') }}>
+                  <svg className="menu-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  Friends
+                </button>
+                <div className="menu-divider" />
+                <button className="menu-item menu-item-danger" onClick={() => { setMenuOpen(false); handleLogout() }}>
+                  <svg className="menu-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+          <input
+            className="sidebar-search-inline"
+            placeholder={tab === 'friends' ? 'Search Friends' : 'Search'}
+            readOnly
+          />
         </div>
 
         {tab === 'conversations' ? (

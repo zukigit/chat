@@ -11,10 +11,6 @@ interface Props {
 export default function ConversationList({ conversations, activeId, onSelect }: Props) {
   return (
     <>
-      <div className="sidebar-header">
-        <span className="sidebar-title">Messages</span>
-      </div>
-      <input className="sidebar-search" placeholder="Search conversations…" readOnly />
       <div className="sidebar-list">
         {conversations.map(c => (
           <div
