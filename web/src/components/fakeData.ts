@@ -43,12 +43,6 @@ export const FAKE_FRIENDS: Friend[] = [
   { id: '6', username: 'frank',   displayName: 'Frank Miller'   },
 ]
 
-export const FAKE_NON_FRIENDS: Friend[] = [
-  { id: 'n1', username: 'james',   displayName: 'James Chen'    },
-  { id: 'n2', username: 'kate',    displayName: 'Kate Rodriguez' },
-  { id: 'n3', username: 'liam',    displayName: ''               },
-]
-
 export const FAKE_CONVERSATIONS: Conversation[] = [
   { id: '1', name: '',    username: 'alice',  lastMessage: 'See you tomorrow! 👋',      time: '09:41', unread: 3, online: true  },
   { id: '2', name: 'Bob Johnson',    username: 'bob',    lastMessage: 'Sounds good to me',          time: 'Mon',   unread: 0, online: false },
