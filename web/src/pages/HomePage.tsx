@@ -23,6 +23,7 @@ export default function HomePage() {
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
+  const [refreshingFriends, setRefreshingFriends] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { loadFriends().catch(console.error) }, [])
@@ -139,6 +140,25 @@ export default function HomePage() {
             placeholder={tab === 'friends' ? 'Search Friends' : 'Search'}
             readOnly
           />
+          {tab === 'friends' && (
+            <button
+              className={`refresh-btn${refreshingFriends ? ' spinning' : ''}`}
+              disabled={refreshingFriends}
+              title="Refresh"
+              onClick={async () => {
+                if (refreshingFriends) return
+                setRefreshingFriends(true)
+                try { await loadFriends() } finally { setRefreshingFriends(false) }
+              }}
+            >
+              <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {tab === 'conversations' ? (
@@ -154,7 +174,6 @@ export default function HomePage() {
             onStartChat={handleStartChat}
             onAccepted={handleAccepted}
             onDeclined={handleDeclined}
-            onRefresh={loadFriends}
           />
         )}
       </div>

@@ -515,6 +515,62 @@
 
 .logout-btn:hover { color: #e53935; }
 
+/* ── Friends wrapper with FAB ── */
+.friends-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fab-send-request {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s, transform 0.15s;
+  z-index: 10;
+}
+
+.fab-send-request svg {
+  width: 24px;
+  height: 24px;
+  color: #fff;
+}
+
+.fab-send-request:hover {
+  background: #4070a8;
+  transform: scale(1.05);
+}
+
+.fab-send-request:active {
+  transform: scale(0.95);
+}
+
+/* ── Friends toolbar ── */
+.friends-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: var(--border);
+}
+
+.friends-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
 /* ── Collapsible section headers ── */
 .section-header {
   display: flex;
@@ -543,9 +599,14 @@
 }
 
 .section-chevron {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
   color: var(--color-sub);
+  transition: transform 0.2s;
+  transform: rotate(-90deg);
 }
+
+.section-chevron.open { transform: rotate(0deg); }
 
 .refresh-btn {
   background: none;
@@ -557,9 +618,16 @@
   line-height: 1;
   opacity: 0.7;
   transition: opacity 0.15s, transform 0.15s;
+  display: flex;
+  align-items: center;
 }
 .refresh-btn:hover:not(:disabled) { opacity: 1; }
 .refresh-btn:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.refresh-icon {
+  width: 16px;
+  height: 16px;
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .refresh-btn.spinning { animation: spin 0.7s linear infinite; opacity: 1; }
