@@ -49,7 +49,7 @@ JOIN users u ON u.user_id = (
     END
 )
 WHERE (f.user1_userid = $1 OR f.user2_userid = $1)
-  AND f.status IN ('accepted', 'pending');
+  AND (f.status = 'accepted' OR (f.status = 'pending' AND f.initiator_userid != $1));
 
 -- name: GetPendingRequests :many
 -- Returns incoming friend requests pending for a user.
