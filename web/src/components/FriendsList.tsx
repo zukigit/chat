@@ -3,6 +3,7 @@ import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import { acceptFriendRequest, rejectFriendRequest } from '../api/friendsApi'
 import type { Friend, FriendRequest } from './fakeData'
+import AddFriendModal from './AddFriendModal'
 
 interface Props {
   friends: Friend[]
@@ -17,6 +18,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showAddModal, setShowAddModal] = useState(false)
 
   async function handleAction(req: FriendRequest, action: 'accept' | 'decline') {
     if (loadingId) return
@@ -126,7 +128,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
           ))}
 
         </div>
-        <button className="fab-send-request" title="Add Friend">
+        <button className="fab-send-request" title="Add Friend" onClick={() => setShowAddModal(true)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="8.5" cy="7" r="4" />
@@ -134,6 +136,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
             <line x1="23" y1="11" x2="17" y2="11" />
           </svg>
         </button>
+        {showAddModal && <AddFriendModal onClose={() => setShowAddModal(false)} />}
       </div>
     </>
   )
