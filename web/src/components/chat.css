@@ -671,6 +671,12 @@
   border: var(--border);
 }
 
+.add-friend-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .req-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

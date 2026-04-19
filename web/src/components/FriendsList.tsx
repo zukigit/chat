@@ -7,14 +7,16 @@ import type { Friend, FriendRequest } from './fakeData'
 interface Props {
   friends: Friend[]
   friendRequests: FriendRequest[]
+  nonFriends: Friend[]
   onStartChat: (friend: Friend) => void
   onAccepted?: (req: FriendRequest) => void
   onDeclined?: (req: FriendRequest) => void
 }
 
-export default function FriendsList({ friends, friendRequests, onStartChat, onAccepted, onDeclined }: Props) {
+export default function FriendsList({ friends, friendRequests, nonFriends, onStartChat, onAccepted, onDeclined }: Props) {
   const [requestsOpen, setRequestsOpen] = useState(true)
-  const [friendsOpen, setFriendsOpen] = useState(true)
+  const [friendsOpen, setFriendsOpen] = useState(false)
+  const [nonFriendsOpen, setNonFriendsOpen] = useState(true)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -40,16 +42,57 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
 
   return (
     <>
-      <div className="friends-wrapper">
+        <div className="friends-wrapper">
         <div className="sidebar-list">
+
+          {/* ── Non Friends section ── */}
+          {nonFriends.length > 0 && (
+            <>
+              <div className="section-header" onClick={() => setNonFriendsOpen(o => !o)}>
+                <span className="section-title">Non Friends</span>
+                <span className="section-meta">
+                  <span style={{ fontSize: 12, color: 'var(--color-sub)', marginRight: 6 }}>{nonFriends.length}</span>
+                  <svg className={`section-chevron${nonFriendsOpen ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </span>
+              </div>
+
+              {nonFriendsOpen && nonFriends.map(f => (
+                <div
+                  key={f.id}
+                  className="list-item"
+                  title="Send friend request"
+                >
+                  <div className="avatar" style={{ background: avatarColor(f.username) }}>
+                    {avatarInitials(f.displayName, f.username)}
+                  </div>
+                  <div className="item-body">
+                    <div className="item-top">
+                      <span className="item-name">{f.displayName || f.username}</span>
+                    </div>
+                    <div className="item-preview">
+                      <span className="item-username">@{f.username}</span>
+                    </div>
+                  </div>
+                  <button className="req-btn accept" title="Add Friend">
+                    <svg className="add-friend-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="8.5" cy="7" r="4" />
+                      <line x1="20" y1="8" x2="20" y2="14" />
+                      <line x1="23" y1="11" x2="17" y2="11" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
 
           {/* ── Friend Requests section ── */}
           <div className="section-header" onClick={() => setRequestsOpen(o => !o)}>
             <span className="section-title">Friend Requests</span>
             <span className="section-meta">
-              {friendRequests.length > 0 && (
-                <span className="unread-badge" style={{ marginRight: 6 }}>{friendRequests.length}</span>
-              )}
+              <span style={{ fontSize: 12, color: 'var(--color-sub)', marginRight: 6 }}>{friendRequests.length}</span>
               <svg className={`section-chevron${requestsOpen ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>

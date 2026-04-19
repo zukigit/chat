@@ -8,6 +8,7 @@ import '../components/chat.css'
 import {
   FAKE_CONVERSATIONS,
   FAKE_MESSAGES,
+  FAKE_NON_FRIENDS,
   type Conversation,
   type Friend,
   type FriendRequest,
@@ -171,6 +172,7 @@ export default function HomePage() {
           <FriendsList
             friends={friends}
             friendRequests={friendRequests}
+            nonFriends={FAKE_NON_FRIENDS}
             onStartChat={handleStartChat}
             onAccepted={handleAccepted}
             onDeclined={handleDeclined}
