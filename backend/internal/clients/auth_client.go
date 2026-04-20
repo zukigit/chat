@@ -59,3 +59,10 @@ func (a *AuthClient) Logout(ctx context.Context, token string) error {
 	_, err := a.client.Logout(lib.WithToken(ctx, token), &auth.LogoutRequest{})
 	return err
 }
+
+// SearchUsers asks the backend to search for users by username or display name.
+func (a *AuthClient) SearchUsers(ctx context.Context, token, query string) (*auth.SearchUsersResponse, error) {
+	return a.client.SearchUsers(lib.WithToken(ctx, token), &auth.SearchUsersRequest{
+		Query: query,
+	})
+}

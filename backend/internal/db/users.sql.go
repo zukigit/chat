@@ -89,6 +89,50 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User,
 	return i, err
 }
 
+const searchUsers = `-- name: SearchUsers :many
+SELECT user_id, user_name, display_name, avatar_url
+FROM users
+WHERE user_name ILIKE '%' || $1 || '%'
+   OR display_name ILIKE '%' || $1 || '%'
+ORDER BY user_name
+LIMIT 50
+`
+
+type SearchUsersRow struct {
+	UserID      uuid.UUID      `json:"user_id"`
+	UserName    string         `json:"user_name"`
+	DisplayName sql.NullString `json:"display_name"`
+	AvatarUrl   sql.NullString `json:"avatar_url"`
+}
+
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersRow
+	for rows.Next() {
+		var i SearchUsersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserName,
+			&i.DisplayName,
+			&i.AvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateLastSeen = `-- name: UpdateLastSeen :exec
 UPDATE users
 SET last_seen_at = NOW()

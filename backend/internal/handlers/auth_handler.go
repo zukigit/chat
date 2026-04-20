@@ -141,3 +141,51 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	lib.WriteJSON(w, http.StatusOK, lib.Response{Success: true, Message: "logged out"})
 }
+
+// SearchUsers handles GET /users/search?q=<query>
+// Returns a list of users matching the query by username or display name.
+func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	token, ok := lib.BearerToken(r)
+	if !ok || token == "" {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Missing token"})
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+			Success: false,
+			Message: "q query parameter is required",
+		})
+		return
+	}
+
+	resp, err := h.authClient.SearchUsers(r.Context(), token, query)
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		switch grpcStatus.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+				Success: false,
+				Message: grpcStatus.Message(),
+			})
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
+				Success: false,
+				Message: grpcStatus.Message(),
+			})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
+				Success: false,
+				Message: grpcStatus.Message(),
+			})
+		}
+		return
+	}
+
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Message: "users found",
+		Data:    resp.Users,
+	})
+}

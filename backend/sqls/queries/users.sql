@@ -27,3 +27,11 @@ RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_u
 UPDATE users
 SET last_seen_at = NOW()
 WHERE user_name = $1;
+
+-- name: SearchUsers :many
+SELECT user_id, user_name, display_name, avatar_url
+FROM users
+WHERE user_name ILIKE '%' || $1 || '%'
+   OR display_name ILIKE '%' || $1 || '%'
+ORDER BY user_name
+LIMIT 50;
