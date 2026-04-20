@@ -29,9 +29,16 @@ SET last_seen_at = NOW()
 WHERE user_name = $1;
 
 -- name: SearchUsers :many
-SELECT user_id, user_name, display_name, avatar_url
-FROM users
-WHERE user_name ILIKE '%' || $1 || '%'
-   OR display_name ILIKE '%' || $1 || '%'
-ORDER BY user_name
+-- Searches for users by username or display name, excluding the caller and any existing friends.
+SELECT u.user_id, u.user_name, u.display_name, u.avatar_url
+FROM users u
+WHERE (u.user_name ILIKE '%' || $1 || '%'
+    OR u.display_name ILIKE '%' || $1 || '%')
+  AND u.user_id != $2
+  AND NOT EXISTS (
+    SELECT 1 FROM friendships f
+    WHERE (f.user1_userid = $2 AND f.user2_userid = u.user_id)
+       OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
+  )
+ORDER BY u.user_name
 LIMIT 50;

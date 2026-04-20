@@ -164,9 +164,17 @@ func (s *AuthServer) SearchUsers(ctx context.Context, req *auth.SearchUsersReque
 		return nil, status.Error(codes.InvalidArgument, "query is required")
 	}
 
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	queries := db.New(s.sqlDB)
 
-	users, err := queries.SearchUsers(ctx, sql.NullString{String: req.Query, Valid: true})
+	users, err := queries.SearchUsers(ctx, db.SearchUsersParams{
+		Column1: sql.NullString{String: req.Query, Valid: true},
+		UserID:  callerID,
+	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "search users: %v", err)
 	}

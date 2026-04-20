@@ -90,13 +90,24 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User,
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT user_id, user_name, display_name, avatar_url
-FROM users
-WHERE user_name ILIKE '%' || $1 || '%'
-   OR display_name ILIKE '%' || $1 || '%'
-ORDER BY user_name
+SELECT u.user_id, u.user_name, u.display_name, u.avatar_url
+FROM users u
+WHERE (u.user_name ILIKE '%' || $1 || '%'
+    OR u.display_name ILIKE '%' || $1 || '%')
+  AND u.user_id != $2
+  AND NOT EXISTS (
+    SELECT 1 FROM friendships f
+    WHERE (f.user1_userid = $2 AND f.user2_userid = u.user_id)
+       OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
+  )
+ORDER BY u.user_name
 LIMIT 50
 `
+
+type SearchUsersParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	UserID  uuid.UUID      `json:"user_id"`
+}
 
 type SearchUsersRow struct {
 	UserID      uuid.UUID      `json:"user_id"`
@@ -105,8 +116,9 @@ type SearchUsersRow struct {
 	AvatarUrl   sql.NullString `json:"avatar_url"`
 }
 
-func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersRow, error) {
-	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+// Searches for users by username or display name, excluding the caller and any existing friends.
+func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, arg.Column1, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
