@@ -704,16 +704,14 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 200;
-  animation: modalFadeIn 0.15s ease;
 }
 
-@keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.modal-overlay.modal-open {
+  display: flex;
 }
 
 .modal-content {
@@ -725,14 +723,9 @@
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  animation: modalSlideIn 0.15s ease;
   overflow: hidden;
 }
 
-@keyframes modalSlideIn {
-  from { transform: translateY(12px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
 
 .modal-header {
   display: flex;
@@ -811,7 +804,14 @@
   height: 18px;
 }
 
+.search-spinner {
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .modal-connect-btn:hover { background: #4070a8; }
+.modal-connect-btn:disabled { cursor: not-allowed; opacity: 0.7; }
 
 .modal-user-list {
   overflow-y: auto;

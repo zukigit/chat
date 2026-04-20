@@ -136,7 +136,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
             <line x1="23" y1="11" x2="17" y2="11" />
           </svg>
         </button>
-        {showAddModal && <AddFriendModal onClose={() => setShowAddModal(false)} />}
+        <AddFriendModal open={showAddModal} onClose={() => setShowAddModal(false)} onOpen={() => setShowAddModal(true)} />
       </div>
     </>
   )
