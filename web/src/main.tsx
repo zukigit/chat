@@ -1,6 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './global.css'
+import './theme.css'
+import './ui.css'
 import PrivateRoute from './components/PrivateRoute'
 import SetupPage from './pages/SetupPage'
 import LoginPage from './pages/LoginPage'

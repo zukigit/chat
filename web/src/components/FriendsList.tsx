@@ -72,18 +72,18 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
                       <span className="item-username">@{req.username}</span>
                     </div>
                     {errors[req.id] && (
-                      <div className="req-error">{errors[req.id]}</div>
+                      <div className="error-text">{errors[req.id]}</div>
                     )}
                     <div className="request-actions">
                       <button
-                        className="req-btn accept"
+                        className="action-btn primary"
                         onClick={() => handleAction(req, 'accept')}
                         disabled={loadingId !== null}
                       >
                         {loadingId === `${req.id}-accept` ? '…' : 'Accept'}
                       </button>
                       <button
-                        className="req-btn decline"
+                        className="action-btn secondary"
                         onClick={() => handleAction(req, 'decline')}
                         disabled={loadingId !== null}
                       >
@@ -128,7 +128,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
           ))}
 
         </div>
-        <button className="fab-send-request" title="Add Friend" onClick={() => setShowAddModal(true)}>
+        <button className="fab" title="Add Friend" onClick={() => setShowAddModal(true)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="8.5" cy="7" r="4" />

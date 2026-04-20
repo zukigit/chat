@@ -62,7 +62,7 @@ function SearchResults() {
           className="modal-search-input"
           placeholder="Username or email"
         />
-        <button type="submit" className="modal-connect-btn" disabled={searching}>
+        <button type="submit" className="icon-btn" disabled={searching}>
           {searching ? (
             <svg className="search-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 12a9 9 0 1 1-6.22-8.56" />
@@ -94,8 +94,8 @@ function SearchResults() {
             {addedIds.has(u.user_id) ? (
               <span className="modal-added-label">Sent</span>
             ) : (
-              <button className="req-btn accept" onClick={() => handleAdd(u.user_id)}>
-                <svg className="add-friend-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <button className="action-btn primary" onClick={() => handleAdd(u.user_id)}>
+                <svg className="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>

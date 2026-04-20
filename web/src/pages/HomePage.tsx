@@ -93,7 +93,7 @@ export default function HomePage() {
           <div className="sidebar-menu-wrap" ref={menuRef}>
             {tab === 'friends' ? (
               <button
-                className="hamburger-btn"
+                className="icon-btn-circle"
                 onClick={() => setTab('conversations')}
                 aria-label="Back"
               >
@@ -103,7 +103,7 @@ export default function HomePage() {
               </button>
             ) : (
               <button
-                className="hamburger-btn"
+                className="icon-btn-circle"
                 onClick={() => setMenuOpen(o => !o)}
                 aria-label="Menu"
               >
@@ -113,9 +113,9 @@ export default function HomePage() {
               </button>
             )}
             {menuOpen && tab !== 'friends' && (
-              <div className="menu-dropdown">
-                <button className="menu-item" onClick={() => { setMenuOpen(false); setTab('friends') }}>
-                  <svg className="menu-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className="dropdown">
+                <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('friends') }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -123,9 +123,9 @@ export default function HomePage() {
                   </svg>
                   Friends
                 </button>
-                <div className="menu-divider" />
-                <button className="menu-item menu-item-danger" onClick={() => { setMenuOpen(false); handleLogout() }}>
-                  <svg className="menu-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="dropdown-divider" />
+                <button className="dropdown-item danger" onClick={() => { setMenuOpen(false); handleLogout() }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" y1="12" x2="9" y2="12" />
@@ -142,7 +142,7 @@ export default function HomePage() {
           />
           {tab === 'friends' && (
             <button
-              className={`refresh-btn${refreshingFriends ? ' spinning' : ''}`}
+              className={`icon-btn-circle${refreshingFriends ? ' spinning' : ''}`}
               disabled={refreshingFriends}
               title="Refresh"
               onClick={async () => {
@@ -151,7 +151,7 @@ export default function HomePage() {
                 try { await loadFriends() } finally { setRefreshingFriends(false) }
               }}
             >
-              <svg className="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 4 23 10 17 10" />
                 <polyline points="1 20 1 14 7 14" />
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
