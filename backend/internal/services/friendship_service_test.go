@@ -240,19 +240,19 @@ func TestGetFriends(t *testing.T) {
 		t.Fatalf("setup: send pending request: %v", err)
 	}
 
-	t.Run("alice sees bob, carol (accepted) and dave (pending)", func(t *testing.T) {
+	t.Run("alice sees bob, carol (accepted) but not dave (outgoing pending)", func(t *testing.T) {
 		resp, err := fs.GetFriends(ctxWithUser("alice", ids["alice"]), &pb.GetFriendsRequest{})
 		if err != nil {
 			t.Fatalf("GetFriends: %v", err)
 		}
-		if len(resp.Friends) != 3 {
-			t.Fatalf("got %d friends, want 3", len(resp.Friends))
+		if len(resp.Friends) != 2 {
+			t.Fatalf("got %d friends, want 2", len(resp.Friends))
 		}
 		byName := make(map[string]*pb.Friend, len(resp.Friends))
 		for _, f := range resp.Friends {
 			byName[f.Username] = f
 		}
-		for _, name := range []string{"bob", "carol", "dave"} {
+		for _, name := range []string{"bob", "carol"} {
 			if _, ok := byName[name]; !ok {
 				t.Errorf("%s missing from alice's friends", name)
 			}
@@ -263,8 +263,8 @@ func TestGetFriends(t *testing.T) {
 		if byName["carol"].Status != "accepted" {
 			t.Errorf("carol status: got %q, want accepted", byName["carol"].Status)
 		}
-		if byName["dave"].Status != "pending" {
-			t.Errorf("dave status: got %q, want pending", byName["dave"].Status)
+		if _, ok := byName["dave"]; ok {
+			t.Errorf("dave should not appear in alice's friends (outgoing pending request)")
 		}
 	})
 
