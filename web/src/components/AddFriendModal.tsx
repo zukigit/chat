@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import { getToken } from '../auth'
