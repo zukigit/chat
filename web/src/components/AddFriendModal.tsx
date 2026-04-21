@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import { getToken } from '../auth'
@@ -17,12 +17,26 @@ interface Props {
   onOpen: () => void
 }
 
-function SearchResults() {
+type RequestState = 'idle' | 'loading' | 'success' | 'error'
+
+function SearchResults({ open }: { open: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [results, setResults] = useState<SearchResultUser[]>([])
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const [requestStates, setRequestStates] = useState<Record<string, RequestState>>({})
+  const [requestErrors, setRequestErrors] = useState<Record<string, string>>({})
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setResults([])
+      setRequestStates({})
+      setRequestErrors({})
+      setSearching(false)
+      setHasSearched(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }, [open])
 
   async function doSearch() {
     const query = inputRef.current?.value ?? ''
@@ -50,8 +64,32 @@ function SearchResults() {
     }
   }
 
-  function handleAdd(id: string) {
-    setAddedIds(prev => new Set(prev).add(id))
+  async function handleAdd(username: string, userId: string) {
+    setRequestStates(s => ({ ...s, [userId]: 'loading' }))
+    setRequestErrors(e => { const n = { ...e }; delete n[userId]; return n })
+    try {
+      const config = loadConfig()
+      const gatewayUrl = config?.gatewayUrl ?? ''
+      const token = getToken()
+      const res = await fetch(`${gatewayUrl}/friends/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ username }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setRequestStates(s => ({ ...s, [userId]: 'success' }))
+      } else {
+        setRequestStates(s => ({ ...s, [userId]: 'error' }))
+        setRequestErrors(e => ({ ...e, [userId]: json.message ?? 'Request failed' }))
+      }
+    } catch {
+      setRequestStates(s => ({ ...s, [userId]: 'error' }))
+      setRequestErrors(e => ({ ...e, [userId]: 'Network error' }))
+    }
   }
 
   return (
@@ -82,28 +120,38 @@ function SearchResults() {
         {hasSearched && results.length === 0 && (
           <div className="modal-empty">No users found</div>
         )}
-        {results.map(u => (
-          <div key={u.user_id} className="modal-user-row">
-            <div className="avatar" style={{ background: avatarColor(u.user_name) }}>
-              {avatarInitials(u.display_name, u.user_name)}
-            </div>
-            <div className="item-body">
-              <div className="item-name">{u.display_name || u.user_name}</div>
-              <div className="item-preview">@{u.user_name}</div>
-            </div>
-            {addedIds.has(u.user_id) ? (
-              <span className="modal-added-label">Sent</span>
-            ) : (
-              <button className="action-btn primary" onClick={() => handleAdd(u.user_id)}>
-                <svg className="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
+        {results.map(u => {
+          const state = requestStates[u.user_id] ?? 'idle'
+          return (
+            <div key={u.user_id} className="modal-user-row">
+              <div className="avatar" style={{ background: avatarColor(u.user_name) }}>
+                {avatarInitials(u.display_name, u.user_name)}
+              </div>
+              <div className="item-body">
+                <div className="item-name">{u.display_name || u.user_name}</div>
+                <div className="item-preview">@{u.user_name}</div>
+                {requestErrors[u.user_id] && (
+                  <div className="error-text">{requestErrors[u.user_id]}</div>
+                )}
+              </div>
+              {state === 'success' ? (
+                <span className="modal-added-label">Sent</span>
+              ) : state === 'loading' ? (
+                <svg className="search-spinner icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 1 1-6.22-8.56" />
                 </svg>
-                Add
-              </button>
-            )}
-          </div>
-        ))}
+              ) : (
+                <button className="action-btn primary" onClick={() => handleAdd(u.user_name, u.user_id)}>
+                  <svg className="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Add
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
     </>
   )
@@ -122,7 +170,7 @@ export default function AddFriendModal({ open, onClose }: Props) {
             </svg>
           </button>
         </div>
-        <SearchResults />
+        <SearchResults open={open} />
       </div>
     </div>
   )
