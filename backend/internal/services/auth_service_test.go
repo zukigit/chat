@@ -124,22 +124,30 @@ func TestSearchUsers(t *testing.T) {
 
 	authServer := services.NewAuthServer(sqlDb)
 
+	// SearchUsers requires a caller identity in the context (it excludes the
+	// caller from results).  Use the first seeded user as the caller.
+	caller, err := q.GetUserByUsername(t.Context(), "zuki")
+	if err != nil {
+		t.Fatalf("failed to fetch caller user: %v", err)
+	}
+
 	tests := []struct {
 		name      string
 		query     string
 		wantCount int
 		wantErr   bool
 	}{
-		{"exact match username", "zuki", 2, false},
-		{"partial match username", "zuk", 2, false},
-		{"case insensitive", "ZUKI", 2, false},
+		{"exact match username", "zuki", 1, false},
+		{"partial match username", "zuk", 1, false},
+		{"case insensitive", "ZUKI", 1, false},
 		{"no results", "xyz123", 0, false},
 		{"empty query", "", 0, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := authServer.SearchUsers(t.Context(), &auth.SearchUsersRequest{
+			ctx := ctxWithUser(caller.UserName, caller.UserID)
+			resp, err := authServer.SearchUsers(ctx, &auth.SearchUsersRequest{
 				Query: tt.query,
 			})
 			if tt.wantErr {
