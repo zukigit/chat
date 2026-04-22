@@ -97,7 +97,79 @@ Returned when the caller does not have permission to add one of the specified me
 
 ---
 
-## 2. Get Messages
+## 2. Get Conversations
+
+Retrieves all conversations that the authenticated user is a member of.
+
+- **URL path:** `/conversations`
+- **Method:** `GET`
+
+### Example Request
+
+```
+GET /conversations
+Authorization: Bearer <JWT_STRING>
+```
+
+### Responses
+
+#### 200 OK (Success)
+
+```json
+{
+  "success": true,
+  "data": {
+    "conversations": [
+      {
+        "id": 42,
+        "is_group": true,
+        "name": "Project Team",
+        "updated_at": "2024-01-15T10:30:00Z",
+        "members": [
+          {
+            "user_id": "550e8400-e29b-41d4-a716-446655440000",
+            "username": "alice",
+            "display_name": "Alice",
+            "avatar_url": ""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+| Field              | Type                    | Description                                    |
+|--------------------|-------------------------|------------------------------------------------|
+| `id`               | `int64`                 | Conversation ID                                |
+| `is_group`         | `bool`                  | Whether this is a group conversation           |
+| `name`             | `string`                | Group name (empty for DMs)                     |
+| `updated_at`       | `string` (RFC3339)      | Last update time                               |
+| `members`          | `ConversationMember[]`  | All members of the conversation                |
+| `members.user_id`  | `string` (UUID)         | Member's user ID                               |
+| `members.username` | `string`                | Member's username                              |
+| `members.display_name` | `string`            | Member's display name                          |
+| `members.avatar_url`   | `string`            | Member's avatar URL                            |
+
+#### 401 Unauthorized
+```json
+{
+  "success": false,
+  "message": "missing or malformed Authorization header"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "success": false,
+  "message": "<error detail>"
+}
+```
+
+---
+
+## 3. Get Messages
 
 Retrieves messages in a conversation, ordered from newest to oldest (cursor-based pagination).
 

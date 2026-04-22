@@ -95,6 +95,7 @@ func main() {
 	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodGet)
 	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodGet)
 	r.HandleFunc("/conversations", chatHandler.CreateConversation).Methods(http.MethodPost)
+	r.HandleFunc("/conversations", chatHandler.GetConversations).Methods(http.MethodGet)
 	r.HandleFunc("/conversations/messages", chatHandler.GetMessages).Methods(http.MethodGet)
 
 	cors := gorhandlers.CORS(

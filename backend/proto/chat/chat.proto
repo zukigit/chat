@@ -62,10 +62,33 @@ message UpdateMessageRequest {
 
 message UpdateMessageResponse {}
 
+message ConversationMember {
+  string user_id = 1;
+  string username = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+}
+
+message ConversationResult {
+  int64 id = 1;
+  bool is_group = 2;
+  string name = 3;
+  string updated_at = 4;
+  repeated ConversationMember members = 5;
+}
+
+message GetConversationsResponse {
+  repeated ConversationResult conversations = 1;
+}
+
+message GetConversationsRequest {}
+
 service Chat {
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
   rpc UpdateLastReadMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
   rpc UpdateLastDeliveredMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
+  rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);
 }
+

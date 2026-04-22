@@ -127,3 +127,32 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		Data:    resp,
 	})
 }
+
+// GetConversations handles GET /conversations
+func (h *ChatHandler) GetConversations(w http.ResponseWriter, r *http.Request) {
+	token, ok := lib.BearerToken(r)
+	if !ok {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
+			Success: false,
+			Message: "missing or malformed Authorization header",
+		})
+		return
+	}
+
+	resp, err := h.client.GetConversations(r.Context(), token)
+	if err != nil {
+		st, _ := status.FromError(err)
+		switch st.Code() {
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: st.Message()})
+		}
+		return
+	}
+
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Data:    resp,
+	})
+}
