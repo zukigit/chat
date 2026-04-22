@@ -56,10 +56,8 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
             </span>
           </div>
 
-          {requestsOpen && (
-            friendRequests.length === 0
-              ? <div className="section-empty">No pending requests</div>
-              : friendRequests.map(req => (
+          {requestsOpen && friendRequests.length > 0 && (
+            friendRequests.map(req => (
                 <div key={req.id} className="list-item request-item">
                   <div className="avatar" style={{ background: avatarColor(req.username) }}>
                     {avatarInitials(req.displayName, req.username)}
