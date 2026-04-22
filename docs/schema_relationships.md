@@ -67,16 +67,23 @@ erDiagram
         timestamptz created_at
     }
 
-    users ||--o{ friendships : "requests (user1_userid)"
-    users ||--o{ friendships : "receives (user2_userid)"
-    users ||--o{ friendships : "initiates (initiator_userid)"
-    users ||--o{ conversation_members : "joins (user_id)"
     dm_peers {
         uuid user1_id PK_FK
         uuid user2_id PK_FK
         bigint conversation_id FK
     }
 
+    sessions {
+        uuid id PK
+        uuid user_userid FK
+        uuid login_id UK
+        timestamptz created_at
+    }
+
+    users ||--o{ friendships : "requests (user1_userid)"
+    users ||--o{ friendships : "receives (user2_userid)"
+    users ||--o{ friendships : "initiates (initiator_userid)"
+    users ||--o{ conversation_members : "joins (user_id)"
     conversations ||--o{ conversation_members : "has members"
     conversations ||--|| dm_peers : "dm lookup (conversation_id)"
     users ||--o{ dm_peers : "dm peer (user1_id)"
@@ -86,14 +93,6 @@ erDiagram
     messages ||--o{ messages : "reply (reply_to_message_id)"
     users ||--o{ notifications : "notified (user_id)"
     users ||--o{ notifications : "sends (sender_id)"
-
-    sessions {
-        uuid id PK
-        uuid user_userid FK
-        uuid login_id UK
-        timestamptz created_at
-    }
-
     users ||--o{ sessions : "owns (user_userid)"
 ```
 
