@@ -195,6 +195,8 @@
 
 .list-item:hover  { background: var(--bg-sidebar-hover); }
 .list-item.active { background: var(--bg-sidebar-active); }
+.friend-item { cursor: default; }
+.friend-item:hover { background: none; }
 
 /* ── List item text ── */
 .item-body {

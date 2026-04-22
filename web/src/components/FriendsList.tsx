@@ -107,9 +107,7 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
           {friendsOpen && friends.map(f => (
             <div
               key={f.id}
-              className="list-item"
-              onClick={() => onStartChat(f)}
-              title="Start chat"
+              className="list-item friend-item"
             >
               <div className="avatar" style={{ background: avatarColor(f.username) }}>
                 {avatarInitials(f.displayName, f.username)}
@@ -122,6 +120,15 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
                   <span className="item-username">@{f.username}</span>
                 </div>
               </div>
+              <button
+                className="action-btn primary"
+                title="Send message"
+                onClick={() => onStartChat(f)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
             </div>
           ))}
 
