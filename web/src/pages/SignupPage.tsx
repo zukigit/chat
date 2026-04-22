@@ -42,6 +42,7 @@ export default function SignupPage() {
         return
       }
       setSuccess(json?.message ?? 'Account created successfully')
+      setTimeout(() => navigate('/login'), 1500)
     } catch {
       setError('Could not reach server. Check your connection.')
     } finally {
