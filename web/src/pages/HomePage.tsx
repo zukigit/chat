@@ -12,7 +12,7 @@ import {
   type FriendRequest,
 } from '../components/fakeData'
 import { fetchFriends } from '../api/friendsApi'
-import { fetchConversations, type ApiConversation } from '../api/conversationsApi'
+import { fetchConversations, createConversation, type ApiConversation } from '../api/conversationsApi'
 import { avatarColor, avatarInitials } from '../components/avatarUtils'
 
 type Tab = 'conversations' | 'friends' | 'profile'
@@ -84,12 +84,22 @@ export default function HomePage() {
     setTab('conversations')
   }
 
-  function handleStartChat(friend: Friend) {
+  async function handleStartChat(friend: Friend) {
     const existing = conversations.find(c =>
       c.members.some(m => m.username === friend.username)
     )
     if (existing) {
       setActiveConv(existing)
+      setTab('conversations')
+      return
+    }
+
+    const conversationId = await createConversation([friend.username])
+    let updated = await fetchConversations()
+    setConversations(updated)
+    const conv = updated.find(c => c.id === conversationId)
+    if (conv) {
+      setActiveConv(conv)
       setTab('conversations')
     }
   }

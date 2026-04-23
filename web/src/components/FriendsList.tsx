@@ -8,7 +8,7 @@ import AddFriendModal from './AddFriendModal'
 interface Props {
   friends: Friend[]
   friendRequests: FriendRequest[]
-  onStartChat: (friend: Friend) => void
+  onStartChat: (friend: Friend) => Promise<void>
   onAccepted?: (req: FriendRequest) => void
   onDeclined?: (req: FriendRequest) => void
 }
@@ -18,6 +18,8 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [chatLoadingId, setChatLoadingId] = useState<string | null>(null)
+  const [chatErrors, setChatErrors] = useState<Record<string, string>>({})
   const [showAddModal, setShowAddModal] = useState(false)
 
   async function handleAction(req: FriendRequest, action: 'accept' | 'decline') {
@@ -119,15 +121,34 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
                 <div className="item-preview">
                   <span className="item-username">@{f.username}</span>
                 </div>
+                {chatErrors[f.id] && (
+                  <div className="error-text">{chatErrors[f.id]}</div>
+                )}
               </div>
               <button
                 className="action-btn primary"
                 title="Send message"
-                onClick={() => onStartChat(f)}
+                disabled={chatLoadingId !== null}
+                onClick={async () => {
+                  if (chatLoadingId) return
+                  setChatLoadingId(f.id)
+                  setChatErrors(e => { const n = { ...e }; delete n[f.id]; return n })
+                  try {
+                    await onStartChat(f)
+                  } catch (err) {
+                    setChatErrors(e => ({ ...e, [f.id]: (err as Error).message }))
+                  } finally {
+                    setChatLoadingId(null)
+                  }
+                }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
+                {chatLoadingId === f.id ? (
+                  <span className="auth-spinner" style={{ width: 14, height: 14 }} />
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                )}
               </button>
             </div>
           ))}
