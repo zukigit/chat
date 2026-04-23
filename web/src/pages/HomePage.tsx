@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getToken, removeToken, getUsername } from '../auth'
 import ConversationList from '../components/ConversationList'
 import FriendsList from '../components/FriendsList'
+import ProfilePanel from '../components/ProfilePanel'
 import MessagePanel from '../components/MessagePanel'
 import '../components/chat.css'
 import {
@@ -12,8 +13,9 @@ import {
 } from '../components/fakeData'
 import { fetchFriends } from '../api/friendsApi'
 import { fetchConversations, type ApiConversation } from '../api/conversationsApi'
+import { avatarColor, avatarInitials } from '../components/avatarUtils'
 
-type Tab = 'conversations' | 'friends'
+type Tab = 'conversations' | 'friends' | 'profile'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -102,7 +104,7 @@ export default function HomePage() {
         {/* Sidebar header with hamburger menu */}
         <div className="sidebar-header-bar">
           <div className="sidebar-menu-wrap" ref={menuRef}>
-            {tab === 'friends' ? (
+            {tab === 'friends' || tab === 'profile' ? (
               <button
                 className="icon-btn-circle"
                 onClick={() => setTab('conversations')}
@@ -125,6 +127,13 @@ export default function HomePage() {
             )}
             {menuOpen && tab !== 'friends' && (
               <div className="dropdown">
+                <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('profile') }}>
+                  <div className="avatar avatar-sm" style={{ background: avatarColor(currentUsername), width: 20, height: 20, fontSize: 9 }}>
+                    {avatarInitials(currentUsername, currentUsername)}
+                  </div>
+                  {currentUsername}
+                </button>
+                <div className="dropdown-divider" />
                 <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('friends') }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -179,7 +188,7 @@ export default function HomePage() {
             currentUsername={currentUsername}
             onSelect={handleSelectConversation}
           />
-        ) : (
+        ) : tab === 'friends' ? (
           <FriendsList
             friends={friends}
             friendRequests={friendRequests}
@@ -187,6 +196,8 @@ export default function HomePage() {
             onAccepted={handleAccepted}
             onDeclined={handleDeclined}
           />
+        ) : (
+          <ProfilePanel username={currentUsername} />
         )}
       </div>
 
