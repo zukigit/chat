@@ -105,35 +105,37 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
 
       {/* Messages */}
       <div className="messages-scroll">
-        {displayMessages.length === 0 && (
-          <div className="date-divider"><span>No messages yet</span></div>
-        )}
-        {displayMessages.map(entry => {
-          if (entry.kind === 'received') {
-            const m = entry.msg
-            const isOwn = m.sender_id === currentUserId
+        <div className="messages-inner">
+          {displayMessages.length === 0 && (
+            <div className="date-divider"><span>No messages yet</span></div>
+          )}
+          {displayMessages.map(entry => {
+            if (entry.kind === 'received') {
+              const m = entry.msg
+              const isOwn = m.sender_id === currentUserId
+              return (
+                <div key={`r-${m.id}`} className={`msg-row ${isOwn ? 'out' : 'in'}`}>
+                  <div className="msg-bubble">
+                    {m.content}
+                    <span className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              )
+            }
+            const s = entry.msg
             return (
-              <div key={`r-${m.id}`} className={`msg-row ${isOwn ? 'out' : 'in'}`}>
+              <div key={`s-${s.tempId}`} className="msg-row out">
                 <div className="msg-bubble">
-                  {m.content}
-                  <span className="msg-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  {s.content}
+                  <span className="msg-time">
+                    {s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    {renderStatusIcon(s.status)}
+                  </span>
                 </div>
               </div>
             )
-          }
-          const s = entry.msg
-          return (
-            <div key={`s-${s.tempId}`} className="msg-row out">
-              <div className="msg-bubble">
-                {s.content}
-                <span className="msg-time">
-                  {s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                  {renderStatusIcon(s.status)}
-                </span>
-              </div>
-            </div>
-          )
-        })}
+          })}
+        </div>
         <div ref={bottomRef} />
       </div>
 

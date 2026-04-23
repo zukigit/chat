@@ -162,7 +162,16 @@
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  align-items: center;
+}
+
+.messages-inner {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .messages-scroll::-webkit-scrollbar { width: 4px; }
@@ -185,18 +194,18 @@
 
 .msg-row {
   display: flex;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .msg-row.out { justify-content: flex-end; }
 .msg-row.in  { justify-content: flex-start; }
 
 .msg-bubble {
-  max-width: 65%;
-  padding: 8px 12px 6px;
+  max-width: 80%;
+  padding: 10px 14px 8px;
   border-radius: var(--radius-bubble);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.5;
   word-break: break-word;
   position: relative;
 }
