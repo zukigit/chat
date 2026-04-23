@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getToken, removeToken, getUsername } from '../auth'
 import ConversationList from '../components/ConversationList'
@@ -7,13 +7,14 @@ import ProfilePanel from '../components/ProfilePanel'
 import MessagePanel from '../components/MessagePanel'
 import '../components/chat.css'
 import {
-  FAKE_MESSAGES,
   type Friend,
   type FriendRequest,
 } from '../components/fakeData'
 import { fetchFriends } from '../api/friendsApi'
 import { fetchConversations, createConversation, type ApiConversation } from '../api/conversationsApi'
 import { avatarColor, avatarInitials } from '../components/avatarUtils'
+import { useChatSession } from '../useChatSession'
+import { getMessages, clearMessages, type StoredMessage } from '../messageStore'
 
 type Tab = 'conversations' | 'friends' | 'profile'
 
@@ -26,12 +27,33 @@ export default function HomePage() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [refreshingFriends, setRefreshingFriends] = useState(false)
+  const [allMessages, setAllMessages] = useState<Record<number, StoredMessage[]>>({})
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const handleIncomingMessage = useCallback((msg: StoredMessage) => {
+    setAllMessages(prev => {
+      const convId = msg.conversation_id
+      const existing = prev[convId] ?? []
+      if (existing.some(m => m.id === msg.id)) return prev
+      return { ...prev, [convId]: [...existing, msg].sort((a, b) => a.id - b.id) }
+    })
+  }, [])
+
+  const { connected, send } = useChatSession(handleIncomingMessage)
 
   useEffect(() => {
     loadFriends().catch(console.error)
     loadConversations().catch(console.error)
   }, [])
+
+  useEffect(() => {
+    const restored: Record<number, StoredMessage[]> = {}
+    conversations.forEach(c => {
+      const msgs = getMessages(c.id)
+      if (msgs.length > 0) restored[c.id] = msgs
+    })
+    setAllMessages(restored)
+  }, [conversations])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -76,6 +98,7 @@ export default function HomePage() {
       }
     }
     removeToken()
+    clearMessages()
     navigate('/login')
   }
 
@@ -104,7 +127,7 @@ export default function HomePage() {
     }
   }
 
-  const messages = activeConv ? (FAKE_MESSAGES[String(activeConv.id)] ?? []) : []
+  const messages = activeConv ? (allMessages[activeConv.id] ?? []) : []
   const currentUsername = getUsername() ?? ''
 
   return (
@@ -196,6 +219,7 @@ export default function HomePage() {
             conversations={conversations}
             activeId={activeConv?.id ?? null}
             currentUsername={currentUsername}
+            messages={allMessages}
             onSelect={handleSelectConversation}
           />
         ) : tab === 'friends' ? (
@@ -212,7 +236,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} currentUsername={currentUsername} />
+      <MessagePanel conversation={activeConv} messages={messages} currentUsername={currentUsername} onSend={send} connected={connected} />
     </div>
   )
 }
