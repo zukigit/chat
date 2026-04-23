@@ -2,22 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import type { ApiConversation } from '../api/conversationsApi'
-import type { StoredMessage } from '../messageStore'
+import type { StoredMessage, SentMessage } from '../messageStore'
+import { addSentMessage } from '../messageStore'
 
 interface Props {
   conversation: ApiConversation | null
   messages: StoredMessage[]
+  sentMessages: SentMessage[]
   currentUsername: string
-  onSend: (conversationId: number, content: string) => void
+  onSend: (conversationId: number, content: string, tempId: string) => void
 }
 
-export default function MessagePanel({ conversation, messages, currentUsername, onSend }: Props) {
+export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, sentMessages])
 
   if (!conversation) {
     return (
@@ -33,12 +35,47 @@ export default function MessagePanel({ conversation, messages, currentUsername, 
   const otherMember = conversation.members.find(m => m.username !== currentUsername)
   const displayName = conversation.is_group ? conversation.name : (otherMember?.display_name || otherMember?.username || '')
   const username = otherMember?.username || ''
+  const currentUserId = conversation.members.find(mem => mem.username === currentUsername)?.user_id ?? ''
 
   function handleSend() {
     const text = input.trim()
     if (!text || !conversation) return
-    onSend(conversation.id, text)
+    const sent = addSentMessage(conversation.id, text)
+    onSend(conversation.id, text, sent.tempId)
     setInput('')
+  }
+
+  function renderStatus(status: string) {
+    if (status === 'sending') {
+      return (
+        <span className="msg-status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </span>
+      )
+    }
+    if (status === 'sent') {
+      return (
+        <span className="msg-status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 6 7 17 2 12" />
+            <polyline points="22 6 11 17" />
+          </svg>
+        </span>
+      )
+    }
+    if (status === 'delivered') {
+      return (
+        <span className="msg-status msg-delivered">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 6 7 17 2 12" />
+            <polyline points="22 6 11 17" />
+          </svg>
+        </span>
+      )
+    }
+    return null
   }
 
   return (
@@ -55,11 +92,11 @@ export default function MessagePanel({ conversation, messages, currentUsername, 
 
       {/* Messages */}
       <div className="messages-scroll">
-        {messages.length === 0 && (
+        {messages.length === 0 && sentMessages.length === 0 && (
           <div className="date-divider"><span>No messages yet</span></div>
         )}
         {messages.map(m => {
-          const isOwn = m.sender_id === (conversation.members.find(mem => mem.username === currentUsername)?.user_id ?? '')
+          const isOwn = m.sender_id === currentUserId
           return (
             <div key={m.id} className={`msg-row ${isOwn ? 'out' : 'in'}`}>
               <div className="msg-bubble">
@@ -69,6 +106,14 @@ export default function MessagePanel({ conversation, messages, currentUsername, 
             </div>
           )
         })}
+        {sentMessages.map(s => (
+          <div key={s.tempId} className="msg-row out">
+            <div className="msg-bubble">
+              {s.content}
+              {renderStatus(s.status)}
+            </div>
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
 

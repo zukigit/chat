@@ -14,7 +14,7 @@ import { fetchFriends } from '../api/friendsApi'
 import { fetchConversations, createConversation, type ApiConversation } from '../api/conversationsApi'
 import { avatarColor, avatarInitials } from '../components/avatarUtils'
 import { useChatSession } from '../useChatSession'
-import { getMessages, clearMessages, type StoredMessage } from '../messageStore'
+import { getMessages, getSentMessages, clearMessages, type StoredMessage, type SentMessage } from '../messageStore'
 
 type Tab = 'conversations' | 'friends' | 'profile'
 
@@ -28,6 +28,7 @@ export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [refreshingFriends, setRefreshingFriends] = useState(false)
   const [allMessages, setAllMessages] = useState<Record<number, StoredMessage[]>>({})
+  const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
   const menuRef = useRef<HTMLDivElement>(null)
 
   const handleIncomingMessage = useCallback((msg: StoredMessage) => {
@@ -37,9 +38,14 @@ export default function HomePage() {
       if (existing.some(m => m.id === msg.id)) return prev
       return { ...prev, [convId]: [...existing, msg].sort((a, b) => a.id - b.id) }
     })
+    setSentMessages(getSentMessages(msg.conversation_id))
   }, [])
 
-  const { connected, error: wsError, retryCountdown, send } = useChatSession(handleIncomingMessage, () => {
+  const handleDelivered = useCallback((conversationId: number, messageId: number) => {
+    setSentMessages(getSentMessages(conversationId))
+  }, [])
+
+  const { connected, error: wsError, retryCountdown, send } = useChatSession(handleIncomingMessage, handleDelivered, () => {
     loadConversations().catch(console.error)
   })
 
@@ -55,7 +61,10 @@ export default function HomePage() {
       if (msgs.length > 0) restored[c.id] = msgs
     })
     setAllMessages(restored)
-  }, [conversations])
+    if (activeConv) {
+      setSentMessages(getSentMessages(activeConv.id))
+    }
+  }, [conversations, activeConv])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -130,7 +139,13 @@ export default function HomePage() {
   }
 
   const messages = activeConv ? (allMessages[activeConv.id] ?? []) : []
+  const currentSent = activeConv ? sentMessages.filter(s => s.conversation_id === activeConv.id) : []
   const currentUsername = getUsername() ?? ''
+
+  function handleSendMessage(conversationId: number, content: string, tempId: string) {
+    send(conversationId, content)
+    setSentMessages(getSentMessages(conversationId))
+  }
 
   return (
     <div className="chat-layout">
@@ -243,7 +258,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} currentUsername={currentUsername} onSend={send} />
+      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} />
     </div>
   )
 }

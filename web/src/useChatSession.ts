@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
-import { addMessage, type StoredMessage } from './messageStore'
+import { addMessage, markSentDelivered, type StoredMessage } from './messageStore'
 
 interface ChatEnvelope {
   version: number
@@ -9,11 +9,12 @@ interface ChatEnvelope {
   data: StoredMessage | { conversation_id: number; message_id: number }
 }
 
-export function useChatSession(onMessage?: (msg: StoredMessage) => void, onConnect?: () => void) {
+export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: number) => void, onConnect?: () => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const countdownTimer = useRef<number | null>(null)
   const onMessageRef = useRef(onMessage)
+  const onDeliveredRef = useRef(onDelivered)
   const onConnectRef = useRef(onConnect)
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,8 +22,9 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onConne
 
   useEffect(() => {
     onMessageRef.current = onMessage
+    onDeliveredRef.current = onDelivered
     onConnectRef.current = onConnect
-  }, [onMessage, onConnect])
+  }, [onMessage, onDelivered, onConnect])
 
   const connect = useCallback(() => {
     const token = getToken()
@@ -66,6 +68,10 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onConne
           const msg = envelope.data as StoredMessage
           addMessage(msg)
           onMessageRef.current?.(msg)
+        } else if (envelope.type === 'delivered' && envelope.data) {
+          const d = envelope.data as { conversation_id: number; message_id: number }
+          markSentDelivered(d.conversation_id)
+          onDeliveredRef.current?.(d.conversation_id, d.message_id)
         }
       } catch {
         // ignore unparseable frames

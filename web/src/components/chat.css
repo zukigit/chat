@@ -221,6 +221,23 @@
 
 .msg-row.out .msg-time { color: rgba(255,255,255,0.55); }
 
+.msg-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  vertical-align: middle;
+  color: rgba(255,255,255,0.5);
+}
+
+.msg-status svg {
+  width: 16px;
+  height: 16px;
+}
+
+.msg-delivered {
+  color: #5dade2;
+}
+
 /* ── Chat input ── */
 .chat-input-bar {
   background: var(--bg-header);
