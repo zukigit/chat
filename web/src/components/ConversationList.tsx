@@ -10,6 +10,14 @@ interface Props {
 }
 
 export default function ConversationList({ conversations, activeId, currentUsername, onSelect }: Props) {
+  if (conversations.length === 0) {
+    return (
+      <div className="sidebar-list-empty">
+        No conversations yet
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="sidebar-list">

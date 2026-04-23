@@ -56,6 +56,15 @@
 .sidebar-list::-webkit-scrollbar-track { background: transparent; }
 .sidebar-list::-webkit-scrollbar-thumb { background: #2c3e50; border-radius: 2px; }
 
+.sidebar-list-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-sub);
+  font-size: 16px;
+}
+
 /* ── Friends ── */
 .friends-wrapper {
   position: relative;
