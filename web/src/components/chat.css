@@ -47,6 +47,26 @@
 
 .sidebar-search-inline::placeholder { color: var(--color-sub); }
 
+.ws-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ws-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-sub);
+}
+
+.ws-status.connected .ws-dot { background: var(--color-online); }
+.ws-status.error .ws-dot { background: var(--color-danger); }
+
 .sidebar-list {
   overflow-y: auto;
   flex: 1;

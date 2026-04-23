@@ -9,10 +9,9 @@ interface Props {
   messages: StoredMessage[]
   currentUsername: string
   onSend: (conversationId: number, content: string) => void
-  connected: boolean
 }
 
-export default function MessagePanel({ conversation, messages, currentUsername, onSend, connected }: Props) {
+export default function MessagePanel({ conversation, messages, currentUsername, onSend }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -51,9 +50,6 @@ export default function MessagePanel({ conversation, messages, currentUsername, 
         </div>
         <div className="chat-header-info">
           <div className="chat-header-name">{displayName}</div>
-          <div className={`chat-header-status${connected ? ' online' : ''}`}>
-            {connected ? 'connected' : 'disconnected'}
-          </div>
         </div>
       </div>
 

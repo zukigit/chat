@@ -39,7 +39,9 @@ export default function HomePage() {
     })
   }, [])
 
-  const { connected, send } = useChatSession(handleIncomingMessage)
+  const { connected, error: wsError, retryCountdown, send } = useChatSession(handleIncomingMessage, () => {
+    loadConversations().catch(console.error)
+  })
 
   useEffect(() => {
     loadFriends().catch(console.error)
@@ -193,6 +195,11 @@ export default function HomePage() {
             placeholder={tab === 'friends' ? 'Search Friends' : 'Search'}
             readOnly
           />
+          {tab === 'conversations' && (
+            <div className={`ws-status${connected ? ' connected' : wsError ? ' error' : ''}`} title={wsError ? `Retrying in ${retryCountdown}s` : (connected ? 'Connected' : 'Connecting...')}>
+              <span className="ws-dot" />
+            </div>
+          )}
           {tab === 'friends' && (
             <button
               className={`icon-btn-circle${refreshingFriends ? ' spinning' : ''}`}
@@ -236,7 +243,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} currentUsername={currentUsername} onSend={send} connected={connected} />
+      <MessagePanel conversation={activeConv} messages={messages} currentUsername={currentUsername} onSend={send} />
     </div>
   )
 }
