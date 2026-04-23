@@ -37,7 +37,7 @@ export default function MessagePanel({ conversation, messages, currentUsername, 
 
   function handleSend() {
     const text = input.trim()
-    if (!text) return
+    if (!text || !conversation) return
     onSend(conversation.id, text)
     setInput('')
   }
