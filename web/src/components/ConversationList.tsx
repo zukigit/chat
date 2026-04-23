@@ -1,41 +1,43 @@
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
-import type { Conversation } from './fakeData'
+import type { ApiConversation } from '../api/conversationsApi'
 
 interface Props {
-  conversations: Conversation[]
-  activeId: string | null
-  onSelect: (conv: Conversation) => void
+  conversations: ApiConversation[]
+  activeId: number | null
+  currentUsername: string
+  onSelect: (conv: ApiConversation) => void
 }
 
-export default function ConversationList({ conversations, activeId, onSelect }: Props) {
+export default function ConversationList({ conversations, activeId, currentUsername, onSelect }: Props) {
   return (
     <>
       <div className="sidebar-list">
-        {conversations.map(c => (
-          <div
-            key={c.id}
-            className={`list-item${activeId === c.id ? ' active' : ''}`}
-            onClick={() => onSelect(c)}
-          >
-            <div className="avatar" style={{ background: avatarColor(c.username) }}>
-              {avatarInitials(c.name, c.username)}
-              {c.online && <span className="online-dot" />}
-            </div>
-            <div className="item-body">
-              <div className="item-top">
-                <span className="item-name">{c.name || c.username}</span>
-                <span className="item-time">{c.time}</span>
+        {conversations.map(c => {
+          const otherMember = c.members.find(m => m.username !== currentUsername)
+          const displayName = c.is_group ? c.name : (otherMember?.display_name || otherMember?.username || '')
+          const username = otherMember?.username || ''
+          return (
+            <div
+              key={c.id}
+              className={`list-item${activeId === c.id ? ' active' : ''}`}
+              onClick={() => onSelect(c)}
+            >
+              <div className="avatar" style={{ background: avatarColor(username) }}>
+                {avatarInitials(displayName, username)}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="item-preview">{c.lastMessage}</span>
-                {c.unread > 0 && (
-                  <span className="unread-badge">{c.unread > 99 ? '99+' : c.unread}</span>
-                )}
+              <div className="item-body">
+                <div className="item-top">
+                  <span className="item-name">{displayName}</span>
+                  <span className="item-time">{new Date(c.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="item-preview">No messages yet</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </>
   )

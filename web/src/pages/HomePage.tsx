@@ -1,32 +1,35 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getToken, removeToken } from '../auth'
+import { getToken, removeToken, getUsername } from '../auth'
 import ConversationList from '../components/ConversationList'
 import FriendsList from '../components/FriendsList'
 import MessagePanel from '../components/MessagePanel'
 import '../components/chat.css'
 import {
-  FAKE_CONVERSATIONS,
   FAKE_MESSAGES,
-  type Conversation,
   type Friend,
   type FriendRequest,
 } from '../components/fakeData'
 import { fetchFriends } from '../api/friendsApi'
+import { fetchConversations, type ApiConversation } from '../api/conversationsApi'
 
 type Tab = 'conversations' | 'friends'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('conversations')
-  const [activeConv, setActiveConv] = useState<Conversation | null>(null)
+  const [activeConv, setActiveConv] = useState<ApiConversation | null>(null)
+  const [conversations, setConversations] = useState<ApiConversation[]>([])
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [refreshingFriends, setRefreshingFriends] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { loadFriends().catch(console.error) }, [])
+  useEffect(() => {
+    loadFriends().catch(console.error)
+    loadConversations().catch(console.error)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -42,6 +45,11 @@ export default function HomePage() {
     const data = await fetchFriends()
     setFriends(data.filter(f => f.status === 'accepted').map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name })))
     setFriendRequests(data.filter(f => f.status === 'pending').map(f => ({ id: f.user_id, username: f.username, displayName: f.display_name })))
+  }
+
+  async function loadConversations() {
+    const data = await fetchConversations()
+    setConversations(data)
   }
 
   function handleAccepted(req: FriendRequest) {
@@ -69,20 +77,23 @@ export default function HomePage() {
     navigate('/login')
   }
 
-  function handleSelectConversation(conv: Conversation) {
+  function handleSelectConversation(conv: ApiConversation) {
     setActiveConv(conv)
     setTab('conversations')
   }
 
   function handleStartChat(friend: Friend) {
-    const existing = FAKE_CONVERSATIONS.find(c => c.username === friend.username)
+    const existing = conversations.find(c =>
+      c.members.some(m => m.username === friend.username)
+    )
     if (existing) {
       setActiveConv(existing)
       setTab('conversations')
     }
   }
 
-  const messages = activeConv ? (FAKE_MESSAGES[activeConv.id] ?? []) : []
+  const messages = activeConv ? (FAKE_MESSAGES[String(activeConv.id)] ?? []) : []
+  const currentUsername = getUsername() ?? ''
 
   return (
     <div className="chat-layout">
@@ -163,8 +174,9 @@ export default function HomePage() {
 
         {tab === 'conversations' ? (
           <ConversationList
-            conversations={FAKE_CONVERSATIONS}
+            conversations={conversations}
             activeId={activeConv?.id ?? null}
+            currentUsername={currentUsername}
             onSelect={handleSelectConversation}
           />
         ) : (
@@ -179,7 +191,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} />
+      <MessagePanel conversation={activeConv} messages={messages} currentUsername={currentUsername} />
     </div>
   )
 }

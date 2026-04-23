@@ -1,6 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import { getToken } from '../auth'
+import { getToken, removeToken } from '../auth'
 
 export default function PrivateRoute() {
-  return getToken() ? <Outlet /> : <Navigate to="/login" replace />
+  const token = getToken()
+  if (!token) {
+    removeToken()
+    return <Navigate to="/login" replace />
+  }
+  return <Outlet />
 }

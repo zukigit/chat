@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
-import type { Conversation, Message } from './fakeData'
+import type { Message } from './fakeData'
+import type { ApiConversation } from '../api/conversationsApi'
 
 interface Props {
-  conversation: Conversation | null
+  conversation: ApiConversation | null
   messages: Message[]
+  currentUsername: string
 }
 
-export default function MessagePanel({ conversation, messages }: Props) {
+export default function MessagePanel({ conversation, messages, currentUsername }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -27,19 +29,19 @@ export default function MessagePanel({ conversation, messages }: Props) {
     )
   }
 
+  const otherMember = conversation.members.find(m => m.username !== currentUsername)
+  const displayName = conversation.is_group ? conversation.name : (otherMember?.display_name || otherMember?.username || '')
+  const username = otherMember?.username || ''
+
   return (
     <div className="chat-main">
       {/* Header */}
       <div className="chat-header">
-        <div className="avatar avatar-sm" style={{ background: avatarColor(conversation.username) }}>
-          {avatarInitials(conversation.name, conversation.username)}
-          {conversation.online && <span className="online-dot" style={{ borderColor: 'var(--bg-header)' }} />}
+        <div className="avatar avatar-sm" style={{ background: avatarColor(username) }}>
+          {avatarInitials(displayName, username)}
         </div>
         <div className="chat-header-info">
-          <div className="chat-header-name">{conversation.name || conversation.username}</div>
-          <div className={`chat-header-status${conversation.online ? ' online' : ''}`}>
-            {conversation.online ? 'online' : 'last seen recently'}
-          </div>
+          <div className="chat-header-name">{displayName}</div>
         </div>
       </div>
 
