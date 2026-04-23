@@ -17,6 +17,7 @@ export interface SentMessage {
   conversation_id: number
   content: string
   status: 'sending' | 'sent' | 'delivered'
+  created_at?: string
 }
 
 const STORAGE_KEY = 'chat_messages'
@@ -72,7 +73,7 @@ export function addMessage(msg: StoredMessage): void {
 
 export function addSentMessage(conversationId: number, content: string): SentMessage {
   const tempId = `sent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  const sent: SentMessage = { tempId, conversation_id: conversationId, content, status: 'sending' }
+  const sent: SentMessage = { tempId, conversation_id: conversationId, content, status: 'sending', created_at: new Date().toISOString() }
   const all = loadSent()
   all.push(sent)
   saveSent(all)
