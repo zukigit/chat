@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
-import { addMessage, markSentDelivered, type StoredMessage } from './messageStore'
+import { addMessage, markSentDelivered, markSentSeen, type StoredMessage } from './messageStore'
 
 interface ChatEnvelope {
   version: number
@@ -71,6 +71,10 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
         } else if (envelope.type === 'delivered' && envelope.data) {
           const d = envelope.data as { conversation_id: number; message_id: number }
           markSentDelivered(d.conversation_id)
+          onDeliveredRef.current?.(d.conversation_id, d.message_id)
+        } else if (envelope.type === 'seen' && envelope.data) {
+          const d = envelope.data as { conversation_id: number; message_id: number }
+          markSentSeen(d.conversation_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
         }
       } catch {

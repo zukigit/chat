@@ -73,7 +73,6 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
         <span className="msg-status">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="18 6 7 17 2 12" />
-            <polyline points="22 6 11 17" />
           </svg>
         </span>
       )
@@ -81,6 +80,16 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
     if (status === 'delivered') {
       return (
         <span className="msg-status msg-delivered">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 6 7 17 2 12" />
+            <polyline points="22 6 11 17" />
+          </svg>
+        </span>
+      )
+    }
+    if (status === 'seen') {
+      return (
+        <span className="msg-status msg-seen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="18 6 7 17 2 12" />
             <polyline points="22 6 11 17" />

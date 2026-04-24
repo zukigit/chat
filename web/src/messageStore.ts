@@ -16,7 +16,7 @@ export interface SentMessage {
   tempId: string
   conversation_id: number
   content: string
-  status: 'sending' | 'sent' | 'delivered'
+  status: 'sending' | 'sent' | 'delivered' | 'seen'
   created_at?: string
 }
 
@@ -87,6 +87,16 @@ export function markSentDelivered(conversationId: number): void {
     s.status = 'delivered'
     saveSent(all)
   }
+}
+
+export function markSentSeen(conversationId: number): void {
+  const all = loadSent()
+  all.forEach(s => {
+    if (s.conversation_id === conversationId && (s.status === 'sent' || s.status === 'delivered')) {
+      s.status = 'seen'
+    }
+  })
+  saveSent(all)
 }
 
 export function markSentByContent(conversationId: number, content: string): void {
