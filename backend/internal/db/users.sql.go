@@ -89,6 +89,62 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User,
 	return i, err
 }
 
+const searchUsers = `-- name: SearchUsers :many
+SELECT u.user_id, u.user_name, u.display_name, u.avatar_url
+FROM users u
+WHERE (u.user_name ILIKE '%' || $1 || '%'
+    OR u.display_name ILIKE '%' || $1 || '%')
+  AND u.user_id != $2
+  AND NOT EXISTS (
+    SELECT 1 FROM friendships f
+    WHERE (f.user1_userid = $2 AND f.user2_userid = u.user_id)
+       OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
+  )
+ORDER BY u.user_name
+LIMIT 50
+`
+
+type SearchUsersParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	UserID  uuid.UUID      `json:"user_id"`
+}
+
+type SearchUsersRow struct {
+	UserID      uuid.UUID      `json:"user_id"`
+	UserName    string         `json:"user_name"`
+	DisplayName sql.NullString `json:"display_name"`
+	AvatarUrl   sql.NullString `json:"avatar_url"`
+}
+
+// Searches for users by username or display name, excluding the caller and any existing friends.
+func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, arg.Column1, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersRow
+	for rows.Next() {
+		var i SearchUsersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserName,
+			&i.DisplayName,
+			&i.AvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateLastSeen = `-- name: UpdateLastSeen :exec
 UPDATE users
 SET last_seen_at = NOW()

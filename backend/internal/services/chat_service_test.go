@@ -318,6 +318,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 		}
 	})
 }
+
 // correct notifications for all conversation members except the sender.
 func TestSendMessage_Notifications(t *testing.T) {
 	sqlDB := setupTestDB(t)
@@ -419,6 +420,110 @@ func TestSendMessage_Notifications(t *testing.T) {
 			if !n.SenderID.Valid || n.SenderID.UUID != ids["alice"] {
 				t.Errorf("%s sender_id: got %v, want alice", recipient, n.SenderID)
 			}
+		}
+	})
+}
+
+func TestGetConversations(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	chatServer := services.NewChatServer(sqlDB, nil)
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
+	makeFriends(t, sqlDB, ids["alice"], ids["carol"])
+
+	dmResp, err := chatServer.CreateConversation(
+		ctxWithUser("alice", ids["alice"]),
+		&pb.CreateConversationRequest{IsGroup: false, MembersUsername: []string{"bob"}},
+	)
+	if err != nil {
+		t.Fatalf("setup DM: %v", err)
+	}
+
+	groupResp, err := chatServer.CreateConversation(
+		ctxWithUser("alice", ids["alice"]),
+		&pb.CreateConversationRequest{IsGroup: true, Name: "test-group", MembersUsername: []string{"bob", "carol"}},
+	)
+	if err != nil {
+		t.Fatalf("setup group: %v", err)
+	}
+
+	t.Run("alice sees both conversations", func(t *testing.T) {
+		resp, err := chatServer.GetConversations(ctxWithUser("alice", ids["alice"]), &pb.GetConversationsRequest{})
+		if err != nil {
+			t.Fatalf("got error: %v", err)
+		}
+		if len(resp.Conversations) != 2 {
+			t.Fatalf("want 2 conversations, got %d", len(resp.Conversations))
+		}
+	})
+
+	t.Run("bob sees both conversations", func(t *testing.T) {
+		resp, err := chatServer.GetConversations(ctxWithUser("bob", ids["bob"]), &pb.GetConversationsRequest{})
+		if err != nil {
+			t.Fatalf("got error: %v", err)
+		}
+		if len(resp.Conversations) != 2 {
+			t.Fatalf("want 2 conversations, got %d", len(resp.Conversations))
+		}
+	})
+
+	t.Run("carol sees only group", func(t *testing.T) {
+		resp, err := chatServer.GetConversations(ctxWithUser("carol", ids["carol"]), &pb.GetConversationsRequest{})
+		if err != nil {
+			t.Fatalf("got error: %v", err)
+		}
+		if len(resp.Conversations) != 1 {
+			t.Fatalf("want 1 conversation, got %d", len(resp.Conversations))
+		}
+		if !resp.Conversations[0].IsGroup {
+			t.Error("expected group conversation")
+		}
+	})
+
+	t.Run("group has correct members", func(t *testing.T) {
+		resp, err := chatServer.GetConversations(ctxWithUser("alice", ids["alice"]), &pb.GetConversationsRequest{})
+		if err != nil {
+			t.Fatalf("got error: %v", err)
+		}
+		var group *pb.ConversationResult
+		for _, c := range resp.Conversations {
+			if c.Id == groupResp.ConversationId {
+				group = c
+				break
+			}
+		}
+		if group == nil {
+			t.Fatal("group conversation not found")
+		}
+		if len(group.Members) != 3 {
+			t.Fatalf("want 3 members, got %d", len(group.Members))
+		}
+	})
+
+	t.Run("dm has correct members", func(t *testing.T) {
+		resp, err := chatServer.GetConversations(ctxWithUser("bob", ids["bob"]), &pb.GetConversationsRequest{})
+		if err != nil {
+			t.Fatalf("got error: %v", err)
+		}
+		var dm *pb.ConversationResult
+		for _, c := range resp.Conversations {
+			if c.Id == dmResp.ConversationId {
+				dm = c
+				break
+			}
+		}
+		if dm == nil {
+			t.Fatal("dm conversation not found")
+		}
+		if len(dm.Members) != 2 {
+			t.Fatalf("want 2 members, got %d", len(dm.Members))
+		}
+	})
+
+	t.Run("no auth", func(t *testing.T) {
+		_, err := chatServer.GetConversations(context.Background(), &pb.GetConversationsRequest{})
+		if got := grpcCode(err); got != codes.Internal {
+			t.Errorf("got %v, want Internal", got)
 		}
 	})
 }

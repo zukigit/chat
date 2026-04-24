@@ -277,6 +277,162 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 	return file_proto_auth_auth_proto_rawDescGZIP(), []int{5}
 }
 
+type SearchUsersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchUsersRequest) Reset() {
+	*x = SearchUsersRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchUsersRequest) ProtoMessage() {}
+
+func (x *SearchUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchUsersRequest.ProtoReflect.Descriptor instead.
+func (*SearchUsersRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SearchUsersRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+type UserResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserName      string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserResult) Reset() {
+	*x = UserResult{}
+	mi := &file_proto_auth_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserResult) ProtoMessage() {}
+
+func (x *UserResult) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserResult.ProtoReflect.Descriptor instead.
+func (*UserResult) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UserResult) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UserResult) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
+func (x *UserResult) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UserResult) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+type SearchUsersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*UserResult          `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchUsersResponse) Reset() {
+	*x = SearchUsersResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchUsersResponse) ProtoMessage() {}
+
+func (x *SearchUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchUsersResponse.ProtoReflect.Descriptor instead.
+func (*SearchUsersResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SearchUsersResponse) GetUsers() []*UserResult {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
 var File_proto_auth_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_auth_proto_rawDesc = "" +
@@ -292,11 +448,23 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\x06passwd\x18\x02 \x01(\tR\x06passwd\"\x10\n" +
 	"\x0eSignupResponse\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
-	"\x0eLogoutResponse2\xa2\x01\n" +
+	"\x0eLogoutResponse\"*\n" +
+	"\x12SearchUsersRequest\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\"\x84\x01\n" +
+	"\n" +
+	"UserResult\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tuser_name\x18\x02 \x01(\tR\buserName\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\"=\n" +
+	"\x13SearchUsersResponse\x12&\n" +
+	"\x05users\x18\x01 \x03(\v2\x10.auth.UserResultR\x05users2\xe6\x01\n" +
 	"\x04Auth\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
 	"\x06Signup\x12\x13.auth.SignupRequest\x1a\x14.auth.SignupResponse\x123\n" +
-	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponseB\rZ\vproto/auth/b\x06proto3"
+	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponse\x12B\n" +
+	"\vSearchUsers\x12\x18.auth.SearchUsersRequest\x1a\x19.auth.SearchUsersResponseB\rZ\vproto/auth/b\x06proto3"
 
 var (
 	file_proto_auth_auth_proto_rawDescOnce sync.Once
@@ -310,27 +478,33 @@ func file_proto_auth_auth_proto_rawDescGZIP() []byte {
 	return file_proto_auth_auth_proto_rawDescData
 }
 
-var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_auth_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),   // 0: auth.LoginRequest
-	(*LoginResponse)(nil),  // 1: auth.LoginResponse
-	(*SignupRequest)(nil),  // 2: auth.SignupRequest
-	(*SignupResponse)(nil), // 3: auth.SignupResponse
-	(*LogoutRequest)(nil),  // 4: auth.LogoutRequest
-	(*LogoutResponse)(nil), // 5: auth.LogoutResponse
+	(*LoginRequest)(nil),        // 0: auth.LoginRequest
+	(*LoginResponse)(nil),       // 1: auth.LoginResponse
+	(*SignupRequest)(nil),       // 2: auth.SignupRequest
+	(*SignupResponse)(nil),      // 3: auth.SignupResponse
+	(*LogoutRequest)(nil),       // 4: auth.LogoutRequest
+	(*LogoutResponse)(nil),      // 5: auth.LogoutResponse
+	(*SearchUsersRequest)(nil),  // 6: auth.SearchUsersRequest
+	(*UserResult)(nil),          // 7: auth.UserResult
+	(*SearchUsersResponse)(nil), // 8: auth.SearchUsersResponse
 }
 var file_proto_auth_auth_proto_depIdxs = []int32{
-	0, // 0: auth.Auth.Login:input_type -> auth.LoginRequest
-	2, // 1: auth.Auth.Signup:input_type -> auth.SignupRequest
-	4, // 2: auth.Auth.Logout:input_type -> auth.LogoutRequest
-	1, // 3: auth.Auth.Login:output_type -> auth.LoginResponse
-	3, // 4: auth.Auth.Signup:output_type -> auth.SignupResponse
-	5, // 5: auth.Auth.Logout:output_type -> auth.LogoutResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	7, // 0: auth.SearchUsersResponse.users:type_name -> auth.UserResult
+	0, // 1: auth.Auth.Login:input_type -> auth.LoginRequest
+	2, // 2: auth.Auth.Signup:input_type -> auth.SignupRequest
+	4, // 3: auth.Auth.Logout:input_type -> auth.LogoutRequest
+	6, // 4: auth.Auth.SearchUsers:input_type -> auth.SearchUsersRequest
+	1, // 5: auth.Auth.Login:output_type -> auth.LoginResponse
+	3, // 6: auth.Auth.Signup:output_type -> auth.SignupResponse
+	5, // 7: auth.Auth.Logout:output_type -> auth.LogoutResponse
+	8, // 8: auth.Auth.SearchUsers:output_type -> auth.SearchUsersResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_proto_auth_auth_proto_init() }
@@ -344,7 +518,7 @@ func file_proto_auth_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_auth_proto_rawDesc), len(file_proto_auth_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

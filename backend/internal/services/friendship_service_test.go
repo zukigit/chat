@@ -225,3 +225,110 @@ func TestFriendshipStateTransitions(t *testing.T) {
 		})
 	}
 }
+
+func TestGetFriends(t *testing.T) {
+	sqlDB := setupTestDB(t)
+	fs := services.NewFriendshipServer(sqlDB, nil)
+	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol", "dave")
+
+	// alice ↔ bob: accepted
+	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
+	// alice ↔ carol: accepted
+	makeFriends(t, sqlDB, ids["alice"], ids["carol"])
+	// alice → dave: pending (not yet accepted)
+	if _, err := fs.SendFriendRequest(ctxWithUser("alice", ids["alice"]), &pb.FriendRequest{TargetUsername: "dave"}); err != nil {
+		t.Fatalf("setup: send pending request: %v", err)
+	}
+
+	t.Run("alice sees bob, carol (accepted) but not dave (outgoing pending)", func(t *testing.T) {
+		resp, err := fs.GetFriends(ctxWithUser("alice", ids["alice"]), &pb.GetFriendsRequest{})
+		if err != nil {
+			t.Fatalf("GetFriends: %v", err)
+		}
+		if len(resp.Friends) != 2 {
+			t.Fatalf("got %d friends, want 2", len(resp.Friends))
+		}
+		byName := make(map[string]*pb.Friend, len(resp.Friends))
+		for _, f := range resp.Friends {
+			byName[f.Username] = f
+		}
+		for _, name := range []string{"bob", "carol"} {
+			if _, ok := byName[name]; !ok {
+				t.Errorf("%s missing from alice's friends", name)
+			}
+		}
+		if byName["bob"].Status != "accepted" {
+			t.Errorf("bob status: got %q, want accepted", byName["bob"].Status)
+		}
+		if byName["carol"].Status != "accepted" {
+			t.Errorf("carol status: got %q, want accepted", byName["carol"].Status)
+		}
+		if _, ok := byName["dave"]; ok {
+			t.Errorf("dave should not appear in alice's friends (outgoing pending request)")
+		}
+	})
+
+	t.Run("bob sees alice as accepted", func(t *testing.T) {
+		resp, err := fs.GetFriends(ctxWithUser("bob", ids["bob"]), &pb.GetFriendsRequest{})
+		if err != nil {
+			t.Fatalf("GetFriends: %v", err)
+		}
+		if len(resp.Friends) != 1 {
+			t.Fatalf("got %d friends, want 1", len(resp.Friends))
+		}
+		if resp.Friends[0].Username != "alice" {
+			t.Errorf("got friend %q, want alice", resp.Friends[0].Username)
+		}
+		if resp.Friends[0].Status != "accepted" {
+			t.Errorf("status: got %q, want accepted", resp.Friends[0].Status)
+		}
+	})
+
+	t.Run("friend entry contains correct user_id", func(t *testing.T) {
+		resp, err := fs.GetFriends(ctxWithUser("bob", ids["bob"]), &pb.GetFriendsRequest{})
+		if err != nil {
+			t.Fatalf("GetFriends: %v", err)
+		}
+		if len(resp.Friends) == 0 {
+			t.Fatal("expected at least one friend")
+		}
+		gotID, err := uuid.Parse(resp.Friends[0].UserId)
+		if err != nil {
+			t.Fatalf("user_id is not a valid UUID: %q", resp.Friends[0].UserId)
+		}
+		if gotID != ids["alice"] {
+			t.Errorf("got user_id %v, want %v", gotID, ids["alice"])
+		}
+	})
+
+	t.Run("dave sees alice as pending (alice sent the request)", func(t *testing.T) {
+		resp, err := fs.GetFriends(ctxWithUser("dave", ids["dave"]), &pb.GetFriendsRequest{})
+		if err != nil {
+			t.Fatalf("GetFriends: %v", err)
+		}
+		if len(resp.Friends) != 1 {
+			t.Fatalf("got %d friends, want 1", len(resp.Friends))
+		}
+		if resp.Friends[0].Username != "alice" {
+			t.Errorf("got friend %q, want alice", resp.Friends[0].Username)
+		}
+		if resp.Friends[0].Status != "pending" {
+			t.Errorf("status: got %q, want pending", resp.Friends[0].Status)
+		}
+	})
+
+	t.Run("friendship visible regardless of who initiated", func(t *testing.T) {
+		// carol initiated nothing — alice sent to carol.
+		// carol should still see alice in their friend list as accepted.
+		resp, err := fs.GetFriends(ctxWithUser("carol", ids["carol"]), &pb.GetFriendsRequest{})
+		if err != nil {
+			t.Fatalf("GetFriends: %v", err)
+		}
+		if len(resp.Friends) != 1 || resp.Friends[0].Username != "alice" {
+			t.Errorf("carol should see alice as friend; got %+v", resp.Friends)
+		}
+		if resp.Friends[0].Status != "accepted" {
+			t.Errorf("status: got %q, want accepted", resp.Friends[0].Status)
+		}
+	})
+}

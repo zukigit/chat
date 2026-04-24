@@ -38,6 +38,7 @@ erDiagram
         uuid user_id PK_FK
         member_role role
         bigint last_read_message_id
+        bigint last_delivered_message_id
         timestamptz joined_at
     }
 
@@ -61,7 +62,21 @@ erDiagram
         uuid sender_id
         notification_type type
         text message
+        bigint reference_id
         boolean is_read
+        timestamptz created_at
+    }
+
+    dm_peers {
+        uuid user1_id PK_FK
+        uuid user2_id PK_FK
+        bigint conversation_id FK
+    }
+
+    sessions {
+        uuid id PK
+        uuid user_userid FK
+        uuid login_id UK
         timestamptz created_at
     }
 
@@ -69,12 +84,6 @@ erDiagram
     users ||--o{ friendships : "receives (user2_userid)"
     users ||--o{ friendships : "initiates (initiator_userid)"
     users ||--o{ conversation_members : "joins (user_id)"
-    dm_peers {
-        uuid user1_id PK_FK
-        uuid user2_id PK_FK
-        bigint conversation_id FK
-    }
-
     conversations ||--o{ conversation_members : "has members"
     conversations ||--|| dm_peers : "dm lookup (conversation_id)"
     users ||--o{ dm_peers : "dm peer (user1_id)"
@@ -84,17 +93,6 @@ erDiagram
     messages ||--o{ messages : "reply (reply_to_message_id)"
     users ||--o{ notifications : "notified (user_id)"
     users ||--o{ notifications : "sends (sender_id)"
-
-    sessions {
-        uuid id PK
-        uuid user_userid FK
-        session_type type
-        session_status status
-        text listen_path
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
     users ||--o{ sessions : "owns (user_userid)"
 ```
 
@@ -158,7 +156,7 @@ Fast lookup table for DM conversations. Maps a canonical user pair to a `convers
 ---
 
 ### `conversation_members`
-Join table linking users to the conversations they belong to. Tracks each member's role and read position.
+Join table linking users to the conversations they belong to. Tracks each member's role, read position, and delivery position.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -166,6 +164,7 @@ Join table linking users to the conversations they belong to. Tracks each member
 | `user_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
 | `role` | `member_role` | `member`, `admin`, `owner` — default `member` |
 | `last_read_message_id` | `BIGINT` | `NOT NULL DEFAULT 0` — ID of the last message read by this member |
+| `last_delivered_message_id` | `BIGINT` | `NOT NULL DEFAULT 0` — ID of the last message delivered to this member's device |
 | `joined_at` | `TIMESTAMPTZ` | |
 
 ---
@@ -199,23 +198,21 @@ Notifies a user of an event.
 | `sender_id` | `UUID` | **FK** → `users.user_id` (SET NULL) — nullable |
 | `type` | `notification_type` | `message`, `friend_request` |
 | `message` | `TEXT` | |
+| `reference_id` | `BIGINT` | nullable — `conversation_id` for `message` type; `NULL` for `friend_request` |
 | `is_read` | `BOOLEAN` | default `false` |
 | `created_at` | `TIMESTAMPTZ` | |
 
 ---
 
 ### `sessions`
-Tracks active WebSocket/SSE sessions for real-time notifications and chat.
+Tracks active logins. One row per login (device). Created on login, deleted on logout. Used by `ValidateSession` to confirm a JWT's `login_id` is still active, and by the gateway to name per-login JetStream consumers.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `UUID` | **PK** — auto-generated |
 | `user_userid` | `UUID` | **FK** → `users.user_id` (CASCADE) |
-| `type` | `session_type` | `notification`, `chat` |
-| `status` | `session_status` | `active`, `idle`, `terminate`, `new` — default `new` |
-| `listen_path` | `TEXT` | nullable — SSE/WS endpoint path |
+| `login_id` | `UUID` | **UNIQUE** — embedded in JWT claims; identifies a specific login session |
 | `created_at` | `TIMESTAMPTZ` | |
-| `updated_at` | `TIMESTAMPTZ` | |
 
 ---
 
@@ -253,4 +250,4 @@ Tracks active WebSocket/SSE sessions for real-time notifications and chat.
 | `idx_friendships_user2_status` | `friendships` | `(user2_userid, status)` | Accepted friends lookup per user (other side) |
 | `idx_friendships_user2_status_time` | `friendships` | `(user2_userid, status, created_at DESC)` | Pending incoming friend requests |
 | `idx_friendships_initiator` | `friendships` | `initiator_userid` | Look up friendships by initiator |
-| `idx_sessions_user_type` | `sessions` | `(user_userid, type)` | Look up sessions by user and type |
+| `idx_sessions_user` | `sessions` | `user_userid` | Look up all sessions for a user |

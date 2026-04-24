@@ -49,6 +49,11 @@ func (c *FriendshipClient) AcceptFriendRequest(ctx context.Context, token, targe
 	return err
 }
 
+// GetFriends returns the list of accepted friends for the caller.
+func (c *FriendshipClient) GetFriends(ctx context.Context, token string) (*pb.GetFriendsResponse, error) {
+	return c.client.GetFriends(lib.WithToken(ctx, token), &pb.GetFriendsRequest{})
+}
+
 // RejectFriendRequest rejects a pending friend request via gRPC.
 func (c *FriendshipClient) RejectFriendRequest(ctx context.Context, token, targetUsername string) error {
 	_, err := c.client.RejectFriendRequest(lib.WithToken(ctx, token), &pb.FriendRequest{

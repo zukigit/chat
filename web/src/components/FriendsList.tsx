@@ -1,0 +1,169 @@
+import { useState } from 'react'
+import './chat.css'
+import { avatarColor, avatarInitials } from './avatarUtils'
+import { acceptFriendRequest, rejectFriendRequest } from '../api/friendsApi'
+import type { Friend, FriendRequest } from './fakeData'
+import AddFriendModal from './AddFriendModal'
+
+interface Props {
+  friends: Friend[]
+  friendRequests: FriendRequest[]
+  onStartChat: (friend: Friend) => Promise<void>
+  onAccepted?: (req: FriendRequest) => void
+  onDeclined?: (req: FriendRequest) => void
+}
+
+export default function FriendsList({ friends, friendRequests, onStartChat, onAccepted, onDeclined }: Props) {
+  const [requestsOpen, setRequestsOpen] = useState(true)
+  const [friendsOpen, setFriendsOpen] = useState(false)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [chatLoadingId, setChatLoadingId] = useState<string | null>(null)
+  const [chatErrors, setChatErrors] = useState<Record<string, string>>({})
+  const [showAddModal, setShowAddModal] = useState(false)
+
+  async function handleAction(req: FriendRequest, action: 'accept' | 'decline') {
+    if (loadingId) return
+    const key = `${req.id}-${action}`
+    setLoadingId(key)
+    setErrors(e => { const n = { ...e }; delete n[req.id]; return n })
+    try {
+      if (action === 'accept') {
+        await acceptFriendRequest(req.username)
+        onAccepted?.(req)
+      } else {
+        await rejectFriendRequest(req.username)
+        onDeclined?.(req)
+      }
+    } catch (err) {
+      setErrors(e => ({ ...e, [req.id]: (err as Error).message }))
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  return (
+    <>
+        <div className="friends-wrapper">
+        <div className="sidebar-list">
+
+          {/* ── Friend Requests section ── */}
+          <div className="section-header" onClick={() => setRequestsOpen(o => !o)}>
+            <span className="section-title">Friend Requests</span>
+            <span className="section-meta">
+              <span style={{ fontSize: 12, color: 'var(--color-sub)', marginRight: 6 }}>{friendRequests.length}</span>
+              <svg className={`section-chevron${requestsOpen ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </div>
+
+          {requestsOpen && friendRequests.length > 0 && (
+            friendRequests.map(req => (
+                <div key={req.id} className="list-item request-item">
+                  <div className="avatar" style={{ background: avatarColor(req.username) }}>
+                    {avatarInitials(req.displayName, req.username)}
+                  </div>
+                  <div className="item-body">
+                    <div className="item-top">
+                      <span className="item-name">{req.displayName || req.username}</span>
+                    </div>
+                    <div className="item-preview">
+                      <span className="item-username">@{req.username}</span>
+                    </div>
+                    {errors[req.id] && (
+                      <div className="error-text">{errors[req.id]}</div>
+                    )}
+                    <div className="request-actions">
+                      <button
+                        className="action-btn primary"
+                        onClick={() => handleAction(req, 'accept')}
+                        disabled={loadingId !== null}
+                      >
+                        {loadingId === `${req.id}-accept` ? '…' : 'Accept'}
+                      </button>
+                      <button
+                        className="action-btn secondary"
+                        onClick={() => handleAction(req, 'decline')}
+                        disabled={loadingId !== null}
+                      >
+                        {loadingId === `${req.id}-decline` ? '…' : 'Decline'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+          )}
+
+          {/* ── Friends section ── */}
+          <div className="section-header" onClick={() => setFriendsOpen(o => !o)}>
+            <span className="section-title">Friends</span>
+            <span className="section-meta">
+              <span style={{ fontSize: 12, color: 'var(--color-sub)', marginRight: 6 }}>{friends.length}</span>
+              <svg className={`section-chevron${friendsOpen ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </div>
+
+          {friendsOpen && friends.map(f => (
+            <div
+              key={f.id}
+              className="list-item friend-item"
+            >
+              <div className="avatar" style={{ background: avatarColor(f.username) }}>
+                {avatarInitials(f.displayName, f.username)}
+              </div>
+              <div className="item-body">
+                <div className="item-top">
+                  <span className="item-name">{f.displayName || f.username}</span>
+                </div>
+                <div className="item-preview">
+                  <span className="item-username">@{f.username}</span>
+                </div>
+                {chatErrors[f.id] && (
+                  <div className="error-text">{chatErrors[f.id]}</div>
+                )}
+              </div>
+              <button
+                className="action-btn primary"
+                title="Send message"
+                disabled={chatLoadingId !== null}
+                onClick={async () => {
+                  if (chatLoadingId) return
+                  setChatLoadingId(f.id)
+                  setChatErrors(e => { const n = { ...e }; delete n[f.id]; return n })
+                  try {
+                    await onStartChat(f)
+                  } catch (err) {
+                    setChatErrors(e => ({ ...e, [f.id]: (err as Error).message }))
+                  } finally {
+                    setChatLoadingId(null)
+                  }
+                }}
+              >
+                {chatLoadingId === f.id ? (
+                  <span className="auth-spinner" style={{ width: 14, height: 14 }} />
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          ))}
+
+        </div>
+        <button className="fab" title="Add Friend" onClick={() => setShowAddModal(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <line x1="20" y1="8" x2="20" y2="14" />
+            <line x1="23" y1="11" x2="17" y2="11" />
+          </svg>
+        </button>
+        <AddFriendModal open={showAddModal} onClose={() => setShowAddModal(false)} onOpen={() => setShowAddModal(true)} />
+      </div>
+    </>
+  )
+}

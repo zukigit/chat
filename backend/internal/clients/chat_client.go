@@ -86,3 +86,8 @@ func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token strin
 	})
 	return err
 }
+
+// GetConversations retrieves all conversations the caller is a member of via gRPC.
+func (c *ChatClient) GetConversations(ctx context.Context, token string) (*pb.GetConversationsResponse, error) {
+	return c.client.GetConversations(lib.WithToken(ctx, token), &pb.GetConversationsRequest{})
+}

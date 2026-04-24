@@ -99,3 +99,69 @@ func TestSignup(t *testing.T) {
 		})
 	}
 }
+
+func TestSearchUsers(t *testing.T) {
+	sqlDb := setupTestDB(t)
+	q := db.New(sqlDb)
+
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("failed to hash password: %v", err)
+	}
+
+	users := []db.CreateUserParams{
+		{UserName: "zuki", HashedPasswd: sql.NullString{String: string(hashPassword), Valid: true}, SignupType: db.SignupTypeEmail},
+		{UserName: "zuki_sama", HashedPasswd: sql.NullString{String: string(hashPassword), Valid: true}, SignupType: db.SignupTypeEmail},
+		{UserName: "alice", HashedPasswd: sql.NullString{String: string(hashPassword), Valid: true}, SignupType: db.SignupTypeEmail},
+		{UserName: "bob", HashedPasswd: sql.NullString{String: string(hashPassword), Valid: true}, SignupType: db.SignupTypeEmail},
+	}
+
+	for _, u := range users {
+		if _, err := q.CreateUser(t.Context(), u); err != nil {
+			t.Fatalf("failed to create user %q: %v", u.UserName, err)
+		}
+	}
+
+	authServer := services.NewAuthServer(sqlDb)
+
+	// SearchUsers requires a caller identity in the context (it excludes the
+	// caller and existing friends from results). Use bob as the caller.
+	caller, err := q.GetUserByUsername(t.Context(), "bob")
+	if err != nil {
+		t.Fatalf("failed to fetch caller user: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		query     string
+		wantCount int
+		wantErr   bool
+	}{
+		{"exact match username", "zuki", 2, false},
+		{"partial match username", "zuk", 2, false},
+		{"case insensitive", "ZUKI", 2, false},
+		{"no results", "xyz123", 0, false},
+		{"empty query", "", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := ctxWithUser(caller.UserName, caller.UserID)
+			resp, err := authServer.SearchUsers(ctx, &auth.SearchUsersRequest{
+				Query: tt.query,
+			})
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(resp.Users) != tt.wantCount {
+				t.Errorf("expected %d results, got %d", tt.wantCount, len(resp.Users))
+			}
+		})
+	}
+}

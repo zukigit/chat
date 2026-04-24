@@ -81,21 +81,26 @@ func main() {
 	chatHandler := handlers.NewChatHandler(chatClient)
 
 	r := mux.NewRouter()
+	r.HandleFunc("/version", handlers.GetVersion).Methods(http.MethodGet)
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
 	r.HandleFunc("/signup", authHandler.Signup).Methods(http.MethodPost)
 	r.HandleFunc("/logout", authHandler.Logout).Methods(http.MethodPost)
+	r.HandleFunc("/users/search", authHandler.SearchUsers).Methods(http.MethodGet)
 
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
+	r.HandleFunc("/friends", friendshipHandler.GetFriends).Methods(http.MethodGet)
 	r.HandleFunc("/notifications/read", notificationHandler.MarkNotificationRead).Methods(http.MethodPost)
 	r.HandleFunc("/sessions/notification", sessionHandler.NotificationSession).Methods(http.MethodGet)
 	r.HandleFunc("/sessions/chat", sessionHandler.ChatSession).Methods(http.MethodGet)
 	r.HandleFunc("/conversations", chatHandler.CreateConversation).Methods(http.MethodPost)
+	r.HandleFunc("/conversations", chatHandler.GetConversations).Methods(http.MethodGet)
 	r.HandleFunc("/conversations/messages", chatHandler.GetMessages).Methods(http.MethodGet)
 
 	cors := gorhandlers.CORS(
-		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "http://localhost:5173")}),
+		// frontend url is dynamic
+		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "")}),
 		gorhandlers.AllowedMethods([]string{"GET", "POST"}),
 		gorhandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)

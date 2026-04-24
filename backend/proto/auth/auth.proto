@@ -23,8 +23,24 @@ message SignupResponse {}
 message LogoutRequest {}
 message LogoutResponse {}
 
+message SearchUsersRequest {
+  string query = 1;
+}
+
+message UserResult {
+  string user_id = 1;
+  string user_name = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+}
+
+message SearchUsersResponse {
+  repeated UserResult users = 1;
+}
+
 service Auth {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Signup(SignupRequest) returns (SignupResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
 }

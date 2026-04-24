@@ -157,3 +157,38 @@ func (s *AuthServer) Logout(ctx context.Context, _ *auth.LogoutRequest) (*auth.L
 
 	return &auth.LogoutResponse{}, nil
 }
+
+// SearchUsers searches for users by username or display name
+func (s *AuthServer) SearchUsers(ctx context.Context, req *auth.SearchUsersRequest) (*auth.SearchUsersResponse, error) {
+	if req.Query == "" {
+		return nil, status.Error(codes.InvalidArgument, "query is required")
+	}
+
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	queries := db.New(s.sqlDB)
+
+	users, err := queries.SearchUsers(ctx, db.SearchUsersParams{
+		Column1: sql.NullString{String: req.Query, Valid: true},
+		UserID:  callerID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "search users: %v", err)
+	}
+
+	var results []*auth.UserResult
+	for _, u := range users {
+		result := &auth.UserResult{
+			UserId:      u.UserID.String(),
+			UserName:    u.UserName,
+			DisplayName: u.DisplayName.String,
+			AvatarUrl:   u.AvatarUrl.String,
+		}
+		results = append(results, result)
+	}
+
+	return &auth.SearchUsersResponse{Users: results}, nil
+}

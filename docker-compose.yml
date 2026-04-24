@@ -42,14 +42,12 @@ services:
       - nats
     environment:
       - BACKEND_LISTEN_ADDRESS=backend:1234
-      - FRONTEND_URL=web
+      - FRONTEND_URL=*
       - NATS_URL=nats://nats:4222
 
-  web:
-    image: zukidocker/chat-web:latest
-    ports:
-      - "80:80"
-    depends_on:
-      - gateway
-    environment:
-      - API_BASE_URL=gateway:8080
+  # web:
+  #   image: zukidocker/chat-web:latest
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - gateway

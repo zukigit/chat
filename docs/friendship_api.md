@@ -26,7 +26,66 @@ If the header is missing, malformed, or the token is expired/invalid, the API wi
 
 ---
 
-## 1. Send Friend Request
+## 1. Get Friends
+
+Returns all friends (accepted) and pending friend requests for the authenticated user.
+
+- **URL path:** `/friends`
+- **Method:** `GET`
+
+### Responses
+
+#### 200 OK (Success)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "user_id": "b3d1f...",
+      "username": "alice",
+      "display_name": "Alice Smith",
+      "avatar_url": "",
+      "status": "accepted"
+    },
+    {
+      "user_id": "c9e2a...",
+      "username": "bob",
+      "display_name": "Bob Johnson",
+      "avatar_url": "",
+      "status": "pending"
+    }
+  ]
+}
+```
+
+`status` is one of:
+- `"accepted"` — confirmed friend
+- `"pending"` — friend request not yet accepted
+
+*(Empty array if the user has no friends or requests)*
+
+#### 401 Unauthorized
+Returned when the token is missing, malformed, or invalid.
+```json
+{
+  "success": false,
+  "message": "missing or malformed Authorization header"
+}
+```
+
+#### 500 Internal Server Error
+Returned on unexpected server errors.
+```json
+{
+  "success": false,
+  "message": "internal server error: <detail>"
+}
+```
+
+---
+
+## 2. Send Friend Request
 
 Sends a friend request from the authenticated user to the specified target username.
 
@@ -92,7 +151,7 @@ Returned on unexpected database or server errors.
 
 ---
 
-## 2. Accept Friend Request
+## 3. Accept Friend Request
 
 Accepts a pending friend request from the specified user. The authenticated caller must be the addressee (recipient) of the original request.
 
@@ -155,7 +214,7 @@ Returned on unexpected server errors.
 
 ---
 
-## 3. Reject Friend Request
+## 4. Reject Friend Request
 
 Rejects a pending friend request from the specified user. The authenticated caller must be the addressee (recipient) of the original request.
 
