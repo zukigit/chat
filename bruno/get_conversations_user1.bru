@@ -1,10 +1,10 @@
 meta {
-  name: conversations_user1
+  name: get_conversations_user1
   type: http
-  seq: 13
+  seq: 20
 }
 
-post {
+get {
   url: {{GATEWAY_URL}}/conversations
   body: json
   auth: inherit
@@ -18,7 +18,7 @@ body:json {
   {
     "is_group": false,
     "name": "",
-    "members_username": ["user3"]
+    "members_username": ["{{USER_NAME_USER2}}"]
   }
 }
 

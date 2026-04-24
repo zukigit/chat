@@ -1,0 +1,23 @@
+meta {
+  name: login_zuki
+  type: http
+  seq: 18
+}
+
+post {
+  url: {{GATEWAY_URL}}/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "zuki",
+    "password": "123@dirace"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
