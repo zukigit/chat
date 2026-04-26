@@ -12,7 +12,20 @@ type ChatEventType string
 const (
 	ChatEventMessage   ChatEventType = "message"
 	ChatEventDelivered ChatEventType = "delivered"
+	ChatEventRead      ChatEventType = "read"
 )
+
+// DeliveredEvent is the Data payload for ChatEventDelivered envelopes.
+type DeliveredEvent struct {
+	ConversationID int64 `json:"conversation_id"`
+	MessageID      int64 `json:"message_id"`
+}
+
+// ReadEvent is the Data payload for ChatEventRead envelopes.
+type ReadEvent struct {
+	ConversationID int64 `json:"conversation_id"`
+	MessageID      int64 `json:"message_id"`
+}
 
 // ChatEnvelope is the typed wrapper for all NATS chat payloads.
 // Clients use the Type field to determine how to handle the Data payload.
@@ -20,12 +33,6 @@ type ChatEnvelope struct {
 	Version int             `json:"version"`
 	Type    ChatEventType   `json:"type"`
 	Data    json.RawMessage `json:"data"`
-}
-
-// DeliveredEvent is the Data payload for ChatEventDelivered envelopes.
-type DeliveredEvent struct {
-	ConversationID int64 `json:"conversation_id"`
-	MessageID      int64 `json:"message_id"`
 }
 
 // NewChatEnvelope marshals data into a ChatEnvelope and returns the JSON bytes.

@@ -43,6 +43,7 @@ func main() {
 		lib.ErrorLog.Fatalf("Failed to create JetStream: %v", err)
 	}
 
+	// add stream for notifications and chat messages, with a retention policy of 24 hours
 	_, err = js.AddStream(&nats.StreamConfig{
 		Name:     "SESSIONS",
 		Subjects: []string{lib.NotiSubjectPrefix + ">", lib.ChatSubjectPrefix + ">"},
@@ -64,6 +65,7 @@ func main() {
 		),
 	)
 
+	// services registration
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))
 	notifServer := services.NewNotificationServer(sqlDB, nc)
 	notification.RegisterNotificationServer(srv, notifServer)
@@ -71,11 +73,11 @@ func main() {
 	session.RegisterSessionServer(srv, services.NewSessionServer(sqlDB))
 	chat.RegisterChatServer(srv, services.NewChatServer(sqlDB, notifServer))
 
-	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 	listener, err := net.Listen("tcp", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to listen on %s: %v", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"), err)
 	}
+	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 
 	if err := srv.Serve(listener); err != nil {
 		lib.ErrorLog.Fatalf("Failed to serve: %v", err)

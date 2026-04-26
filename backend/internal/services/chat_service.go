@@ -410,8 +410,47 @@ func (s *ChatServer) GetConversations(ctx context.Context, req *pb.GetConversati
 	}, nil
 }
 
-// UpdateLastDeliveredMessage marks a message as delivered for the calling user
+// UpdateLastReadMessage marks a message as read for the calling user
 // and notifies the original sender via NATS.
+func (s *ChatServer) UpdateLastReadMessage(ctx context.Context, req *pb.UpdateMessageRequest) (*pb.UpdateMessageResponse, error) {
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.GetConversationId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+	}
+	if req.GetMessageId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "message_id is required")
+	}
+
+	q := db.New(s.sqlDB)
+	if err := q.UpdateLastReadMessageID(ctx, db.UpdateLastReadMessageIDParams{
+		ConversationID:    req.GetConversationId(),
+		UserID:            callerID,
+		LastReadMessageID: req.GetMessageId(),
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "UpdateLastReadMessage: %v", err)
+	}
+
+	// Notify the original sender that their message was read.
+	if s.notif != nil && req.GetUserId() != "" {
+		senderID, err := uuid.Parse(req.GetUserId())
+		if err == nil {
+			receiptBytes, err := lib.NewChatEnvelope(lib.ChatEventRead, lib.ReadEvent{
+				ConversationID: req.GetConversationId(),
+				MessageID:      req.GetMessageId(),
+			})
+			if err == nil {
+				s.notif.publishIfOnline(senderID, lib.ChatSubjectPrefix, receiptBytes)
+			}
+		}
+	}
+
+	return &pb.UpdateMessageResponse{}, nil
+}
+
 func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.UpdateMessageRequest) (*pb.UpdateMessageResponse, error) {
 	callerID, err := lib.CallerUUID(ctx)
 	if err != nil {
