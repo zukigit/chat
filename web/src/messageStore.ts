@@ -80,19 +80,19 @@ export function addSentMessage(conversationId: number, content: string): SentMes
   return sent
 }
 
-export function markSentDelivered(conversationId: number): void {
+export function markSentDelivered(_conversationId: number, _messageId?: number): void {
   const all = loadSent()
-  const s = all.find(x => x.conversation_id === conversationId && x.status === 'sending')
-  if (s) {
-    s.status = 'delivered'
+  const sending = all.filter(x => x.conversation_id === _conversationId && x.status === 'sending')
+  if (sending.length > 0) {
+    sending[sending.length - 1].status = 'delivered'
     saveSent(all)
   }
 }
 
-export function markSentSeen(conversationId: number): void {
+export function markSentSeen(_conversationId: number, _messageId?: number): void {
   const all = loadSent()
   all.forEach(s => {
-    if (s.conversation_id === conversationId && (s.status === 'sent' || s.status === 'delivered')) {
+    if (s.conversation_id === _conversationId && (s.status === 'sent' || s.status === 'delivered')) {
       s.status = 'seen'
     }
   })

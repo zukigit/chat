@@ -68,13 +68,24 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
           const msg = envelope.data as StoredMessage
           addMessage(msg)
           onMessageRef.current?.(msg)
+          // If this message is from someone other than the current user, mark it as read
+          const token = getToken()
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]))
+              const currentUserId = payload.sub || payload.user_id
+              if (msg.sender_id !== currentUserId) {
+                markRead(msg.conversation_id, msg.id, msg.sender_id)
+              }
+            } catch { /* ignore */ }
+          }
         } else if (envelope.type === 'delivered' && envelope.data) {
           const d = envelope.data as { conversation_id: number; message_id: number }
-          markSentDelivered(d.conversation_id)
+          markSentDelivered(d.conversation_id, d.message_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
-        } else if (envelope.type === 'seen' && envelope.data) {
+        } else if (envelope.type === 'read' && envelope.data) {
           const d = envelope.data as { conversation_id: number; message_id: number }
-          markSentSeen(d.conversation_id)
+          markSentSeen(d.conversation_id, d.message_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
         }
       } catch {
@@ -124,5 +135,13 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
     }))
   }, [])
 
-  return { connected, error, retryCountdown, send, markRead, connect }
+  const markAllRead = useCallback((conversationId: number, messages: StoredMessage[], currentUserId: string) => {
+    for (const m of messages) {
+      if (m.sender_id !== currentUserId) {
+        markRead(conversationId, m.id, m.sender_id)
+      }
+    }
+  }, [markRead])
+
+  return { connected, error, retryCountdown, send, markRead, markAllRead, connect }
 }

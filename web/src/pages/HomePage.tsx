@@ -45,7 +45,7 @@ export default function HomePage() {
     setSentMessages(getSentMessages(conversationId))
   }, [])
 
-  const { connected, error: wsError, retryCountdown, send, markRead } = useChatSession(handleIncomingMessage, handleDelivered, () => {
+  const { connected, error: wsError, retryCountdown, send, markAllRead } = useChatSession(handleIncomingMessage, handleDelivered, () => {
     loadConversations().catch(console.error)
   })
 
@@ -65,6 +65,15 @@ export default function HomePage() {
       setSentMessages(getSentMessages(activeConv.id))
     }
   }, [conversations, activeConv])
+
+  // Mark all received messages as read when a conversation is opened.
+  useEffect(() => {
+    if (!activeConv) return
+    const username = getUsername() ?? ''
+    const currentUserId = activeConv.members.find(mem => mem.username === username)?.user_id ?? ''
+    const msgs = allMessages[activeConv.id] ?? []
+    markAllRead(activeConv.id, msgs, currentUserId)
+  }, [activeConv?.id, markAllRead])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -258,7 +267,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} onMarkRead={markRead} />
+      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} />
     </div>
   )
 }
