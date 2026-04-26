@@ -67,7 +67,7 @@ func main() {
 	chatHandler := handlers.NewChatHandler(chatClient)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/version", handlers.GetVersion).Methods(http.MethodGet)
+	r.HandleFunc("/version", sessionHandler.GetChatEnvelopeRequestVersion).Methods(http.MethodGet)
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
 	r.HandleFunc("/signup", authHandler.Signup).Methods(http.MethodPost)
 	r.HandleFunc("/logout", authHandler.Logout).Methods(http.MethodPost)

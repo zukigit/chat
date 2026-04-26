@@ -48,7 +48,7 @@ sequenceDiagram
     actor B  as Frontend (User B — recipient)
 
     note over A, GW: User A sends a message over the chat WebSocket
-    A->>GW: WS frame — chatSendRequest JSON<br/>{conversation_id, content, message_type, ...}
+    A->>GW: WS frame — ChatRequestEnvelope {type:"send", data:{conversation_id, content, ...}}
 
     note over GW, DB: Gateway forwards to backend via gRPC
     GW->>BE: gRPC SendMessage(token, conversation_id, content, ...)
@@ -64,24 +64,24 @@ sequenceDiagram
     note over BE, NQ: For each member except the sender
     BE->>DB: INSERT INTO notifications (type=message, user_id=User B)
     BE->>NQ: Publish sessions.noti.{user_b_id}<br/>(raw notification JSON)
-    BE->>NQ: Publish sessions.chat.{user_b_id}<br/>(ChatEnvelope {type:"message", data: message})
+    BE->>NQ: Publish sessions.chat.{user_b_id}<br/>(ChatResponseEnvelope {type:"message", data: message})
 
     BE-->>GW: SendMessageResponse {message_id}
 
     note over NQ, B: JetStream delivers to User B's chat consumer
     NQ->>GW: Deliver msg from consumer chat-{user_b_login_id}
-    GW->>B: WS frame — ChatEnvelope {type:"message", data: {...}}
-    GW->>B: WS frame — ChatEnvelope (via noti consumer)<br/>{notification JSON}
+    GW->>B: WS frame — ChatResponseEnvelope {type:"message", data: {...}}
+    GW->>B: WS frame — ChatResponseEnvelope (via noti consumer)<br/>{notification JSON}
 
     note over GW, NQ: Gateway marks message delivered
     GW->>BE: gRPC UpdateLastDeliveredMessage(conversation_id, message_id, sender_id=User A)
     BE->>DB: UPDATE conversation_members<br/>SET last_delivered_message_id = message_id<br/>WHERE last_delivered_message_id < message_id
     DB-->>BE: 1 row updated
-    BE->>NQ: Publish sessions.chat.{user_a_id}<br/>(ChatEnvelope {type:"delivered", data:{conversation_id, message_id}})
+    BE->>NQ: Publish sessions.chat.{user_a_id}<br/>(ChatResponseEnvelope {type:"delivered", data:{conversation_id, message_id}})
 
     note over NQ, A: JetStream delivers delivery receipt to User A
     NQ->>GW: Deliver msg from consumer chat-{user_a_login_id}
-    GW->>A: WS frame — ChatEnvelope {type:"delivered", data:{conversation_id, message_id}}
+    GW->>A: WS frame — ChatResponseEnvelope {type:"delivered", data:{conversation_id, message_id}}
 ```
 
 ---
@@ -121,12 +121,12 @@ sequenceDiagram
 
 ## Envelope Format Reference
 
-All server-to-client chat WebSocket frames use this structure:
+### Server → Client (`ChatResponseEnvelope`)
 
 ```json
 {
   "version": 1,
-  "type": "message | delivered",
+  "type": "message | delivered | read",
   "data": { ... }
 }
 ```
@@ -135,3 +135,21 @@ All server-to-client chat WebSocket frames use this structure:
 |--------|---------------|
 | `"message"` | Full `Message` row from DB (`id`, `conversation_id`, `sender_id`, `content`, `message_type`, `created_at`, ...) |
 | `"delivered"` | `{ "conversation_id": 42, "message_id": 149 }` |
+| `"read"` | `{ "conversation_id": 42, "message_id": 149 }` |
+
+### Client → Server (`ChatRequestEnvelope`)
+
+```json
+{
+  "version": 1,
+  "type": "send | read",
+  "data": { ... }
+}
+```
+
+| `type` | `data` payload |
+|--------|---------------|
+| `"send"` | `{ "conversation_id": 42, "content": "hello!", "message_type": "text", "reply_to_message_id": 0 }` |
+| `"read"` | `{ "conversation_id": 42, "message_id": 149, "sender_id": "<uuid>" }` |
+
+The `version` must match the current `chat_request_version` returned by `GET /version`.

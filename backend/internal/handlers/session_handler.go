@@ -101,6 +101,13 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	<-ctx.Done()
 }
 
+func (s *SessionHandler) GetChatEnvelopeRequestVersion(w http.ResponseWriter, r *http.Request) {
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Data:    map[string]int{"chat_request_version": lib.ChatRequestEnvelopeVersion},
+	})
+}
+
 func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 	token, ok := lib.BearerToken(r)
 	if !ok {

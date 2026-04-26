@@ -32,7 +32,7 @@ If the token is missing, invalid, or the session has been invalidated (logout), 
 
 ## Message Envelope Format
 
-All messages pushed **from the server to the client** over both sessions use the `ChatEnvelope` JSON structure:
+All messages pushed **from the server to the client** over both sessions use the `ChatResponseEnvelope` JSON structure:
 
 ```json
 {
@@ -45,7 +45,7 @@ All messages pushed **from the server to the client** over both sessions use the
 | Field     | Type     | Description                                  |
 |-----------|----------|----------------------------------------------|
 | `version` | `int`    | Protocol version (currently `1`)             |
-| `type`    | `string` | Event type: `"message"` or `"delivered"`     |
+| `type`    | `string` | Event type: `"message"`, `"delivered"`, or `"read"` |
 | `data`    | `object` | Event-specific payload (see types below)     |
 
 ### Event: `message`
@@ -126,21 +126,39 @@ Establishes a bidirectional WebSocket connection for sending and receiving chat 
 ### Behavior
 
 **Receiving messages (server → client):**
-- NATS messages are pushed as `ChatEnvelope` JSON text frames to the client.
+- NATS messages are pushed as `ChatResponseEnvelope` JSON text frames to the client.
 - For `"message"` events, the gateway automatically calls `UpdateLastDeliveredMessage` to track delivery and notify the sender with a `"delivered"` event.
 - Messages are acknowledged after successful write.
 - The consumer persists for 24 hours after last active connection.
 
 **Sending messages (client → server):**
 
-The client sends JSON frames to post a message to a conversation:
+The client sends JSON frames wrapped in a `ChatRequestEnvelope`:
 
 ```json
 {
-  "conversation_id": 42,
-  "content": "hello!",
-  "message_type": "text",
-  "reply_to_message_id": 0
+  "version": 1,
+  "type": "<request_type>",
+  "data": { ... }
+}
+```
+
+The `version` must match the current `chat_request_version` returned by `GET /version`.
+
+### Request: `send`
+
+Post a message to a conversation:
+
+```json
+{
+  "version": 1,
+  "type": "send",
+  "data": {
+    "conversation_id": 42,
+    "content": "hello!",
+    "message_type": "text",
+    "reply_to_message_id": 0
+  }
 }
 ```
 
@@ -150,6 +168,28 @@ The client sends JSON frames to post a message to a conversation:
 | `content`            | `string` | Yes      | Message body                                       |
 | `message_type`       | `string` | No       | Message type (e.g. `"text"`, `"image"`); default `"text"` |
 | `reply_to_message_id`| `int64`  | No       | ID of the message being replied to (`0` = none)    |
+
+### Request: `read`
+
+Mark messages in a conversation as read:
+
+```json
+{
+  "version": 1,
+  "type": "read",
+  "data": {
+    "conversation_id": 42,
+    "message_id": 149,
+    "sender_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+| Field                | Type     | Required | Description                                        |
+|----------------------|----------|----------|----------------------------------------------------|
+| `conversation_id`    | `int64`  | Yes      | Target conversation                                |
+| `message_id`         | `int64`  | Yes      | ID of the message that was read                    |
+| `sender_id`          | `string` | Yes      | UUID of the original message sender                |
 
 Invalid or unparseable frames from the client are silently ignored (the connection remains open).
 

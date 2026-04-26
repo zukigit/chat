@@ -2,9 +2,9 @@ package lib
 
 import "encoding/json"
 
-// ChatProtocolVersion is the current chat WebSocket protocol version.
+// ChatResponseEnvelopeVersion is the current chat WebSocket protocol version.
 // Increment this when making breaking changes to the message envelope format.
-const ChatProtocolVersion = 1
+const ChatResponseEnvelopeVersion = 1
 
 // ChatEventType identifies the kind of event inside a ChatResponseEnvelope.
 type ChatEventType string
@@ -43,18 +43,22 @@ func NewChatResponseEnvelope(eventType ChatEventType, data any) ([]byte, error) 
 		return nil, err
 	}
 	return json.Marshal(ChatResponseEnvelope{
-		Version: ChatProtocolVersion,
+		Version: ChatResponseEnvelopeVersion,
 		Type:    eventType,
 		Data:    raw,
 	})
 }
 
+// ChatRequestEnvelopeVersion is the current client-to-server WebSocket protocol version.
+// Increment this when making breaking changes to the request envelope format.
+var ChatRequestEnvelopeVersion = 1
+
 // ChatRequestType identifies the kind of request from client to server.
 type ChatRequestType string
 
 const (
-	ChatRequestSend  ChatRequestType = "send"
-	ChatRequestRead  ChatRequestType = "read"
+	ChatRequestSend ChatRequestType = "send"
+	ChatRequestRead ChatRequestType = "read"
 )
 
 // ChatRequestEnvelope is the typed wrapper for all WebSocket messages
