@@ -9,10 +9,11 @@ interface ChatResponseEnvelope {
   data: StoredMessage | { conversation_id: number; message_id: number }
 }
 
-export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: number) => void, onConnect?: () => void) {
+export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: number) => void, onConnect?: () => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const countdownTimer = useRef<number | null>(null)
+  const activeConvIdRef = useRef(activeConversationId)
   const onMessageRef = useRef(onMessage)
   const onDeliveredRef = useRef(onDelivered)
   const onConnectRef = useRef(onConnect)
@@ -21,10 +22,11 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
   const [retryCountdown, setRetryCountdown] = useState(0)
 
   useEffect(() => {
+    activeConvIdRef.current = activeConversationId
     onMessageRef.current = onMessage
     onDeliveredRef.current = onDelivered
     onConnectRef.current = onConnect
-  }, [onMessage, onDelivered, onConnect])
+  }, [activeConversationId, onMessage, onDelivered, onConnect])
 
   const connect = useCallback(() => {
     const token = getToken()
@@ -68,16 +70,18 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
           const msg = envelope.data as StoredMessage
           addMessage(msg)
           onMessageRef.current?.(msg)
-          // If this message is from someone other than the current user, mark it as read
-          const token = getToken()
-          if (token) {
-            try {
-              const payload = JSON.parse(atob(token.split('.')[1]))
-              const currentUserId = payload.sub || payload.user_id
-              if (msg.sender_id !== currentUserId) {
-                markRead(msg.conversation_id, msg.id, msg.sender_id)
-              }
-            } catch { /* ignore */ }
+          // Only mark as read if this message belongs to the currently open conversation
+          if (msg.conversation_id === activeConvIdRef.current) {
+            const token = getToken()
+            if (token) {
+              try {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                const currentUserId = payload.sub || payload.user_id
+                if (msg.sender_id !== currentUserId) {
+                  sendRead(wsRef.current, msg.conversation_id, msg.id, msg.sender_id)
+                }
+              } catch { /* ignore */ }
+            }
           }
         } else if (envelope.type === 'delivered' && envelope.data) {
           const d = envelope.data as { conversation_id: number; message_id: number }
@@ -144,4 +148,18 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
   }, [markRead])
 
   return { connected, error, retryCountdown, send, markRead, markAllRead, connect }
+}
+
+function sendRead(ws: WebSocket | null, conversationId: number, messageId: number, senderId: string) {
+  if (ws?.readyState !== WebSocket.OPEN) return
+  const config = loadConfig()
+  ws.send(JSON.stringify({
+    version: config?.chatRequestVersion ?? 1,
+    type: 'read',
+    data: {
+      conversation_id: conversationId,
+      message_id: messageId,
+      sender_id: senderId,
+    },
+  }))
 }
