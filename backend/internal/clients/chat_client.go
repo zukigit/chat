@@ -87,6 +87,17 @@ func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token strin
 	return err
 }
 
+// UpdateLastReadMessage tells the backend that the caller has read up to the given message.
+// senderID is the UUID of the original message author — the backend uses it to push a read receipt.
+func (c *ChatClient) UpdateLastReadMessage(ctx context.Context, token string, conversationID, messageID int64, senderID string) error {
+	_, err := c.client.UpdateLastReadMessage(lib.WithToken(ctx, token), &pb.UpdateMessageRequest{
+		ConversationId: conversationID,
+		MessageId:      messageID,
+		UserId:         senderID,
+	})
+	return err
+}
+
 // GetConversations retrieves all conversations the caller is a member of via gRPC.
 func (c *ChatClient) GetConversations(ctx context.Context, token string) (*pb.GetConversationsResponse, error) {
 	return c.client.GetConversations(lib.WithToken(ctx, token), &pb.GetConversationsRequest{})

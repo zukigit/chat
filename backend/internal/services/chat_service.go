@@ -280,7 +280,7 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 
 	// Publish the saved message (including its ID) to each member's chat session via NATS.
 	if s.notif != nil {
-		msgBytes, err := lib.NewChatEnvelope(lib.ChatEventMessage, msg)
+		msgBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventMessage, msg)
 		if err == nil {
 			for _, m := range members {
 				if m.UserID == callerID {
@@ -438,7 +438,7 @@ func (s *ChatServer) UpdateLastReadMessage(ctx context.Context, req *pb.UpdateMe
 	if s.notif != nil && req.GetUserId() != "" {
 		senderID, err := uuid.Parse(req.GetUserId())
 		if err == nil {
-			receiptBytes, err := lib.NewChatEnvelope(lib.ChatEventRead, lib.ReadEvent{
+			receiptBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventRead, lib.ReadEvent{
 				ConversationID: req.GetConversationId(),
 				MessageID:      req.GetMessageId(),
 			})
@@ -485,7 +485,7 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 	if s.notif != nil && req.GetUserId() != "" {
 		senderID, err := uuid.Parse(req.GetUserId())
 		if err == nil {
-			receiptBytes, err := lib.NewChatEnvelope(lib.ChatEventDelivered, lib.DeliveredEvent{
+			receiptBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventDelivered, lib.DeliveredEvent{
 				ConversationID: req.GetConversationId(),
 				MessageID:      req.GetMessageId(),
 			})

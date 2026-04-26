@@ -153,14 +153,33 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			var req chatSendRequest
-			if err := json.Unmarshal(data, &req); err != nil {
+			var env lib.ChatRequestEnvelope
+			if err := json.Unmarshal(data, &env); err != nil {
 				lib.ErrorLog.Printf("chat session: invalid message from client: %v", err)
 				continue
 			}
 
-			if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
-				lib.ErrorLog.Printf("chat session: SendMessage: %v", err)
+			switch env.Type {
+			case lib.ChatRequestSend:
+				var req sendMessageRequest
+				if err := json.Unmarshal(env.Data, &req); err != nil {
+					lib.ErrorLog.Printf("chat session: unmarshal send request: %v", err)
+					continue
+				}
+				if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
+					lib.ErrorLog.Printf("chat session: SendMessage: %v", err)
+				}
+			case lib.ChatRequestRead:
+				var req readMessageRequest
+				if err := json.Unmarshal(env.Data, &req); err != nil {
+					lib.ErrorLog.Printf("chat session: unmarshal read request: %v", err)
+					continue
+				}
+				if err := s.chatClient.UpdateLastReadMessage(ctx, token, req.ConversationID, req.MessageID, req.SenderID); err != nil {
+					lib.ErrorLog.Printf("chat session: UpdateLastReadMessage: %v", err)
+				}
+			default:
+				lib.ErrorLog.Printf("chat session: unknown request type: %q", env.Type)
 			}
 		}
 	}()
@@ -172,7 +191,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var env lib.ChatEnvelope
+		var env lib.ChatResponseEnvelope
 		var message db.Message
 		if err := json.Unmarshal(msg.Data, &env); err != nil {
 			lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)

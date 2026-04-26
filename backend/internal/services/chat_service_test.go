@@ -274,7 +274,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 	t.Run("bob receives message params via NATS", func(t *testing.T) {
 		select {
 		case msg := <-bobMsgs:
-			var envelope lib.ChatEnvelope
+			var envelope lib.ChatResponseEnvelope
 			if err := json.Unmarshal(msg.Data, &envelope); err != nil {
 				t.Fatalf("unmarshal envelope: %v", err)
 			}
