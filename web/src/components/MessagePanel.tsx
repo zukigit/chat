@@ -11,19 +11,31 @@ interface Props {
   sentMessages: SentMessage[]
   currentUsername: string
   onSend: (conversationId: number, content: string, tempId: string) => void
+  onMarkRead: (conversationId: number, messageId: number, senderId: string) => void
 }
 
 type DisplayMessage =
   | { kind: 'received'; msg: StoredMessage }
   | { kind: 'sent'; msg: SentMessage }
 
-export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend }: Props) {
+export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend, onMarkRead }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sentMessages])
+
+  // Mark received messages as read when they appear in the active conversation.
+  useEffect(() => {
+    if (!conversation) return
+    const currentUserId = conversation.members.find(mem => mem.username === currentUsername)?.user_id ?? ''
+    for (const m of messages) {
+      if (m.sender_id !== currentUserId) {
+        onMarkRead(conversation.id, m.id, m.sender_id)
+      }
+    }
+  }, [messages, conversation, currentUsername, onMarkRead])
 
   if (!conversation) {
     return (

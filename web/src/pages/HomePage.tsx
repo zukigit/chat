@@ -41,11 +41,11 @@ export default function HomePage() {
     setSentMessages(getSentMessages(msg.conversation_id))
   }, [])
 
-  const handleDelivered = useCallback((conversationId: number, messageId: number) => {
+  const handleDelivered = useCallback((conversationId: number) => {
     setSentMessages(getSentMessages(conversationId))
   }, [])
 
-  const { connected, error: wsError, retryCountdown, send } = useChatSession(handleIncomingMessage, handleDelivered, () => {
+  const { connected, error: wsError, retryCountdown, send, markRead } = useChatSession(handleIncomingMessage, handleDelivered, () => {
     loadConversations().catch(console.error)
   })
 
@@ -142,7 +142,7 @@ export default function HomePage() {
   const currentSent = activeConv ? sentMessages.filter(s => s.conversation_id === activeConv.id) : []
   const currentUsername = getUsername() ?? ''
 
-  function handleSendMessage(conversationId: number, content: string, tempId: string) {
+  function handleSendMessage(conversationId: number, content: string, _tempId: string) {
     send(conversationId, content)
     setSentMessages(getSentMessages(conversationId))
   }
@@ -258,7 +258,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} />
+      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} onMarkRead={markRead} />
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { getToken } from './auth'
 import { loadConfig } from './config'
 import { addMessage, markSentDelivered, markSentSeen, type StoredMessage } from './messageStore'
 
-interface ChatEnvelope {
+interface ChatResponseEnvelope {
   version: number
   type: string
   data: StoredMessage | { conversation_id: number; message_id: number }
@@ -63,7 +63,7 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
 
     ws.onmessage = (event) => {
       try {
-        const envelope: ChatEnvelope = JSON.parse(event.data)
+        const envelope: ChatResponseEnvelope = JSON.parse(event.data)
         if (envelope.type === 'message' && envelope.data) {
           const msg = envelope.data as StoredMessage
           addMessage(msg)
@@ -97,13 +97,32 @@ export function useChatSession(onMessage?: (msg: StoredMessage) => void, onDeliv
 
   const send = useCallback((conversationId: number, content: string, messageType = 'text', replyTo = 0) => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return
+    const config = loadConfig()
     wsRef.current.send(JSON.stringify({
-      conversation_id: conversationId,
-      content,
-      message_type: messageType,
-      reply_to_message_id: replyTo,
+      version: config?.chatRequestVersion ?? 1,
+      type: 'send',
+      data: {
+        conversation_id: conversationId,
+        content,
+        message_type: messageType,
+        reply_to_message_id: replyTo,
+      },
     }))
   }, [])
 
-  return { connected, error, retryCountdown, send, connect }
+  const markRead = useCallback((conversationId: number, messageId: number, senderId: string) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return
+    const config = loadConfig()
+    wsRef.current.send(JSON.stringify({
+      version: config?.chatRequestVersion ?? 1,
+      type: 'read',
+      data: {
+        conversation_id: conversationId,
+        message_id: messageId,
+        sender_id: senderId,
+      },
+    }))
+  }, [])
+
+  return { connected, error, retryCountdown, send, markRead, connect }
 }
