@@ -3,13 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/nats-io/nats.go/jetstream"
+	"github.com/nats-io/nats.go"
 	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
@@ -21,12 +19,12 @@ import (
 type SessionHandler struct {
 	client     *clients.SessionClient
 	chatClient *clients.ChatClient
-	stream     jetstream.Stream
+	js         nats.JetStreamContext
 }
 
 // NewSessionHandler creates a SessionHandler with the given gRPC client.
-func NewSessionHandler(client *clients.SessionClient, chatClient *clients.ChatClient, stream jetstream.Stream) *SessionHandler {
-	return &SessionHandler{client: client, chatClient: chatClient, stream: stream}
+func NewSessionHandler(client *clients.SessionClient, chatClient *clients.ChatClient, js nats.JetStreamContext) *SessionHandler {
+	return &SessionHandler{client: client, chatClient: chatClient, js: js}
 }
 
 func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Request) {
@@ -62,17 +60,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Durable:           "noti-" + claims.LoginID,
-		FilterSubjects:    []string{lib.NotiSubjectPrefix + claims.UserID},
-		AckPolicy:         jetstream.AckExplicitPolicy,
-		InactiveThreshold: 24 * time.Hour,
-	})
-	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: fmt.Sprintf("Failed to create consumer: %v", err)})
-		return
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
@@ -96,30 +83,20 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		}
 	}()
 
-	cc, err := consumer.Consume(
-		func(msg jetstream.Msg) {
-			if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
-				lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
-				return // don't ack; let JetStream retry
-			}
-			msg.Ack()
-		},
-		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {
-			if errors.Is(err, jetstream.ErrConsumerDeleted) {
-				closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, fmt.Sprintf("consumer deleted by server: loginID: %s", claims.LoginID))
-				_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
-				cancel()
-				return
-			}
-			lib.ErrorLog.Printf("consumer error: loginID: %s, err: %v", claims.LoginID, err)
-		}),
-	)
+	// Deliver incoming NATS messages to the WS client.
+	sub, err := s.js.Subscribe(lib.NotiSubjectPrefix+claims.UserID, func(msg *nats.Msg) {
+		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
+			lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
+			return
+		}
+		msg.Ack()
+	}, nats.Durable("noti-"+claims.LoginID), nats.BindStream("SESSIONS"))
 	if err != nil {
-		closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, fmt.Sprintf("Failed to consume messages: %v", err))
-		_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
+		lib.ErrorLog.Printf("Failed to subscribe: %v", err)
+		cancel()
 		return
 	}
-	defer cc.Stop()
+	defer sub.Unsubscribe()
 
 	<-ctx.Done()
 }
@@ -153,18 +130,6 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
-
-	consumer, err := s.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Durable:           "chat-" + claims.LoginID,
-		FilterSubjects:    []string{lib.ChatSubjectPrefix + claims.UserID},
-		AckPolicy:         jetstream.AckExplicitPolicy,
-		DeliverPolicy:     jetstream.DeliverNewPolicy,
-		InactiveThreshold: 24 * time.Hour,
-	})
-	if err != nil {
-		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: fmt.Sprintf("Failed to create consumer: %v", err)})
-		return
-	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -201,53 +166,41 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Deliver incoming NATS messages to the WS client.
-	cc, err := consumer.Consume(
-		func(msg jetstream.Msg) {
-			if err := conn.WriteMessage(websocket.TextMessage, msg.Data()); err != nil {
-				lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
-				return // don't ack; let JetStream retry
-			}
+	sub, err := s.js.Subscribe(lib.ChatSubjectPrefix+claims.UserID, func(msg *nats.Msg) {
+		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
+			lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
+			return
+		}
 
-			var env lib.ChatEnvelope
-			var message db.Message
-			if err := json.Unmarshal(msg.Data(), &env); err != nil {
-				lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)
-				goto ack
-			}
+		var env lib.ChatEnvelope
+		var message db.Message
+		if err := json.Unmarshal(msg.Data, &env); err != nil {
+			lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)
+			goto ack
+		}
 
-			if env.Type != lib.ChatEventMessage {
-				goto ack
-			}
+		if env.Type != lib.ChatEventMessage {
+			goto ack
+		}
 
-			if err := json.Unmarshal(env.Data, &message); err != nil {
-				lib.ErrorLog.Printf("chat session: unmarshal message: loginID: %s, err: %v", claims.LoginID, err)
-				goto ack
-			}
+		if err := json.Unmarshal(env.Data, &message); err != nil {
+			lib.ErrorLog.Printf("chat session: unmarshal message: loginID: %s, err: %v", claims.LoginID, err)
+			goto ack
+		}
 
-			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
-				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: loginID: %s, err: %v", claims.LoginID, err)
-			}
+		if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
+			lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: loginID: %s, err: %v", claims.LoginID, err)
+		}
 
-		ack:
-			msg.Ack()
-		},
-		jetstream.ConsumeErrHandler(func(_ jetstream.ConsumeContext, err error) {
-			if errors.Is(err, jetstream.ErrConsumerDeleted) {
-				lib.InfoLog.Printf("consumer deleted by server: loginID: %s", claims.LoginID)
-				closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "consumer deleted by server")
-				_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
-				cancel()
-				return
-			}
-			lib.ErrorLog.Printf("consumer error: loginID: %s, err: %v", claims.LoginID, err)
-		}),
-	)
+	ack:
+		msg.Ack()
+	}, nats.Durable("chat-"+claims.LoginID), nats.BindStream("SESSIONS"))
 	if err != nil {
-		closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, fmt.Sprintf("Failed to consume messages: %v", err))
-		_ = conn.WriteMessage(websocket.CloseMessage, closeMsg)
+		lib.ErrorLog.Printf("Failed to subscribe: %v", err)
+		cancel()
 		return
 	}
-	defer cc.Stop()
+	defer sub.Unsubscribe()
 
 	<-ctx.Done()
 }

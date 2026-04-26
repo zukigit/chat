@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"net/http"
-	"time"
 
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/handlers"
 	"github.com/zukigit/chat/backend/internal/lib"
@@ -26,20 +23,9 @@ func main() {
 	}
 	defer nc.Close()
 
-	// streams preparation
-	js, err := jetstream.New(nc)
+	js, err := nc.JetStream()
 	if err != nil {
-		lib.ErrorLog.Fatalf("Failed to create JetStream: %v", err)
-	}
-
-	sessionsStream, err := js.CreateOrUpdateStream(context.Background(), jetstream.StreamConfig{
-		Name:     "SESSIONS",
-		Subjects: []string{lib.NotiSubjectPrefix + ">", lib.ChatSubjectPrefix + ">"},
-		MaxAge:   24 * time.Hour,
-		Storage:  jetstream.FileStorage,
-	})
-	if err != nil {
-		lib.ErrorLog.Fatalf("Failed to create sessions stream: %v", err)
+		lib.ErrorLog.Fatalf("Failed to create JetStream context: %v", err)
 	}
 
 	// clients preparation
@@ -76,7 +62,7 @@ func main() {
 	// handlers preparation
 	authHandler := handlers.NewAuthHandler(authClient)
 	friendshipHandler := handlers.NewFriendshipHandler(friendshipClient)
-	sessionHandler := handlers.NewSessionHandler(sessionClient, chatClient, sessionsStream)
+	sessionHandler := handlers.NewSessionHandler(sessionClient, chatClient, js)
 	notificationHandler := handlers.NewNotificationHandler(notiClient)
 	chatHandler := handlers.NewChatHandler(chatClient)
 

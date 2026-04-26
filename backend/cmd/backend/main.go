@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/nats-io/nats.go"
@@ -35,6 +36,22 @@ func main() {
 		lib.ErrorLog.Fatalf("Failed to connect to NATS: %v", err)
 	}
 	defer nc.Close()
+
+	// streams preparation
+	js, err := nc.JetStream()
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to create JetStream: %v", err)
+	}
+
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "SESSIONS",
+		Subjects: []string{lib.NotiSubjectPrefix + ">", lib.ChatSubjectPrefix + ">"},
+		MaxAge:   24 * time.Hour,
+		Storage:  nats.FileStorage,
+	})
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to create sessions stream: %v", err)
+	}
 
 	srv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
