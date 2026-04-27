@@ -241,9 +241,15 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		replyTo = sql.NullInt64{Valid: true, Int64: r}
 	}
 
+	callerLoginID, err := uuid.Parse(lib.CallerLoginID(ctx))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: parse login_id: %v", err)
+	}
+
 	msg, err := q.SendMessage(ctx, db.SendMessageParams{
 		ConversationID:   req.GetConversationId(),
 		SenderID:         callerID,
+		SenderLoginID:    callerLoginID,
 		ReplyToMessageID: replyTo,
 		Content:          req.GetContent(),
 		MessageType:      msgType,
@@ -278,14 +284,10 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
 	}
 
-	// Publish the saved message (including its ID) to each member's chat session via NATS.
 	if s.notif != nil {
 		msgBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventMessage, msg)
 		if err == nil {
 			for _, m := range members {
-				if m.UserID == callerID {
-					continue
-				}
 				s.notif.publishIfOnline(m.UserID, lib.ChatSubjectPrefix, msgBytes)
 			}
 		}

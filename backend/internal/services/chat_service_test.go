@@ -298,25 +298,6 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 			t.Fatal("timeout: expected NATS message on bob's chat subject")
 		}
 	})
-
-	t.Run("alice (sender) receives no chat publish", func(t *testing.T) {
-		// Alice has no chat session, so nothing should be published for her.
-		// Verify by checking there are no pending messages on an alice subject.
-		aliceSubject := lib.ChatSubjectPrefix + ids["alice"].String()
-		aliceMsgs := make(chan *nats.Msg, 1)
-		aliceSub, err := js.ChanSubscribe(aliceSubject, aliceMsgs)
-		if err != nil {
-			t.Fatalf("subscribe alice subject: %v", err)
-		}
-		defer aliceSub.Unsubscribe()
-
-		select {
-		case <-aliceMsgs:
-			t.Error("unexpected NATS message published for alice (sender)")
-		case <-time.After(300 * time.Millisecond):
-			// expected: no message
-		}
-	})
 }
 
 // correct notifications for all conversation members except the sender.

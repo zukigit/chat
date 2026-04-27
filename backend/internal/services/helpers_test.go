@@ -131,6 +131,7 @@ func makeFriends(t *testing.T, sqlDB *sql.DB, id1, id2 uuid.UUID) {
 func ctxWithUser(username string, userID uuid.UUID) context.Context {
 	ctx := context.WithValue(context.Background(), lib.ContextKeyUsername, username)
 	ctx = context.WithValue(ctx, lib.ContextKeyUserID, userID.String())
+	ctx = context.WithValue(ctx, lib.ContextKeyLoginID, uuid.NewString())
 	return ctx
 }
 

@@ -191,34 +191,39 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Deliver incoming NATS messages to the WS client.
 	sub, err := s.js.Subscribe(lib.ChatSubjectPrefix+claims.UserID, func(msg *nats.Msg) {
+		var env lib.ChatResponseEnvelope
+		if err := json.Unmarshal(msg.Data, &env); err != nil {
+			lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)
+			msg.Ack()
+			return
+		}
+
+		var message db.Message
+		isMessageEvent := env.Type == lib.ChatEventMessage
+		if isMessageEvent {
+			if err := json.Unmarshal(env.Data, &message); err != nil {
+				lib.ErrorLog.Printf("chat session: unmarshal message: loginID: %s, err: %v", claims.LoginID, err)
+				msg.Ack()
+				return
+			}
+			if message.SenderLoginID.String() == claims.LoginID {
+				msg.Ack()
+				return
+			}
+		}
+
 		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
 			lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
 			return
 		}
 
-		var env lib.ChatResponseEnvelope
-		var message db.Message
-		if err := json.Unmarshal(msg.Data, &env); err != nil {
-			lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)
-			goto ack
+		if isMessageEvent {
+			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
+				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: loginID: %s, err: %v", claims.LoginID, err)
+			}
 		}
 
-		if env.Type != lib.ChatEventMessage {
-			goto ack
-		}
-
-		if err := json.Unmarshal(env.Data, &message); err != nil {
-			lib.ErrorLog.Printf("chat session: unmarshal message: loginID: %s, err: %v", claims.LoginID, err)
-			goto ack
-		}
-
-		if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
-			lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: loginID: %s, err: %v", claims.LoginID, err)
-		}
-
-	ack:
 		msg.Ack()
 	}, nats.Durable("chat-"+claims.LoginID), nats.BindStream("SESSIONS"))
 	if err != nil {

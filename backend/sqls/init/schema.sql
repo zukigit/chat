@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id                  BIGSERIAL    PRIMARY KEY,
     conversation_id     BIGINT       NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id           UUID         NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
+    sender_login_id     UUID         NOT NULL,
     reply_to_message_id BIGINT       REFERENCES messages(id) ON DELETE SET NULL,
     content             TEXT         NOT NULL,
     message_type        message_type NOT NULL DEFAULT 'text',

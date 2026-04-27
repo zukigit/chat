@@ -1,7 +1,7 @@
 -- name: SendMessage :one
-INSERT INTO messages (conversation_id, sender_id, reply_to_message_id, content, message_type, media_url)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, conversation_id, sender_id, reply_to_message_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;
+INSERT INTO messages (conversation_id, sender_id, sender_login_id, reply_to_message_id, content, message_type, media_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, conversation_id, sender_id, sender_login_id, reply_to_message_id, content, message_type, media_url, is_edited, deleted_at, created_at, updated_at;
 
 -- name: GetConversationMessages :many
 -- Cursor-based pagination: pass the last seen message id as cursor (0 for first page).
