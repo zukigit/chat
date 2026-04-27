@@ -31,10 +31,11 @@ func main() {
 	}
 
 	// get JetStream
-	js, err := lib.GetJetStream(lib.Getenv("NATS_URL", nats.DefaultURL))
+	js, nc, err := lib.GetJetStream(lib.Getenv("NATS_URL", nats.DefaultURL))
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to set up JetStream: %v", err)
 	}
+	defer nc.Close()
 
 	// gRPC server setup
 	srv := grpc.NewServer(

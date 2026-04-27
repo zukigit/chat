@@ -152,6 +152,7 @@ func setupTestNats(t *testing.T) nats.JetStreamContext {
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "nats:latest",
 			ExposedPorts: []string{"4222/tcp"},
+			Cmd:          []string{"-js"},
 			WaitingFor:   wait.ForLog("Server is ready"),
 		},
 		Started: true,
@@ -170,10 +171,11 @@ func setupTestNats(t *testing.T) nats.JetStreamContext {
 		t.Fatalf("setupTestNats: get port: %v", err)
 	}
 
-	js, err := lib.GetJetStream(fmt.Sprintf("nats://%s:%s", host, port.Port()))
+	js, nc, err := lib.GetJetStream(fmt.Sprintf("nats://%s:%s", host, port.Port()))
 	if err != nil {
 		t.Fatalf("setupTestNats: get JetStream: %v", err)
 	}
+	t.Cleanup(func() { nc.Close() })
 
 	return js
 }
