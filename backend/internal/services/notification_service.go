@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/notification"
@@ -18,7 +19,7 @@ import (
 // NatsPublisher is a minimal interface for publishing to a NATS subject.
 // Implemented by *nats.Conn (via Publish) or any JetStream wrapper.
 type NatsPublisher interface {
-	Publish(subject string, data []byte) error
+	Publish(subj string, data []byte, opts ...nats.PubOpt) (*nats.PubAck, error)
 }
 
 // NotificationServer handles all notification concerns: persisting to the

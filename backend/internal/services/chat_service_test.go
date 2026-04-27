@@ -236,9 +236,9 @@ func TestGetMessages(t *testing.T) {
 // db.SendMessageParams to each recipient's active chat session via NATS.
 func TestSendMessage_NatsPublish(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	nc := setupTestNats(t)
+	js := setupTestNats(t)
 
-	notifServer := services.NewNotificationServer(sqlDB, nc)
+	notifServer := services.NewNotificationServer(sqlDB, js)
 	chatServer := services.NewChatServer(sqlDB, notifServer)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
@@ -258,7 +258,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 
 	// Subscribe to bob's chat subject before sending.
 	bobMsgs := make(chan *nats.Msg, 1)
-	sub, err := nc.ChanSubscribe(bobSubject, bobMsgs)
+	sub, err := js.ChanSubscribe(bobSubject, bobMsgs)
 	if err != nil {
 		t.Fatalf("subscribe %s: %v", bobSubject, err)
 	}
@@ -304,7 +304,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 		// Verify by checking there are no pending messages on an alice subject.
 		aliceSubject := lib.ChatSubjectPrefix + ids["alice"].String()
 		aliceMsgs := make(chan *nats.Msg, 1)
-		aliceSub, err := nc.ChanSubscribe(aliceSubject, aliceMsgs)
+		aliceSub, err := js.ChanSubscribe(aliceSubject, aliceMsgs)
 		if err != nil {
 			t.Fatalf("subscribe alice subject: %v", err)
 		}
