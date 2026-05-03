@@ -28,15 +28,25 @@ func GetJetStream(natsURL string) (nats.JetStreamContext, *nats.Conn, error) {
 	}
 
 	// add stream for notifications and chat messages, with a retention policy of 24 hours
-	_, err = js.AddStream(&nats.StreamConfig{
+	streamConf := &nats.StreamConfig{
 		Name:     "SESSIONS",
 		Subjects: []string{NotiSubjectPrefix + ">", ChatSubjectPrefix + ">"},
 		MaxAge:   chatMaxAge,
 		Storage:  nats.FileStorage,
-	})
+	}
+
+	_, err = js.AddStream(streamConf)
 	if err != nil {
-		nc.Close()
-		return nil, nil, fmt.Errorf("failed to create sessions stream: %v", err)
+		if err == nats.ErrStreamNameAlreadyInUse {
+			_, err = js.UpdateStream(streamConf)
+			if err != nil {
+				nc.Close()
+				return nil, nil, fmt.Errorf("failed to update sessions stream: %v", err)
+			}
+		} else {
+			nc.Close()
+			return nil, nil, fmt.Errorf("failed to create sessions stream: %v", err)
+		}
 	}
 
 	return js, nc, nil
