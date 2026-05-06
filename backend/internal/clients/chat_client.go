@@ -102,3 +102,12 @@ func (c *ChatClient) UpdateLastReadMessage(ctx context.Context, token string, co
 func (c *ChatClient) GetConversations(ctx context.Context, token string) (*pb.GetConversationsResponse, error) {
 	return c.client.GetConversations(lib.WithToken(ctx, token), &pb.GetConversationsRequest{})
 }
+
+// GetConversationsByName retrieves conversations matching the search pattern via gRPC.
+// For groups: matches conversation name.
+// For DMs: matches the other member's username.
+func (c *ChatClient) GetConversationsByName(ctx context.Context, token string, name string) (*pb.GetConversationsResponse, error) {
+	return c.client.GetConversationsByName(lib.WithToken(ctx, token), &pb.GetConversationsByNameRequest{
+		Name: name,
+	})
+}
