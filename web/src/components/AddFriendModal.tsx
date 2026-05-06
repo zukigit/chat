@@ -9,23 +9,26 @@ interface SearchResultUser {
   user_name: string
   display_name: string
   avatar_url: string
+  friendship_status: string
 }
 
 interface Props {
   open: boolean
   onClose: () => void
   onOpen: () => void
+  onStartChat?: (username: string) => Promise<void>
 }
 
 type RequestState = 'idle' | 'loading' | 'success' | 'error'
 
-function SearchResults({ open }: { open: boolean }) {
+function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (username: string) => Promise<void> }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [results, setResults] = useState<SearchResultUser[]>([])
   const [requestStates, setRequestStates] = useState<Record<string, RequestState>>({})
   const [requestErrors, setRequestErrors] = useState<Record<string, string>>({})
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const [chatLoadingId, setChatLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -34,6 +37,7 @@ function SearchResults({ open }: { open: boolean }) {
       setRequestErrors({})
       setSearching(false)
       setHasSearched(false)
+      setChatLoadingId(null)
       if (inputRef.current) inputRef.current.value = ''
     }
   }, [open])
@@ -92,6 +96,18 @@ function SearchResults({ open }: { open: boolean }) {
     }
   }
 
+  async function handleChat(u: SearchResultUser) {
+    if (!onStartChat || chatLoadingId) return
+    setChatLoadingId(u.user_id)
+    try {
+      await onStartChat(u.user_name)
+    } catch {
+      // error handled by parent
+    } finally {
+      setChatLoadingId(null)
+    }
+  }
+
   return (
     <>
       <form className="modal-search-row" onSubmit={e => { e.preventDefault(); doSearch() }}>
@@ -122,6 +138,8 @@ function SearchResults({ open }: { open: boolean }) {
         )}
         {results.map(u => {
           const state = requestStates[u.user_id] ?? 'idle'
+          const isAccepted = u.friendship_status === 'accepted'
+          const isPending = u.friendship_status === 'pending'
           return (
             <div key={u.user_id} className="modal-user-row">
               <div className="avatar" style={{ background: avatarColor(u.user_name) }}>
@@ -134,7 +152,22 @@ function SearchResults({ open }: { open: boolean }) {
                   <div className="error-text">{requestErrors[u.user_id]}</div>
                 )}
               </div>
-              {state === 'success' ? (
+              {isAccepted ? (
+                <button
+                  className="action-btn primary"
+                  title="Send message"
+                  disabled={chatLoadingId !== null}
+                  onClick={() => handleChat(u)}
+                >
+                  {chatLoadingId === u.user_id ? (
+                    <span className="auth-spinner" style={{ width: 14, height: 14 }} />
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  )}
+                </button>
+              ) : isPending || state === 'success' ? (
                 <span className="modal-added-label">Sent</span>
               ) : state === 'loading' ? (
                 <svg className="search-spinner icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -157,12 +190,12 @@ function SearchResults({ open }: { open: boolean }) {
   )
 }
 
-export default function AddFriendModal({ open, onClose }: Props) {
+export default function AddFriendModal({ open, onClose, onStartChat }: Props) {
   return (
     <div className={`modal-overlay${open ? ' modal-open' : ''}`} onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">Add Friend</span>
+          <span className="modal-title">Search Users</span>
           <button className="modal-close" onClick={onClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -170,7 +203,7 @@ export default function AddFriendModal({ open, onClose }: Props) {
             </svg>
           </button>
         </div>
-        <SearchResults open={open} />
+        <SearchResults open={open} onStartChat={onStartChat} />
       </div>
     </div>
   )
