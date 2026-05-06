@@ -14,6 +14,7 @@ import { fetchFriends } from '../api/friendsApi'
 import { fetchConversations, createConversation, type ApiConversation } from '../api/conversationsApi'
 import { avatarColor, avatarInitials } from '../components/avatarUtils'
 import { useChatSession } from '../useChatSession'
+import { useNotificationSession } from '../useNotificationSession'
 import { getMessages, getSentMessages, clearMessages, type StoredMessage, type SentMessage } from '../messageStore'
 
 type Tab = 'conversations' | 'friends' | 'profile'
@@ -26,9 +27,9 @@ export default function HomePage() {
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
-  const [refreshingFriends, setRefreshingFriends] = useState(false)
   const [allMessages, setAllMessages] = useState<Record<number, StoredMessage[]>>({})
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
+  const [hasUnreadNoti, setHasUnreadNoti] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const handleIncomingMessage = useCallback((msg: StoredMessage) => {
@@ -45,6 +46,17 @@ export default function HomePage() {
     setSentMessages(getSentMessages(conversationId))
   }, [])
 
+  const handleNotification = useCallback((noti: { type: string }) => {
+    if (noti.type === 'friend_request') {
+      setHasUnreadNoti(true)
+      loadFriends().catch(console.error)
+    }
+  }, [])
+
+  const clearNotiBadge = useCallback(() => {
+    setHasUnreadNoti(false)
+  }, [])
+
   const { connected, error: wsError, retryCountdown, send, markAllRead } = useChatSession(
     activeConv?.id ?? null,
     handleIncomingMessage,
@@ -54,6 +66,8 @@ export default function HomePage() {
     },
     () => { loadConversations().catch(console.error) }
   )
+
+  useNotificationSession(handleNotification)
 
   useEffect(() => {
     loadFriends().catch(console.error)
@@ -69,7 +83,6 @@ export default function HomePage() {
     setAllMessages(restored)
     if (activeConv) {
       setSentMessages(getSentMessages(activeConv.id))
-      // Mark restored messages as read for the open conversation.
       const username = getUsername() ?? ''
       const currentUserId = activeConv.members.find(mem => mem.username === username)?.user_id ?? ''
       const msgs = restored[activeConv.id] ?? []
@@ -160,6 +173,11 @@ export default function HomePage() {
     setSentMessages(getSentMessages(conversationId))
   }
 
+  function handleTabChange(newTab: Tab) {
+    setTab(newTab)
+    clearNotiBadge()
+  }
+
   return (
     <div className="chat-layout">
       {/* Sidebar */}
@@ -186,18 +204,19 @@ export default function HomePage() {
                 <span className="hamburger-icon">
                   <span /><span /><span />
                 </span>
+                {hasUnreadNoti && <span className="notification-dot" />}
               </button>
             )}
             {menuOpen && tab !== 'friends' && (
               <div className="dropdown">
-                <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('profile') }}>
+                <button className="dropdown-item" onClick={() => { setMenuOpen(false); handleTabChange('profile') }}>
                   <div className="avatar avatar-sm" style={{ background: avatarColor(currentUsername), width: 20, height: 20, fontSize: 9 }}>
                     {avatarInitials(currentUsername, currentUsername)}
                   </div>
                   {currentUsername}
                 </button>
                 <div className="dropdown-divider" />
-                <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('friends') }}>
+                <button className="dropdown-item" onClick={() => { setMenuOpen(false); handleTabChange('friends') }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
@@ -218,35 +237,12 @@ export default function HomePage() {
               </div>
             )}
           </div>
-          <input
-            className="sidebar-search-inline"
-            placeholder={tab === 'friends' ? 'Search Friends' : 'Search'}
-            readOnly
-          />
-          {tab === 'conversations' && (
-            <div className={`ws-status${connected ? ' connected' : wsError ? ' error' : ''}`} title={wsError ? `Retrying in ${retryCountdown}s` : (connected ? 'Connected' : 'Connecting...')}>
-              <span className="ws-dot" />
-            </div>
-          )}
-          {tab === 'friends' && (
-            <button
-              className={`icon-btn-circle${refreshingFriends ? ' spinning' : ''}`}
-              disabled={refreshingFriends}
-              title="Refresh"
-              onClick={async () => {
-                if (refreshingFriends) return
-                setRefreshingFriends(true)
-                try { await loadFriends() } finally { setRefreshingFriends(false) }
-              }}
-            >
-              <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
-                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
-              </svg>
-            </button>
-          )}
+          <span className="section-label">
+            {tab === 'conversations' ? 'Conversations' : tab === 'friends' ? 'Friends' : 'Profile'}
+          </span>
+          <div className={`ws-status${connected ? ' connected' : wsError ? ' error' : ''}`} title={wsError ? `Retrying in ${retryCountdown}s` : (connected ? 'Connected' : 'Connecting...')}>
+            <span className="ws-dot" />
+          </div>
         </div>
 
         {tab === 'conversations' ? (
@@ -275,4 +271,3 @@ export default function HomePage() {
     </div>
   )
 }
-
