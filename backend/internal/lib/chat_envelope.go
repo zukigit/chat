@@ -13,6 +13,7 @@ const (
 	ChatEventMessage   ChatEventType = "message"
 	ChatEventDelivered ChatEventType = "delivered"
 	ChatEventRead      ChatEventType = "read"
+	ChatEventError     ChatEventType = "error"
 )
 
 // DeliveredEvent is the Data payload for ChatEventDelivered envelopes.
@@ -25,6 +26,12 @@ type DeliveredEvent struct {
 type ReadEvent struct {
 	ConversationID int64 `json:"conversation_id"`
 	MessageID      int64 `json:"message_id"`
+}
+
+// ErrorEvent is the Data payload for ChatEventError envelopes.
+type ErrorEvent struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 // ChatResponseEnvelope is the typed wrapper for all NATS chat payloads

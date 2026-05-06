@@ -49,6 +49,9 @@ export default function HomePage() {
     activeConv?.id ?? null,
     handleIncomingMessage,
     handleDelivered,
+    (code, message) => {
+      console.error(`WebSocket error [${code}]: ${message}`)
+    },
     () => { loadConversations().catch(console.error) }
   )
 

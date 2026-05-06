@@ -6,16 +6,17 @@ import { addMessage, markSentDelivered, markSentSeen, type StoredMessage } from 
 interface ChatResponseEnvelope {
   version: number
   type: string
-  data: StoredMessage | { conversation_id: number; message_id: number }
+  data: StoredMessage | { conversation_id: number; message_id: number } | { code: number; message: string }
 }
 
-export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: number) => void, onConnect?: () => void) {
+export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: number) => void, onError?: (code: number, message: string) => void, onConnect?: () => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const countdownTimer = useRef<number | null>(null)
   const activeConvIdRef = useRef(activeConversationId)
   const onMessageRef = useRef(onMessage)
   const onDeliveredRef = useRef(onDelivered)
+  const onErrorRef = useRef(onError)
   const onConnectRef = useRef(onConnect)
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,8 +26,9 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     activeConvIdRef.current = activeConversationId
     onMessageRef.current = onMessage
     onDeliveredRef.current = onDelivered
+    onErrorRef.current = onError
     onConnectRef.current = onConnect
-  }, [activeConversationId, onMessage, onDelivered, onConnect])
+  }, [activeConversationId, onMessage, onDelivered, onError, onConnect])
 
   const connect = useCallback(() => {
     const token = getToken()
@@ -91,6 +93,9 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
           const d = envelope.data as { conversation_id: number; message_id: number }
           markSentSeen(d.conversation_id, d.message_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
+        } else if (envelope.type === 'error' && envelope.data) {
+          const e = envelope.data as { code: number; message: string }
+          onErrorRef.current?.(e.code, e.message)
         }
       } catch {
         // ignore unparseable frames
