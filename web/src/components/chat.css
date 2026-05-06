@@ -302,3 +302,18 @@
 }
 
 .send-btn:hover { background: var(--color-accent-hover); }
+
+.dropdown-item-wrap {
+  position: relative;
+}
+
+.dropdown-noti-dot {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  pointer-events: none;
+}
