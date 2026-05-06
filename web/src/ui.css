@@ -470,9 +470,24 @@
 }
 
 .modal-added-label {
-  font-size: 13px;
-  color: var(--color-accent);
+  padding: 3px 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 12px;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent);
+  color: #fff;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.modal-action-fixed {
+  min-width: 64px;
+  text-align: center;
+  justify-content: center;
 }
 
 /* ── Error ── */

@@ -154,31 +154,29 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
               </div>
               {isAccepted ? (
                 <button
-                  className="action-btn primary"
+                  className="action-btn primary modal-action-fixed"
                   title="Send message"
                   disabled={chatLoadingId !== null}
                   onClick={() => handleChat(u)}
                 >
                   {chatLoadingId === u.user_id ? (
-                    <span className="auth-spinner" style={{ width: 14, height: 14 }} />
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    <svg className="search-spinner icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12a9 9 0 1 1-6.22-8.56" />
                     </svg>
+                  ) : (
+                    'Chat'
                   )}
                 </button>
               ) : isPending || state === 'success' ? (
-                <span className="modal-added-label">Sent</span>
+                <span className="modal-added-label modal-action-fixed">Sent</span>
               ) : state === 'loading' ? (
-                <svg className="search-spinner icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12a9 9 0 1 1-6.22-8.56" />
-                </svg>
-              ) : (
-                <button className="action-btn primary" onClick={() => handleAdd(u.user_name, u.user_id)}>
-                  <svg className="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
+                <span className="modal-action-fixed" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg className="search-spinner icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.22-8.56" />
                   </svg>
+                </span>
+              ) : (
+                <button className="action-btn primary modal-action-fixed" onClick={() => handleAdd(u.user_name, u.user_id)}>
                   Add
                 </button>
               )}
