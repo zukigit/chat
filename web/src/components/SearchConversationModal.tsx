@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
-import { getToken } from '../auth'
+import { getUsername, getToken } from '../auth'
 import { loadConfig } from '../config'
 import type { ApiConversation } from '../api/conversationsApi'
 
@@ -32,9 +32,7 @@ export default function SearchConversationModal({ open, onClose, onSelect }: Pro
       setSearching(false)
       setHasSearched(false)
       if (inputRef.current) inputRef.current.value = ''
-      try {
-        currentUsername.current = JSON.parse(atob(getToken()!.split('.')[1])).sub ?? ''
-      } catch { /* ignore */ }
+      currentUsername.current = getUsername() ?? ''
     }
   }, [open])
 
