@@ -67,7 +67,7 @@ export function addMessage(msg: StoredMessage): void {
     all[key].sort((a, b) => a.id - b.id)
   }
   saveAll(all)
-  const sent = loadSent().filter(s => !(s.conversation_id === msg.conversation_id && s.content === msg.content))
+  const sent = loadSent().filter(s => !(s.conversation_id === msg.conversation_id && s.content === msg.content && !s.tempId.startsWith('sent-remote-')))
   saveSent(sent)
 }
 
@@ -78,6 +78,14 @@ export function addSentMessage(conversationId: number, content: string): SentMes
   all.push(sent)
   saveSent(all)
   return sent
+}
+
+export function addRemoteSentMessage(conversationId: number, content: string): void {
+  const all = loadSent()
+  if (all.some(s => s.conversation_id === conversationId && s.content === content && s.tempId.startsWith('sent-remote-'))) return
+  const tempId = `sent-remote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  all.push({ tempId, conversation_id: conversationId, content, status: 'sending', created_at: new Date().toISOString() })
+  saveSent(all)
 }
 
 export function markSentDelivered(_conversationId: number, _messageId?: number): void {

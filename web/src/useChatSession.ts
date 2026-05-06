@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
-import { addMessage, markSentDelivered, markSentSeen, type StoredMessage } from './messageStore'
+import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSeen, type StoredMessage } from './messageStore'
 
 interface ChatResponseEnvelope {
   version: number
@@ -70,12 +70,23 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
         const envelope: ChatResponseEnvelope = JSON.parse(event.data)
         if (envelope.type === 'message' && envelope.data) {
           const msg = envelope.data as StoredMessage
+          const token = getToken()
+          let isOwnMessage = false
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]))
+              const currentUserId = payload.sub || payload.user_id
+              isOwnMessage = msg.sender_id === currentUserId
+            } catch { /* ignore */ }
+          }
+          if (isOwnMessage) {
+            addRemoteSentMessage(msg.conversation_id, msg.content)
+            onDeliveredRef.current?.(msg.conversation_id, msg.id)
+          }
           addMessage(msg)
           onMessageRef.current?.(msg)
-          // Only mark as read if this message belongs to the currently open conversation
           if (msg.conversation_id === activeConvIdRef.current) {
-            const token = getToken()
-            if (token) {
+            if (token && !isOwnMessage) {
               try {
                 const payload = JSON.parse(atob(token.split('.')[1]))
                 const currentUserId = payload.sub || payload.user_id
