@@ -90,35 +90,39 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User,
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT u.user_id, u.user_name, u.display_name, u.avatar_url
+SELECT u.user_id, u.user_name, u.display_name, u.avatar_url,
+    COALESCE(
+      (SELECT f.status::text FROM friendships f
+       WHERE (f.user1_userid = $2 AND f.user2_userid = u.user_id)
+          OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
+       LIMIT 1),
+      ''
+    ) AS friendship_status
 FROM users u
 WHERE (u.user_name ILIKE '%' || $1 || '%'
     OR u.display_name ILIKE '%' || $1 || '%')
   AND u.user_id != $2
-  AND NOT EXISTS (
-    SELECT 1 FROM friendships f
-    WHERE (f.user1_userid = $2 AND f.user2_userid = u.user_id)
-       OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
-  )
 ORDER BY u.user_name
 LIMIT 50
 `
 
 type SearchUsersParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	UserID  uuid.UUID      `json:"user_id"`
+	Column1     sql.NullString `json:"column_1"`
+	User1Userid uuid.UUID      `json:"user1_userid"`
 }
 
 type SearchUsersRow struct {
-	UserID      uuid.UUID      `json:"user_id"`
-	UserName    string         `json:"user_name"`
-	DisplayName sql.NullString `json:"display_name"`
-	AvatarUrl   sql.NullString `json:"avatar_url"`
+	UserID           uuid.UUID      `json:"user_id"`
+	UserName         string         `json:"user_name"`
+	DisplayName      sql.NullString `json:"display_name"`
+	AvatarUrl        sql.NullString `json:"avatar_url"`
+	FriendshipStatus interface{}    `json:"friendship_status"`
 }
 
-// Searches for users by username or display name, excluding the caller and any existing friends.
+// Searches for users by username or display name, excluding the caller.
+// Returns the friendship status if a relationship exists, or empty string otherwise.
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
-	rows, err := q.db.QueryContext(ctx, searchUsers, arg.Column1, arg.UserID)
+	rows, err := q.db.QueryContext(ctx, searchUsers, arg.Column1, arg.User1Userid)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +135,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 			&i.UserName,
 			&i.DisplayName,
 			&i.AvatarUrl,
+			&i.FriendshipStatus,
 		); err != nil {
 			return nil, err
 		}
