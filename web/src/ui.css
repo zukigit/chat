@@ -460,6 +460,8 @@
 
 .modal-user-row:hover { background: var(--bg-sidebar-hover); }
 
+.modal-user-row-clickable { cursor: pointer; }
+
 .modal-empty {
   padding: 30px 20px;
   text-align: center;
