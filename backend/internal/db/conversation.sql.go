@@ -176,6 +176,61 @@ func (q *Queries) GetConversationMembers(ctx context.Context, conversationID int
 	return items, nil
 }
 
+const getConversationsByName = `-- name: GetConversationsByName :many
+SELECT c.id, c.is_group, c.name, c.created_at, c.updated_at
+FROM conversations c
+JOIN conversation_members cm ON cm.conversation_id = c.id
+WHERE cm.user_id = $1
+  AND (
+    (c.is_group = true AND c.name ILIKE '%' || $2 || '%')
+    OR (c.is_group = false AND EXISTS (
+      SELECT 1 FROM conversation_members cm2
+      JOIN users u ON u.user_id = cm2.user_id
+      WHERE cm2.conversation_id = c.id
+        AND cm2.user_id != $1
+        AND u.user_name ILIKE '%' || $2 || '%'
+    ))
+  )
+ORDER BY c.updated_at DESC
+`
+
+type GetConversationsByNameParams struct {
+	UserID  uuid.UUID      `json:"user_id"`
+	Column2 sql.NullString `json:"column_2"`
+}
+
+// Returns conversations matching the search pattern.
+// For groups: matches conversation name.
+// For DMs: matches the other member's username.
+func (q *Queries) GetConversationsByName(ctx context.Context, arg GetConversationsByNameParams) ([]Conversation, error) {
+	rows, err := q.db.QueryContext(ctx, getConversationsByName, arg.UserID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.IsGroup,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getConversationsByUser = `-- name: GetConversationsByUser :many
 SELECT c.id, c.is_group, c.name, c.created_at, c.updated_at
 FROM conversations c

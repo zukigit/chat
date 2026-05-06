@@ -412,6 +412,60 @@ func (s *ChatServer) GetConversations(ctx context.Context, req *pb.GetConversati
 	}, nil
 }
 
+// GetConversationsByName returns conversations matching the search pattern.
+// For groups: matches conversation name.
+// For DMs: matches the other member's username.
+func (s *ChatServer) GetConversationsByName(ctx context.Context, req *pb.GetConversationsByNameRequest) (*pb.GetConversationsResponse, error) {
+	callerID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.GetName() == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+
+	q := db.New(s.sqlDB)
+
+	conversations, err := q.GetConversationsByName(ctx, db.GetConversationsByNameParams{
+		UserID:  callerID,
+		Column2: sql.NullString{Valid: true, String: req.GetName()},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "GetConversationsByName: query: %v", err)
+	}
+
+	results := make([]*pb.ConversationResult, 0, len(conversations))
+	for _, c := range conversations {
+		members, err := q.GetConversationMembers(ctx, c.ID)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "GetConversationsByName: get members for conversation %d: %v", c.ID, err)
+		}
+
+		memberProtos := make([]*pb.ConversationMember, 0, len(members))
+		for _, m := range members {
+			memberProtos = append(memberProtos, &pb.ConversationMember{
+				UserId:      m.UserID_2.String(),
+				Username:    m.UserName,
+				DisplayName: m.DisplayName.String,
+				AvatarUrl:   m.AvatarUrl.String,
+			})
+		}
+
+		results = append(results, &pb.ConversationResult{
+			Id:        c.ID,
+			IsGroup:   c.IsGroup,
+			Name:      c.Name.String,
+			UpdatedAt: c.UpdatedAt.Format(time.RFC3339),
+			Members:   memberProtos,
+		})
+	}
+
+	return &pb.GetConversationsResponse{
+		Conversations: results,
+	}, nil
+}
+
 // UpdateLastReadMessage marks a message as read for the calling user
 // and notifies the original sender via NATS.
 func (s *ChatServer) UpdateLastReadMessage(ctx context.Context, req *pb.UpdateMessageRequest) (*pb.UpdateMessageResponse, error) {

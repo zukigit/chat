@@ -23,6 +23,26 @@ JOIN conversation_members cm ON cm.conversation_id = c.id
 WHERE cm.user_id = $1
 ORDER BY c.updated_at DESC;
 
+-- name: GetConversationsByName :many
+-- Returns conversations matching the search pattern.
+-- For groups: matches conversation name.
+-- For DMs: matches the other member's username.
+SELECT c.id, c.is_group, c.name, c.created_at, c.updated_at
+FROM conversations c
+JOIN conversation_members cm ON cm.conversation_id = c.id
+WHERE cm.user_id = $1
+  AND (
+    (c.is_group = true AND c.name ILIKE '%' || $2 || '%')
+    OR (c.is_group = false AND EXISTS (
+      SELECT 1 FROM conversation_members cm2
+      JOIN users u ON u.user_id = cm2.user_id
+      WHERE cm2.conversation_id = c.id
+        AND cm2.user_id != $1
+        AND u.user_name ILIKE '%' || $2 || '%'
+    ))
+  )
+ORDER BY c.updated_at DESC;
+
 -- name: AddMemberToConversation :one
 INSERT INTO conversation_members (conversation_id, user_id)
 VALUES ($1, $2)

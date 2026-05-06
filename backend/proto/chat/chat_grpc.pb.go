@@ -25,6 +25,7 @@ const (
 	Chat_UpdateLastReadMessage_FullMethodName      = "/chat.Chat/UpdateLastReadMessage"
 	Chat_UpdateLastDeliveredMessage_FullMethodName = "/chat.Chat/UpdateLastDeliveredMessage"
 	Chat_GetConversations_FullMethodName           = "/chat.Chat/GetConversations"
+	Chat_GetConversationsByName_FullMethodName     = "/chat.Chat/GetConversationsByName"
 )
 
 // ChatClient is the client API for Chat service.
@@ -37,6 +38,7 @@ type ChatClient interface {
 	UpdateLastReadMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error)
 	UpdateLastDeliveredMessage(ctx context.Context, in *UpdateMessageRequest, opts ...grpc.CallOption) (*UpdateMessageResponse, error)
 	GetConversations(ctx context.Context, in *GetConversationsRequest, opts ...grpc.CallOption) (*GetConversationsResponse, error)
+	GetConversationsByName(ctx context.Context, in *GetConversationsByNameRequest, opts ...grpc.CallOption) (*GetConversationsResponse, error)
 }
 
 type chatClient struct {
@@ -107,6 +109,16 @@ func (c *chatClient) GetConversations(ctx context.Context, in *GetConversationsR
 	return out, nil
 }
 
+func (c *chatClient) GetConversationsByName(ctx context.Context, in *GetConversationsByNameRequest, opts ...grpc.CallOption) (*GetConversationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetConversationsResponse)
+	err := c.cc.Invoke(ctx, Chat_GetConversationsByName_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServer is the server API for Chat service.
 // All implementations must embed UnimplementedChatServer
 // for forward compatibility.
@@ -117,6 +129,7 @@ type ChatServer interface {
 	UpdateLastReadMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error)
 	UpdateLastDeliveredMessage(context.Context, *UpdateMessageRequest) (*UpdateMessageResponse, error)
 	GetConversations(context.Context, *GetConversationsRequest) (*GetConversationsResponse, error)
+	GetConversationsByName(context.Context, *GetConversationsByNameRequest) (*GetConversationsResponse, error)
 	mustEmbedUnimplementedChatServer()
 }
 
@@ -144,6 +157,9 @@ func (UnimplementedChatServer) UpdateLastDeliveredMessage(context.Context, *Upda
 }
 func (UnimplementedChatServer) GetConversations(context.Context, *GetConversationsRequest) (*GetConversationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConversations not implemented")
+}
+func (UnimplementedChatServer) GetConversationsByName(context.Context, *GetConversationsByNameRequest) (*GetConversationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConversationsByName not implemented")
 }
 func (UnimplementedChatServer) mustEmbedUnimplementedChatServer() {}
 func (UnimplementedChatServer) testEmbeddedByValue()              {}
@@ -274,6 +290,24 @@ func _Chat_GetConversations_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Chat_GetConversationsByName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConversationsByNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).GetConversationsByName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Chat_GetConversationsByName_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).GetConversationsByName(ctx, req.(*GetConversationsByNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Chat_ServiceDesc is the grpc.ServiceDesc for Chat service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +338,10 @@ var Chat_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConversations",
 			Handler:    _Chat_GetConversations_Handler,
+		},
+		{
+			MethodName: "GetConversationsByName",
+			Handler:    _Chat_GetConversationsByName_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
