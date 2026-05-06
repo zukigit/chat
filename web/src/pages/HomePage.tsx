@@ -32,7 +32,22 @@ export default function HomePage() {
   const [hasUnreadNoti, setHasUnreadNoti] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  const loadConversationsRef = useRef(() => {})
+  const loadFriendsRef = useRef(() => {})
+
+  useEffect(() => {
+    loadConversationsRef.current = loadConversations
+    loadFriendsRef.current = loadFriends
+  })
+
   const handleIncomingMessage = useCallback((msg: StoredMessage) => {
+    setConversations(prev => {
+      const exists = prev.some(c => c.id === msg.conversation_id)
+      if (!exists) {
+        setTimeout(() => loadConversationsRef.current(), 0)
+      }
+      return prev
+    })
     setAllMessages(prev => {
       const convId = msg.conversation_id
       const existing = prev[convId] ?? []
@@ -49,7 +64,7 @@ export default function HomePage() {
   const handleNotification = useCallback((noti: { type: string }) => {
     if (noti.type === 'friend_request') {
       setHasUnreadNoti(true)
-      loadFriends().catch(console.error)
+      loadFriendsRef.current()
     }
   }, [])
 
@@ -64,7 +79,7 @@ export default function HomePage() {
     (code, message) => {
       console.error(`WebSocket error [${code}]: ${message}`)
     },
-    () => { loadConversations().catch(console.error) }
+    () => { loadConversationsRef.current() }
   )
 
   useNotificationSession(handleNotification)

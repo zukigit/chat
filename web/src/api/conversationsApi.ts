@@ -45,3 +45,10 @@ export async function createConversation(membersUsername: string[], isGroup = fa
   if (!res.ok || !body.success) throw new Error(body.message ?? 'failed to create conversation')
   return body.data.conversation_id as number
 }
+
+export async function fetchConversation(id: number): Promise<ApiConversation> {
+  const res = await fetch(`${gatewayUrl()}/conversations/${id}`, { headers: authHeader() })
+  const body = await res.json()
+  if (!res.ok || !body.success) throw new Error(body.message ?? 'failed to fetch conversation')
+  return body.data as ApiConversation
+}
