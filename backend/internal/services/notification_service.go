@@ -54,8 +54,7 @@ func (s *NotificationServer) Send(ctx context.Context, q *db.Queries, notiParams
 		return err
 	}
 
-	s.publishIfOnline(notiParams.UserID, lib.NotiSubjectPrefix, notificationBytes)
-	return nil
+	return s.publishIfOnline(notiParams.UserID, lib.NotiSubjectPrefix, notificationBytes)
 }
 
 // MarkNotificationRead implements notification.NotificationServer.
@@ -79,10 +78,11 @@ func (s *NotificationServer) MarkNotificationRead(ctx context.Context, req *pb.M
 // publishIfOnline publishes payload to the per-user NATS subject.
 // JetStream retains the message so any active durable consumer (device) receives it.
 // All errors are logged and swallowed — delivery via JetStream handles retries.
-func (s *NotificationServer) publishIfOnline(userID uuid.UUID, subjectPrefix string, payload []byte) {
+func (s *NotificationServer) publishIfOnline(userID uuid.UUID, subjectPrefix string, payload []byte) error {
 	if s.publisher == nil {
-		return
+		return nil
 	}
 	subject := subjectPrefix + userID.String()
-	s.publisher.Publish(subject, payload) //nolint:errcheck
+	_, err := s.publisher.Publish(subject, payload)
+	return err
 }

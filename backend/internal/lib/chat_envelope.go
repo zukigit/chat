@@ -14,7 +14,14 @@ const (
 	ChatEventDelivered ChatEventType = "delivered"
 	ChatEventRead      ChatEventType = "read"
 	ChatEventError     ChatEventType = "error"
+	ChatEventSent      ChatEventType = "sent"
 )
+
+// SentEvent is the Data payload for ChatEventSent envelopes.
+type SentEvent struct {
+	ConversationID int64  `json:"conversation_id"`
+	MessageID      string `json:"message_id"`
+}
 
 // DeliveredEvent is the Data payload for ChatEventDelivered envelopes.
 type DeliveredEvent struct {

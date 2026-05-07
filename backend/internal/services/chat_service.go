@@ -284,7 +284,22 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 
 	// publish the message to NATs
 	for _, m := range members {
-		s.notif.publishIfOnline(m.UserID, lib.ChatSubjectPrefix, msgBytes)
+		err := s.notif.publishIfOnline(m.UserID, lib.ChatSubjectPrefix, msgBytes)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "SendMessage: publish message: %v", err)
+		}
+	}
+
+	// prepare ack message
+	ackMsg := lib.SentEvent{
+		ConversationID: req.GetConversationId(),
+		MessageID:      req.GetMessageId(),
+	}
+
+	ackMsgBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventSent, ackMsg)
+	if err == nil {
+		// ack the sender the message was sent
+		s.notif.publishIfOnline(callerID, lib.ChatSubjectPrefix, ackMsgBytes)
 	}
 
 	// notify other members
