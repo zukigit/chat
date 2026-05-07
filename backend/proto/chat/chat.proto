@@ -90,7 +90,6 @@ message GetConversationsByNameRequest {
 service Chat {
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
-  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
   rpc UpdateLastReadMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
   rpc UpdateLastDeliveredMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
   rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);

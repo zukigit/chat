@@ -187,11 +187,6 @@ func (s *ChatServer) createOrGetDmConversation(ctx context.Context, q *db.Querie
 	return conv.ID, nil
 }
 
-const (
-	defaultMessageLimit = 50
-	maxMessageLimit     = 100
-)
-
 // SendMessage posts a message to a conversation on behalf of the authenticated caller.
 // The caller must be a member of the conversation.
 func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
@@ -250,19 +245,16 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		return nil, status.Errorf(codes.Internal, "SendMessage: parse login_id: %v", err)
 	}
 
-	msgID := uuid.New()
-	msg, err := q.SendMessage(ctx, db.SendMessageParams{
-		ID:               msgID,
+	msg := db.Message{
+		ID:               uuid.New(),
 		ConversationID:   req.GetConversationId(),
 		SenderID:         callerID,
 		SenderLoginID:    callerLoginID,
 		ReplyToMessageID: replyTo,
 		Content:          req.GetContent(),
 		MessageType:      msgType,
+		CreatedAt:        time.Now().UTC(),
 		MediaUrl:         sql.NullString{},
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "SendMessage: insert: %v", err)
 	}
 
 	// Notify all conversation members except the sender.
@@ -300,86 +292,6 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 	}
 
 	return &pb.SendMessageResponse{MessageId: msg.ID.String()}, nil
-}
-
-// GetMessages returns a paginated list of messages in a conversation.
-// The caller must be a member of the conversation.
-// cursor is the last seen message_id (0 for the first page).
-// limit defaults to 50 (max 100).
-func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest) (*pb.GetMessagesResponse, error) {
-	callerID, err := lib.CallerUUID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.GetConversationId() == 0 {
-		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
-	}
-
-	limit := int32(defaultMessageLimit)
-	if req.GetLimit() > 0 {
-		limit = req.GetLimit()
-	}
-	if limit > maxMessageLimit {
-		limit = maxMessageLimit
-	}
-
-	q := db.New(s.sqlDB)
-
-	isMember, err := q.IsMember(ctx, db.IsMemberParams{
-		ConversationID: req.GetConversationId(),
-		UserID:         callerID,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "GetMessages: check membership: %v", err)
-	}
-	if !isMember {
-		return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
-	}
-
-	var cursor uuid.NullUUID
-	if c := req.GetCursor(); c != "" {
-		parsed, err := uuid.Parse(c)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid cursor: %v", err)
-		}
-		cursor = uuid.NullUUID{Valid: true, UUID: parsed}
-	}
-
-	rows, err := q.GetConversationMessages(ctx, db.GetConversationMessagesParams{
-		ConversationID: req.GetConversationId(),
-		Column2:        cursor.UUID,
-		Limit:          limit,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "GetMessages: query: %v", err)
-	}
-
-	messages := make([]*pb.Message, 0, len(rows))
-	for _, r := range rows {
-		m := &pb.Message{
-			MessageId:   r.ID.String(),
-			SenderId:    r.SenderID.String(),
-			Content:     r.Content,
-			MessageType: string(r.MessageType),
-			IsEdited:    r.IsEdited,
-			CreatedAt:   r.CreatedAt.Format(time.RFC3339),
-		}
-		if r.ReplyToMessageID.Valid {
-			m.ReplyToMessageId = r.ReplyToMessageID.UUID.String()
-		}
-		messages = append(messages, m)
-	}
-
-	var nextCursor string
-	if len(rows) > 0 {
-		nextCursor = rows[len(rows)-1].ID.String()
-	}
-
-	return &pb.GetMessagesResponse{
-		Messages:   messages,
-		NextCursor: nextCursor,
-	}, nil
 }
 
 // GetConversations returns all conversations the caller is a member of.

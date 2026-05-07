@@ -82,7 +82,6 @@ func main() {
 	r.HandleFunc("/conversations", chatHandler.CreateConversation).Methods(http.MethodPost)
 	r.HandleFunc("/conversations", chatHandler.GetConversations).Methods(http.MethodGet)
 	r.HandleFunc("/conversations/search", chatHandler.GetConversationsByName).Methods(http.MethodGet)
-	r.HandleFunc("/conversations/messages", chatHandler.GetMessages).Methods(http.MethodGet)
 
 	cors := gorhandlers.CORS(
 		// frontend url is dynamic

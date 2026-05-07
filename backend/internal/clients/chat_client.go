@@ -66,16 +66,6 @@ func (c *ChatClient) SendMessage(ctx context.Context, token string, conversation
 	return resp.GetMessageId(), nil
 }
 
-// GetMessages retrieves paginated messages from a conversation via gRPC.
-// cursor is the last seen message_id (empty for the first page).
-func (c *ChatClient) GetMessages(ctx context.Context, token string, conversationID int64, limit int32, cursor string) (*pb.GetMessagesResponse, error) {
-	return c.client.GetMessages(lib.WithToken(ctx, token), &pb.GetMessagesRequest{
-		ConversationId: conversationID,
-		Limit:          limit,
-		Cursor:         cursor,
-	})
-}
-
 // UpdateLastDeliveredMessage tells the backend that the given message was delivered to the caller.
 // senderID is the UUID of the original message author — the backend uses it to push a receipt.
 func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token string, conversationID int64, messageID string, senderID string) error {

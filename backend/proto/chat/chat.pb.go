@@ -925,11 +925,10 @@ const file_proto_chat_chat_proto_rawDesc = "" +
 	"\rconversations\x18\x01 \x03(\v2\x18.chat.ConversationResultR\rconversations\"\x19\n" +
 	"\x17GetConversationsRequest\"3\n" +
 	"\x1dGetConversationsByNameRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name2\xc2\x04\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name2\xfe\x03\n" +
 	"\x04Chat\x12W\n" +
 	"\x12CreateConversation\x12\x1f.chat.CreateConversationRequest\x1a .chat.CreateConversationResponse\x12B\n" +
-	"\vSendMessage\x12\x18.chat.SendMessageRequest\x1a\x19.chat.SendMessageResponse\x12B\n" +
-	"\vGetMessages\x12\x18.chat.GetMessagesRequest\x1a\x19.chat.GetMessagesResponse\x12P\n" +
+	"\vSendMessage\x12\x18.chat.SendMessageRequest\x1a\x19.chat.SendMessageResponse\x12P\n" +
 	"\x15UpdateLastReadMessage\x12\x1a.chat.UpdateMessageRequest\x1a\x1b.chat.UpdateMessageResponse\x12U\n" +
 	"\x1aUpdateLastDeliveredMessage\x12\x1a.chat.UpdateMessageRequest\x1a\x1b.chat.UpdateMessageResponse\x12Q\n" +
 	"\x10GetConversations\x12\x1d.chat.GetConversationsRequest\x1a\x1e.chat.GetConversationsResponse\x12]\n" +
@@ -971,20 +970,18 @@ var file_proto_chat_chat_proto_depIdxs = []int32{
 	11, // 2: chat.GetConversationsResponse.conversations:type_name -> chat.ConversationResult
 	0,  // 3: chat.Chat.CreateConversation:input_type -> chat.CreateConversationRequest
 	2,  // 4: chat.Chat.SendMessage:input_type -> chat.SendMessageRequest
-	5,  // 5: chat.Chat.GetMessages:input_type -> chat.GetMessagesRequest
-	8,  // 6: chat.Chat.UpdateLastReadMessage:input_type -> chat.UpdateMessageRequest
-	8,  // 7: chat.Chat.UpdateLastDeliveredMessage:input_type -> chat.UpdateMessageRequest
-	13, // 8: chat.Chat.GetConversations:input_type -> chat.GetConversationsRequest
-	14, // 9: chat.Chat.GetConversationsByName:input_type -> chat.GetConversationsByNameRequest
-	1,  // 10: chat.Chat.CreateConversation:output_type -> chat.CreateConversationResponse
-	3,  // 11: chat.Chat.SendMessage:output_type -> chat.SendMessageResponse
-	6,  // 12: chat.Chat.GetMessages:output_type -> chat.GetMessagesResponse
-	9,  // 13: chat.Chat.UpdateLastReadMessage:output_type -> chat.UpdateMessageResponse
-	9,  // 14: chat.Chat.UpdateLastDeliveredMessage:output_type -> chat.UpdateMessageResponse
-	12, // 15: chat.Chat.GetConversations:output_type -> chat.GetConversationsResponse
-	12, // 16: chat.Chat.GetConversationsByName:output_type -> chat.GetConversationsResponse
-	10, // [10:17] is the sub-list for method output_type
-	3,  // [3:10] is the sub-list for method input_type
+	8,  // 5: chat.Chat.UpdateLastReadMessage:input_type -> chat.UpdateMessageRequest
+	8,  // 6: chat.Chat.UpdateLastDeliveredMessage:input_type -> chat.UpdateMessageRequest
+	13, // 7: chat.Chat.GetConversations:input_type -> chat.GetConversationsRequest
+	14, // 8: chat.Chat.GetConversationsByName:input_type -> chat.GetConversationsByNameRequest
+	1,  // 9: chat.Chat.CreateConversation:output_type -> chat.CreateConversationResponse
+	3,  // 10: chat.Chat.SendMessage:output_type -> chat.SendMessageResponse
+	9,  // 11: chat.Chat.UpdateLastReadMessage:output_type -> chat.UpdateMessageResponse
+	9,  // 12: chat.Chat.UpdateLastDeliveredMessage:output_type -> chat.UpdateMessageResponse
+	12, // 13: chat.Chat.GetConversations:output_type -> chat.GetConversationsResponse
+	12, // 14: chat.Chat.GetConversationsByName:output_type -> chat.GetConversationsResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
