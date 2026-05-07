@@ -33,14 +33,15 @@ func (c *SessionClient) Close() {
 	c.conn.Close()
 }
 
-// GetListenPath asks the backend for the NATS subject path to listen on.
-// The backend validates the JWT and returns a path like sessions.chat.<user_id>.<login_id>.
-func (c *SessionClient) GetListenPath(ctx context.Context, token, listenType string) (string, error) {
+// GetListenPath asks the backend for the NATS subject path and durable consumer name.
+// The backend validates the JWT and returns a path like sessions.chat.<user_id>
+// and a consumer name like chat-<login_id>.
+func (c *SessionClient) GetListenPath(ctx context.Context, token, listenType string) (listenPath string, consumerName string, err error) {
 	resp, err := c.client.GetListenPath(lib.WithToken(ctx, token), &pb.GetListenPathRequest{
 		Type: listenType,
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return resp.ListenPath, nil
+	return resp.ListenPath, resp.ConsumerName, nil
 }

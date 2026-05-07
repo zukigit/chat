@@ -68,6 +68,7 @@ func (x *GetListenPathRequest) GetType() string {
 type GetListenPathResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ListenPath    string                 `protobuf:"bytes,1,opt,name=listen_path,json=listenPath,proto3" json:"listen_path,omitempty"`
+	ConsumerName  string                 `protobuf:"bytes,2,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -109,16 +110,24 @@ func (x *GetListenPathResponse) GetListenPath() string {
 	return ""
 }
 
+func (x *GetListenPathResponse) GetConsumerName() string {
+	if x != nil {
+		return x.ConsumerName
+	}
+	return ""
+}
+
 var File_proto_session_session_proto protoreflect.FileDescriptor
 
 const file_proto_session_session_proto_rawDesc = "" +
 	"\n" +
 	"\x1bproto/session/session.proto\x12\asession\"*\n" +
 	"\x14GetListenPathRequest\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\"8\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\"]\n" +
 	"\x15GetListenPathResponse\x12\x1f\n" +
 	"\vlisten_path\x18\x01 \x01(\tR\n" +
-	"listenPath2Y\n" +
+	"listenPath\x12#\n" +
+	"\rconsumer_name\x18\x02 \x01(\tR\fconsumerName2Y\n" +
 	"\aSession\x12N\n" +
 	"\rGetListenPath\x12\x1d.session.GetListenPathRequest\x1a\x1e.session.GetListenPathResponseB\x10Z\x0eproto/session/b\x06proto3"
 

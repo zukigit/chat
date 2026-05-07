@@ -57,8 +57,8 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	// Get the NATS listen path from the backend (includes login_id).
-	listenPath, err := s.client.GetListenPath(ctx, token, "notification")
+	// Get the NATS listen path and consumer name from the backend.
+	listenPath, consumerName, err := s.client.GetListenPath(ctx, token, "notification")
 	if err != nil {
 		st, _ := status.FromError(err)
 		switch st.Code() {
@@ -96,11 +96,11 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	// Deliver incoming NATS messages to the WS client.
 	sub, err := s.js.Subscribe(listenPath, func(msg *nats.Msg) {
 		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
-			lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
+			lib.ErrorLog.Printf("Error writing to websocket: consumerName: %s, err: %v", consumerName, err)
 			return
 		}
 		msg.Ack()
-	}, nats.Durable("noti-"+claims.LoginID), nats.BindStream("SESSIONS"))
+	}, nats.Durable(consumerName), nats.BindStream("SESSIONS"))
 	if err != nil {
 		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to notifications: %v", err))
 		cancel()
@@ -137,8 +137,8 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	// Get the NATS listen path from the backend (includes login_id).
-	listenPath, err := s.client.GetListenPath(ctx, token, "chat")
+	// Get the NATS listen path and consumer name from the backend.
+	listenPath, consumerName, err := s.client.GetListenPath(ctx, token, "chat")
 	if err != nil {
 		st, _ := status.FromError(err)
 		switch st.Code() {
@@ -207,7 +207,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 	sub, err := s.js.Subscribe(listenPath, func(msg *nats.Msg) {
 		var env lib.ChatResponseEnvelope
 		if err := json.Unmarshal(msg.Data, &env); err != nil {
-			lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)
+			lib.ErrorLog.Printf("chat session: unmarshal envelope: consumerName: %s, err: %v", consumerName, err)
 			msg.Ack()
 			return
 		}
@@ -216,7 +216,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		isMessageEvent := env.Type == lib.ChatEventMessage
 		if isMessageEvent {
 			if err := json.Unmarshal(env.Data, &message); err != nil {
-				lib.ErrorLog.Printf("chat session: unmarshal message: loginID: %s, err: %v", claims.LoginID, err)
+				lib.ErrorLog.Printf("chat session: unmarshal message: consumerName: %s, err: %v", consumerName, err)
 				msg.Ack()
 				return
 			}
@@ -227,18 +227,18 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
-			lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
+			lib.ErrorLog.Printf("Error writing to websocket: consumerName: %s, err: %v", consumerName, err)
 			return
 		}
 
 		if isMessageEvent {
 			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
-				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: loginID: %s, err: %v", claims.LoginID, err)
+				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: consumerName: %s, err: %v", consumerName, err)
 			}
 		}
 
 		msg.Ack()
-	}, nats.Durable("chat-"+claims.LoginID), nats.BindStream("SESSIONS"))
+	}, nats.Durable(consumerName), nats.BindStream("SESSIONS"))
 	if err != nil {
 		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to chat: %v", err))
 		cancel()

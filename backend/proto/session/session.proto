@@ -10,6 +10,7 @@ message GetListenPathRequest {
 
 message GetListenPathResponse {
   string listen_path = 1;
+  string consumer_name = 2;
 }
 
 service Session {

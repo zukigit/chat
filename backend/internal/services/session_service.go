@@ -31,9 +31,9 @@ func (s *SessionServer) GetListenPath(ctx context.Context, req *session.GetListe
 
 	switch req.GetType() {
 	case "chat":
-		return &session.GetListenPathResponse{ListenPath: lib.ChatSubjectPrefix + userID}, nil
+		return &session.GetListenPathResponse{ListenPath: lib.ChatSubjectPrefix + userID, ConsumerName: "chat-" + loginID}, nil
 	case "notification":
-		return &session.GetListenPathResponse{ListenPath: lib.NotiSubjectPrefix + userID}, nil
+		return &session.GetListenPathResponse{ListenPath: lib.NotiSubjectPrefix + userID, ConsumerName: "noti-" + loginID}, nil
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "unknown type: %q (must be 'chat' or 'notification')", req.GetType())
 	}
