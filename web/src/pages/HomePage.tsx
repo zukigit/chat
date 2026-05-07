@@ -76,14 +76,19 @@ export default function HomePage() {
     setSentMessages(getSentMessages(conversationId))
   }, [])
 
+  const handleError = useCallback((code: number, message: string, conversationId?: number) => {
+    console.error(`WebSocket error [${code}]: ${message}`)
+    if (conversationId !== undefined) {
+      setSentMessages(getSentMessages(conversationId))
+    }
+  }, [])
+
   const { connected, error: wsError, retryCountdown, send, markAllRead, retrySend } = useChatSession(
     activeConv?.id ?? null,
     handleIncomingMessage,
     handleSent,
     handleDelivered,
-    (code, message) => {
-      console.error(`WebSocket error [${code}]: ${message}`)
-    },
+    handleError,
     () => { loadConversationsRef.current() }
   )
 

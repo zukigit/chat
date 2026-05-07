@@ -9,7 +9,7 @@ interface ChatResponseEnvelope {
   data: StoredMessage | { conversation_id: number; message_id: string } | { code: number; message: string }
 }
 
-export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onSent?: (conversationId: number, messageId: string) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string) => void, onConnect?: () => void) {
+export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onSent?: (conversationId: number, messageId: string) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string, conversationId?: number) => void, onConnect?: () => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const countdownTimer = useRef<number | null>(null)
@@ -111,8 +111,13 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
           markSentSeen(d.conversation_id, d.message_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
         } else if (envelope.type === 'error' && envelope.data) {
-          const e = envelope.data as { code: number; message: string }
-          onErrorRef.current?.(e.code, e.message)
+          const e = envelope.data as { code: number; message: string; conversation_id?: number; message_id?: string }
+          if (e.conversation_id !== undefined && e.message_id) {
+            markSentFailed(e.conversation_id, e.message_id)
+            onErrorRef.current?.(e.code, e.message, e.conversation_id)
+          } else {
+            onErrorRef.current?.(e.code, e.message)
+          }
         }
       } catch {
         // ignore unparseable frames
@@ -134,7 +139,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
 
   const send = useCallback((conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '') => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      markSentFailed(conversationId, content)
+      markSentFailed(conversationId, messageId)
       return
     }
     const config = loadConfig()
@@ -178,7 +183,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
 
   const retrySend = useCallback((_tempId: string, conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '') => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      markSentFailed(conversationId, content)
+      markSentFailed(conversationId, messageId)
       return
     }
     const config = loadConfig()

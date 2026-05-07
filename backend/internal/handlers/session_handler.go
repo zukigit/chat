@@ -194,6 +194,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 				}
 				if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.MessageID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
 					s.sendWSError(conn, 500, fmt.Sprintf("failed to send message: %v", err), req.ConversationID, req.MessageID)
+					continue
 				}
 			case lib.ChatRequestRead:
 				var req readMessageRequest

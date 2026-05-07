@@ -144,9 +144,9 @@ export function clearMessages(): void {
   localStorage.removeItem(SENT_KEY)
 }
 
-export function markSentFailed(conversationId: number, content: string): void {
+export function markSentFailed(conversationId: number, messageId?: string): void {
   const all = loadSent()
-  const s = all.find(x => x.conversation_id === conversationId && x.content === content && x.status === 'sending')
+  const s = all.find(x => x.conversation_id === conversationId && x.tempId === messageId && (x.status === 'sending' || x.status === 'sent'))
   if (s) {
     s.status = 'failed'
     saveSent(all)
