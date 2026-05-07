@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getToken, removeToken, getUsername } from '../auth'
+import { removeToken, getUsername } from '../auth'
 import ConversationList from '../components/ConversationList'
 import FriendsList from '../components/FriendsList'
 import ProfilePanel from '../components/ProfilePanel'
@@ -137,18 +137,8 @@ export default function HomePage() {
     setFriendRequests(prev => prev.filter(r => r.id !== req.id))
   }
 
-  async function handleLogout() {
+  function handleLogout() {
     if (!confirm('Are you sure you want to logout?')) return
-    const token = getToken()
-    if (token) {
-      const config = JSON.parse(localStorage.getItem('chat_config') ?? '{}')
-      if (config.gatewayUrl) {
-        await fetch(`${config.gatewayUrl}/logout`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        }).catch(() => {})
-      }
-    }
     removeToken()
     clearMessages()
     navigate('/login')

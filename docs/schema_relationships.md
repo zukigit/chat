@@ -73,13 +73,6 @@ erDiagram
         bigint conversation_id FK
     }
 
-    sessions {
-        uuid id PK
-        uuid user_userid FK
-        uuid login_id UK
-        timestamptz created_at
-    }
-
     users ||--o{ friendships : "requests (user1_userid)"
     users ||--o{ friendships : "receives (user2_userid)"
     users ||--o{ friendships : "initiates (initiator_userid)"
@@ -93,7 +86,6 @@ erDiagram
     messages ||--o{ messages : "reply (reply_to_message_id)"
     users ||--o{ notifications : "notified (user_id)"
     users ||--o{ notifications : "sends (sender_id)"
-    users ||--o{ sessions : "owns (user_userid)"
 ```
 
 ---
@@ -204,18 +196,6 @@ Notifies a user of an event.
 
 ---
 
-### `sessions`
-Tracks active logins. One row per login (device). Created on login, deleted on logout. Used by `ValidateSession` to confirm a JWT's `login_id` is still active, and by the gateway to name per-login JetStream consumers.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | `UUID` | **PK** — auto-generated |
-| `user_userid` | `UUID` | **FK** → `users.user_id` (CASCADE) |
-| `login_id` | `UUID` | **UNIQUE** — embedded in JWT claims; identifies a specific login session |
-| `created_at` | `TIMESTAMPTZ` | |
-
----
-
 ## Relationship Summary
 
 | From | To | Via | Cardinality |
@@ -233,7 +213,6 @@ Tracks active logins. One row per login (device). Created on login, deleted on l
 | `users` | `dm_peers` | `user1_id` | one-to-many |
 | `users` | `dm_peers` | `user2_id` | one-to-many |
 | `conversations` | `dm_peers` | `conversation_id` | one-to-one |
-| `users` | `sessions` | `user_userid` | one-to-many |
 
 ---
 
@@ -250,4 +229,3 @@ Tracks active logins. One row per login (device). Created on login, deleted on l
 | `idx_friendships_user2_status` | `friendships` | `(user2_userid, status)` | Accepted friends lookup per user (other side) |
 | `idx_friendships_user2_status_time` | `friendships` | `(user2_userid, status, created_at DESC)` | Pending incoming friend requests |
 | `idx_friendships_initiator` | `friendships` | `initiator_userid` | Look up friendships by initiator |
-| `idx_sessions_user` | `sessions` | `user_userid` | Look up all sessions for a user |

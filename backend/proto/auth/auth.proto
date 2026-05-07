@@ -20,9 +20,6 @@ message SignupRequest {
 
 message SignupResponse {}
 
-message LogoutRequest {}
-message LogoutResponse {}
-
 message SearchUsersRequest {
   string query = 1;
 }
@@ -43,6 +40,5 @@ message SearchUsersResponse {
 service Auth {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Signup(SignupRequest) returns (SignupResponse);
-  rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
 }

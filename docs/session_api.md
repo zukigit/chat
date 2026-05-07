@@ -13,7 +13,7 @@ Both endpoints upgrade an HTTP GET request to a WebSocket connection. They requi
 The JWT must contain `login_id` (UUID) and `user_id` (UUID). On connection:
 
 1. The gateway parses the JWT claims (without signature verification — the gRPC backend enforces auth).
-2. `ValidateSession` is called to confirm the session is still active (i.e. the user has not logged out).
+2. `GetListenPath` is called to validate the token and receive the NATS subject to subscribe to.
 3. A durable JetStream consumer is created (or resumed) scoped to this specific login.
 
 Token can be provided in two ways:
@@ -145,7 +145,7 @@ Establishes a persistent WebSocket connection for receiving real-time notificati
 
 | Status | Cause                                               |
 |--------|-----------------------------------------------------|
-| 401    | Missing/invalid token or session not found          |
+| 401    | Missing/invalid token                               |
 | 500    | Failed to create JetStream consumer or upgrade WS   |
 
 ### Error Responses (WebSocket, after upgrade)
@@ -247,7 +247,7 @@ Invalid or unparseable frames from the client result in an `error` event sent ba
 
 | Status | Cause                                               |
 |--------|-----------------------------------------------------|
-| 401    | Missing/invalid token or session not found          |
+| 401    | Missing/invalid token                               |
 | 500    | Failed to create JetStream consumer or upgrade WS   |
 
 ### Error Responses (WebSocket, after upgrade)

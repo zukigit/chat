@@ -70,7 +70,6 @@ func main() {
 	r.HandleFunc("/version", sessionHandler.GetChatEnvelopeRequestVersion).Methods(http.MethodGet)
 	r.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
 	r.HandleFunc("/signup", authHandler.Signup).Methods(http.MethodPost)
-	r.HandleFunc("/logout", authHandler.Logout).Methods(http.MethodPost)
 	r.HandleFunc("/users/search", authHandler.SearchUsers).Methods(http.MethodGet)
 
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)

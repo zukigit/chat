@@ -119,12 +119,6 @@ func (s *AuthServer) Signup(ctx context.Context, req *auth.SignupRequest) (*auth
 	return &auth.SignupResponse{}, nil
 }
 
-// Logout is a no-op since sessions are no longer tracked in the database.
-// Token invalidation is handled via TTL (JWT expiry).
-func (s *AuthServer) Logout(ctx context.Context, _ *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	return &auth.LogoutResponse{}, nil
-}
-
 // SearchUsers searches for users by username or display name
 func (s *AuthServer) SearchUsers(ctx context.Context, req *auth.SearchUsersRequest) (*auth.SearchUsersResponse, error) {
 	if req.Query == "" {

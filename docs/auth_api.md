@@ -125,7 +125,7 @@ Returned on unexpected server errors or backend unavailability.
 
 ## 3. Logout
 
-Invalidates the caller's current session by deleting it from the server. The `login_id` embedded in the JWT is used to identify which session to remove. Multiple devices (each with their own `login_id`) are unaffected.
+Invalidates the caller's current session. Since sessions are no longer tracked server-side, this is a no-op — token invalidation relies on JWT expiry (24 hours).
 
 - **URL path:** `/logout`
 - **Method:** `POST`

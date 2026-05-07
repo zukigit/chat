@@ -30,7 +30,7 @@ Each connected device (identified by `login_id` from the JWT) creates or resumes
 | Chat | `chat-{login_id}` | `sessions.chat.{user_id}` |
 | Notification | `noti-{login_id}` | `sessions.noti.{user_id}` |
 
-Because consumers are per-`login_id`, multiple devices logged in as the same user each receive every message independently.
+The gateway calls `GetListenPath` (gRPC) before establishing the WebSocket to validate the JWT and receive the correct subject path.
 
 ---
 
@@ -105,10 +105,12 @@ The `/sessions/notification` WebSocket runs a separate durable consumer (`noti-{
 sequenceDiagram
     actor Client as Frontend
     participant GW as Gateway
+    participant BE as Backend
     participant NQ as NATS JetStream
 
     Client->>GW: GET /sessions/notification (WS upgrade, Bearer JWT)
-    GW->>GW: ValidateSession (gRPC → Backend)
+    GW->>BE: gRPC GetListenPath(token, "notification")
+    BE-->>GW: listen_path = sessions.noti.{user_id}
     GW->>NQ: CreateOrUpdateConsumer noti-{login_id}<br/>filter: sessions.noti.{user_id}
     loop While connected
         NQ->>GW: Deliver retained + new notifications
