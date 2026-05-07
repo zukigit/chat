@@ -72,7 +72,7 @@ export default function HomePage() {
     setHasUnreadNoti(false)
   }, [])
 
-  const { connected, error: wsError, retryCountdown, send, markAllRead } = useChatSession(
+  const { connected, error: wsError, retryCountdown, send, markAllRead, retrySend } = useChatSession(
     activeConv?.id ?? null,
     handleIncomingMessage,
     handleDelivered,
@@ -178,6 +178,11 @@ export default function HomePage() {
     setSentMessages(getSentMessages(conversationId))
   }
 
+  function handleRetryMessage(tempId: string, conversationId: number, content: string) {
+    retrySend(tempId, conversationId, content)
+    setSentMessages(getSentMessages(conversationId))
+  }
+
   function handleTabChange(newTab: Tab) {
     setTab(newTab)
     clearNotiBadge()
@@ -276,7 +281,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} onBack={() => setActiveConv(null)} />
+      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} onRetry={handleRetryMessage} onBack={() => setActiveConv(null)} />
     </div>
   )
 }

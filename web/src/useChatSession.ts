@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
-import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSeen, type StoredMessage } from './messageStore'
+import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSeen, markSentFailed, type StoredMessage } from './messageStore'
 
 interface ChatResponseEnvelope {
   version: number
@@ -127,7 +127,10 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
   }, [connect])
 
   const send = useCallback((conversationId: number, content: string, messageType = 'text', replyTo = '') => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) return
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      markSentFailed(conversationId, content)
+      return
+    }
     const config = loadConfig()
     const payload: Record<string, unknown> = {
       version: config?.chatRequestVersion ?? 1,
@@ -166,7 +169,28 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
   }, [markRead])
 
-  return { connected, error, retryCountdown, send, markRead, markAllRead, connect }
+  const retrySend = useCallback((_tempId: string, conversationId: number, content: string, messageType = 'text', replyTo = '') => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      markSentFailed(conversationId, content)
+      return
+    }
+    const config = loadConfig()
+    const payload: Record<string, unknown> = {
+      version: config?.chatRequestVersion ?? 1,
+      type: 'send',
+      data: {
+        conversation_id: conversationId,
+        content,
+        message_type: messageType,
+      },
+    }
+    if (replyTo) {
+      ;(payload.data as Record<string, unknown>).reply_to_message_id = replyTo
+    }
+    wsRef.current.send(JSON.stringify(payload))
+  }, [])
+
+  return { connected, error, retryCountdown, send, markRead, markAllRead, connect, retrySend }
 }
 
 function sendRead(ws: WebSocket | null, conversationId: number, messageId: string, senderId: string) {

@@ -16,7 +16,7 @@ export interface SentMessage {
   tempId: string
   conversation_id: number
   content: string
-  status: 'sending' | 'sent' | 'delivered' | 'seen'
+  status: 'sending' | 'sent' | 'delivered' | 'seen' | 'failed'
   created_at?: string
 }
 
@@ -124,4 +124,22 @@ export function removeSent(tempId: string): void {
 export function clearMessages(): void {
   localStorage.removeItem(STORAGE_KEY)
   localStorage.removeItem(SENT_KEY)
+}
+
+export function markSentFailed(conversationId: number, content: string): void {
+  const all = loadSent()
+  const s = all.find(x => x.conversation_id === conversationId && x.content === content && x.status === 'sending')
+  if (s) {
+    s.status = 'failed'
+    saveSent(all)
+  }
+}
+
+export function retrySentMessage(tempId: string): void {
+  const all = loadSent()
+  const s = all.find(x => x.tempId === tempId)
+  if (s && s.status === 'failed') {
+    s.status = 'sending'
+    saveSent(all)
+  }
 }

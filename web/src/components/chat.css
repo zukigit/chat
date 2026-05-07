@@ -252,6 +252,26 @@
   height: 16px;
 }
 
+.msg-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  vertical-align: middle;
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.msg-retry-btn:hover {
+  background: rgba(255, 107, 107, 0.15);
+}
+
 .msg-delivered {
   color: rgba(255,255,255,0.5);
 }

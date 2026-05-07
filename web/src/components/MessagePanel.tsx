@@ -3,7 +3,7 @@ import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import type { ApiConversation } from '../api/conversationsApi'
 import type { StoredMessage, SentMessage } from '../messageStore'
-import { addSentMessage } from '../messageStore'
+import { addSentMessage, retrySentMessage } from '../messageStore'
 
 interface Props {
   conversation: ApiConversation | null
@@ -11,6 +11,7 @@ interface Props {
   sentMessages: SentMessage[]
   currentUsername: string
   onSend: (conversationId: number, content: string, tempId: string) => void
+  onRetry?: (tempId: string, conversationId: number, content: string) => void
   onBack?: () => void
 }
 
@@ -18,7 +19,7 @@ type DisplayMessage =
   | { kind: 'received'; msg: StoredMessage }
   | { kind: 'sent'; msg: SentMessage }
 
-export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend, onBack }: Props) {
+export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend, onRetry, onBack }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -59,7 +60,24 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
     setInput('')
   }
 
-  function renderStatusIcon(status: string) {
+  function renderStatusIcon(status: string, s: SentMessage) {
+    if (status === 'failed') {
+      return (
+        <button
+          className="msg-retry-btn"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onRetry) {
+              retrySentMessage(s.tempId)
+              onRetry(s.tempId, s.conversation_id, s.content)
+            }
+          }}
+          aria-label="Retry send"
+        >
+          ↻
+        </button>
+      )
+    }
     if (status === 'sending') {
       return (
         <span className="msg-status">
@@ -144,7 +162,7 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
                   {s.content}
                   <span className="msg-time">
                     {s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    {renderStatusIcon(s.status)}
+                    {renderStatusIcon(s.status, s)}
                   </span>
                 </div>
               </div>
