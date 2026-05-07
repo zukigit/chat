@@ -33,6 +33,7 @@ message UserResult {
   string display_name = 3;
   string avatar_url = 4;
   string friendship_status = 5;
+  string friendship_initiator_userid = 6;
 }
 
 message SearchUsersResponse {

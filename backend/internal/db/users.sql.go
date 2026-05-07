@@ -97,7 +97,14 @@ SELECT u.user_id, u.user_name, u.display_name, u.avatar_url,
           OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
        LIMIT 1),
       ''
-    ) AS friendship_status
+    ) AS friendship_status,
+    COALESCE(
+      (SELECT f.initiator_userid::text FROM friendships f
+       WHERE (f.user1_userid = $2 AND f.user2_userid = u.user_id)
+          OR (f.user1_userid = u.user_id AND f.user2_userid = $2)
+       LIMIT 1),
+      ''
+    ) AS friendship_initiator_userid
 FROM users u
 WHERE (u.user_name ILIKE '%' || $1 || '%'
     OR u.display_name ILIKE '%' || $1 || '%')
@@ -112,15 +119,16 @@ type SearchUsersParams struct {
 }
 
 type SearchUsersRow struct {
-	UserID           uuid.UUID      `json:"user_id"`
-	UserName         string         `json:"user_name"`
-	DisplayName      sql.NullString `json:"display_name"`
-	AvatarUrl        sql.NullString `json:"avatar_url"`
-	FriendshipStatus interface{}    `json:"friendship_status"`
+	UserID                    uuid.UUID      `json:"user_id"`
+	UserName                  string         `json:"user_name"`
+	DisplayName               sql.NullString `json:"display_name"`
+	AvatarUrl                 sql.NullString `json:"avatar_url"`
+	FriendshipStatus          interface{}    `json:"friendship_status"`
+	FriendshipInitiatorUserid interface{}    `json:"friendship_initiator_userid"`
 }
 
 // Searches for users by username or display name, excluding the caller.
-// Returns the friendship status if a relationship exists, or empty string otherwise.
+// Returns the friendship status and initiator user ID if a relationship exists, or empty string otherwise.
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchUsers, arg.Column1, arg.User1Userid)
 	if err != nil {
@@ -136,6 +144,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 			&i.DisplayName,
 			&i.AvatarUrl,
 			&i.FriendshipStatus,
+			&i.FriendshipInitiatorUserid,
 		); err != nil {
 			return nil, err
 		}

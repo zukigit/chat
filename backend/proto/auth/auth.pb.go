@@ -322,14 +322,15 @@ func (x *SearchUsersRequest) GetQuery() string {
 }
 
 type UserResult struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	UserId           string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	UserName         string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	DisplayName      string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	AvatarUrl        string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	FriendshipStatus string                 `protobuf:"bytes,5,opt,name=friendship_status,json=friendshipStatus,proto3" json:"friendship_status,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	UserId                    string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserName                  string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	DisplayName               string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl                 string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	FriendshipStatus          string                 `protobuf:"bytes,5,opt,name=friendship_status,json=friendshipStatus,proto3" json:"friendship_status,omitempty"`
+	FriendshipInitiatorUserid string                 `protobuf:"bytes,6,opt,name=friendship_initiator_userid,json=friendshipInitiatorUserid,proto3" json:"friendship_initiator_userid,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *UserResult) Reset() {
@@ -397,6 +398,13 @@ func (x *UserResult) GetFriendshipStatus() string {
 	return ""
 }
 
+func (x *UserResult) GetFriendshipInitiatorUserid() string {
+	if x != nil {
+		return x.FriendshipInitiatorUserid
+	}
+	return ""
+}
+
 type SearchUsersResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Users         []*UserResult          `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
@@ -458,7 +466,7 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\rLogoutRequest\"\x10\n" +
 	"\x0eLogoutResponse\"*\n" +
 	"\x12SearchUsersRequest\x12\x14\n" +
-	"\x05query\x18\x01 \x01(\tR\x05query\"\xb1\x01\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\"\xf1\x01\n" +
 	"\n" +
 	"UserResult\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
@@ -466,7 +474,8 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12+\n" +
-	"\x11friendship_status\x18\x05 \x01(\tR\x10friendshipStatus\"=\n" +
+	"\x11friendship_status\x18\x05 \x01(\tR\x10friendshipStatus\x12>\n" +
+	"\x1bfriendship_initiator_userid\x18\x06 \x01(\tR\x19friendshipInitiatorUserid\"=\n" +
 	"\x13SearchUsersResponse\x12&\n" +
 	"\x05users\x18\x01 \x03(\v2\x10.auth.UserResultR\x05users2\xe6\x01\n" +
 	"\x04Auth\x120\n" +

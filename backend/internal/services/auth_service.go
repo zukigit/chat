@@ -185,12 +185,17 @@ func (s *AuthServer) SearchUsers(ctx context.Context, req *auth.SearchUsersReque
 		if s, ok := u.FriendshipStatus.(string); ok {
 			friendshipStatus = s
 		}
+		var friendshipInitiatorUserid string
+		if s, ok := u.FriendshipInitiatorUserid.(string); ok {
+			friendshipInitiatorUserid = s
+		}
 		result := &auth.UserResult{
-			UserId:           u.UserID.String(),
-			UserName:         u.UserName,
-			DisplayName:      u.DisplayName.String,
-			AvatarUrl:        u.AvatarUrl.String,
-			FriendshipStatus: friendshipStatus,
+			UserId:                    u.UserID.String(),
+			UserName:                  u.UserName,
+			DisplayName:               u.DisplayName.String,
+			AvatarUrl:                 u.AvatarUrl.String,
+			FriendshipStatus:          friendshipStatus,
+			FriendshipInitiatorUserid: friendshipInitiatorUserid,
 		}
 		results = append(results, result)
 	}
