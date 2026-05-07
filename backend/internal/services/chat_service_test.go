@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
@@ -116,14 +117,20 @@ func TestSendMessage(t *testing.T) {
 		{"invalid message type", ctxWithUser("alice", ids["alice"]), convID, "hi", "video", codes.InvalidArgument},
 		{"empty content", ctxWithUser("alice", ids["alice"]), convID, "", "text", codes.InvalidArgument},
 		{"zero conversation_id", ctxWithUser("alice", ids["alice"]), 0, "hello", "", codes.InvalidArgument},
+		{"empty message_id", ctxWithUser("alice", ids["alice"]), convID, "hello", "", codes.InvalidArgument},
 		{"non-member", ctxWithUser("carol", ids["carol"]), convID, "hello", "", codes.PermissionDenied},
 		{"no auth", context.Background(), convID, "hello", "", codes.Internal},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			msgID := uuid.New().String()
+			if tc.name == "empty message_id" {
+				msgID = ""
+			}
 			_, err := chatServer.SendMessage(tc.ctx, &pb.SendMessageRequest{
 				ConversationId: tc.convID,
+				MessageId:      msgID,
 				Content:        tc.content,
 				MessageType:    tc.messageType,
 			})
@@ -168,7 +175,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 
 	if _, err := chatServer.SendMessage(
 		ctxWithUser("alice", ids["alice"]),
-		&pb.SendMessageRequest{ConversationId: convID, Content: "hello bob"},
+		&pb.SendMessageRequest{ConversationId: convID, MessageId: uuid.New().String(), Content: "hello bob"},
 	); err != nil {
 		t.Fatalf("SendMessage: %v", err)
 	}
@@ -225,7 +232,7 @@ func TestSendMessage_Notifications(t *testing.T) {
 
 		if _, err := chatServer.SendMessage(
 			ctxWithUser("alice", ids["alice"]),
-			&pb.SendMessageRequest{ConversationId: convID, Content: "hey bob"},
+			&pb.SendMessageRequest{ConversationId: convID, MessageId: uuid.New().String(), Content: "hey bob"},
 		); err != nil {
 			t.Fatalf("SendMessage: %v", err)
 		}
@@ -275,7 +282,7 @@ func TestSendMessage_Notifications(t *testing.T) {
 
 		if _, err := chatServer.SendMessage(
 			ctxWithUser("alice", ids["alice"]),
-			&pb.SendMessageRequest{ConversationId: convID, Content: "hello group"},
+			&pb.SendMessageRequest{ConversationId: convID, MessageId: uuid.New().String(), Content: "hello group"},
 		); err != nil {
 			t.Fatalf("SendMessage: %v", err)
 		}
