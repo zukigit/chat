@@ -290,6 +290,8 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		}
 	}
 
+	// every errors from here on will be ignored
+
 	// prepare ack message
 	ackMsg := lib.SentEvent{
 		ConversationID: req.GetConversationId(),
@@ -303,7 +305,6 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 	}
 
 	// notify other members
-	// every errors from here on will be ignored
 	callerName := lib.CallerFrom(ctx)
 	for _, m := range members {
 		if m.UserID == callerID {
