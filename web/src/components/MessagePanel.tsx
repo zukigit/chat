@@ -11,13 +11,14 @@ interface Props {
   sentMessages: SentMessage[]
   currentUsername: string
   onSend: (conversationId: number, content: string, tempId: string) => void
+  onBack?: () => void
 }
 
 type DisplayMessage =
   | { kind: 'received'; msg: StoredMessage }
   | { kind: 'sent'; msg: SentMessage }
 
-export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend }: Props) {
+export default function MessagePanel({ conversation, messages, sentMessages, currentUsername, onSend, onBack }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -104,6 +105,11 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
     <div className="chat-main">
       {/* Header */}
       <div className="chat-header">
+        <button className="icon-btn-circle chat-back-btn" onClick={onBack} aria-label="Back">
+          <svg className="back-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
         <div className="avatar avatar-sm" style={{ background: avatarColor(username) }}>
           {avatarInitials(displayName, username)}
         </div>

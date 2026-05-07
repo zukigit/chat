@@ -194,7 +194,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="chat-layout">
+    <div className={`chat-layout${activeConv ? ' chat-open' : ''}`}>
       {/* Sidebar */}
       <div className="chat-sidebar">
         {/* Sidebar header with hamburger menu */}
@@ -286,7 +286,7 @@ export default function HomePage() {
       </div>
 
       {/* Right panel */}
-      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} />
+      <MessagePanel conversation={activeConv} messages={messages} sentMessages={currentSent} currentUsername={currentUsername} onSend={handleSendMessage} onBack={() => setActiveConv(null)} />
     </div>
   )
 }
