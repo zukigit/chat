@@ -98,23 +98,31 @@ export function addRemoteSentMessage(conversationId: number, content: string): v
   saveSent(all)
 }
 
-export function markSentDelivered(_conversationId: number, _messageId?: string): void {
+export function markSentSent(conversationId: number, messageId?: string): void {
   const all = loadSent()
-  const sending = all.filter(x => x.conversation_id === _conversationId && x.status === 'sending')
-  if (sending.length > 0) {
-    sending[sending.length - 1].status = 'delivered'
+  const msg = all.find(x => x.conversation_id === conversationId && x.tempId === messageId && x.status === 'sending')
+  if (msg) {
+    msg.status = 'sent'
     saveSent(all)
   }
 }
 
-export function markSentSeen(_conversationId: number, _messageId?: string): void {
+export function markSentDelivered(conversationId: number, messageId?: string): void {
   const all = loadSent()
-  all.forEach(s => {
-    if (s.conversation_id === _conversationId && (s.status === 'sent' || s.status === 'delivered')) {
-      s.status = 'seen'
-    }
-  })
-  saveSent(all)
+  const msg = all.find(x => x.conversation_id === conversationId && x.tempId === messageId && x.status === 'sent')
+  if (msg) {
+    msg.status = 'delivered'
+    saveSent(all)
+  }
+}
+
+export function markSentSeen(conversationId: number, messageId?: string): void {
+  const all = loadSent()
+  const msg = all.find(x => x.conversation_id === conversationId && x.tempId === messageId && (x.status === 'sent' || x.status === 'delivered'))
+  if (msg) {
+    msg.status = 'seen'
+    saveSent(all)
+  }
 }
 
 export function markSentByContent(conversationId: number, content: string): void {

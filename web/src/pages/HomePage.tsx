@@ -72,9 +72,14 @@ export default function HomePage() {
     setHasUnreadNoti(false)
   }, [])
 
+  const handleSent = useCallback((conversationId: number) => {
+    setSentMessages(getSentMessages(conversationId))
+  }, [])
+
   const { connected, error: wsError, retryCountdown, send, markAllRead, retrySend } = useChatSession(
     activeConv?.id ?? null,
     handleIncomingMessage,
+    handleSent,
     handleDelivered,
     (code, message) => {
       console.error(`WebSocket error [${code}]: ${message}`)

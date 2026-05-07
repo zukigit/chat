@@ -80,9 +80,9 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
     }
     if (status === 'sending') {
       return (
-        <span className="msg-status">
+        <span className="msg-status msg-sending">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
+            <circle cx="12" cy="12" r="3" />
           </svg>
         </span>
       )

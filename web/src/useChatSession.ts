@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
-import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSeen, markSentFailed, type StoredMessage } from './messageStore'
+import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSent, markSentSeen, markSentFailed, type StoredMessage } from './messageStore'
 
 interface ChatResponseEnvelope {
   version: number
@@ -9,12 +9,13 @@ interface ChatResponseEnvelope {
   data: StoredMessage | { conversation_id: number; message_id: string } | { code: number; message: string }
 }
 
-export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string) => void, onConnect?: () => void) {
+export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onSent?: (conversationId: number, messageId: string) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string) => void, onConnect?: () => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const countdownTimer = useRef<number | null>(null)
   const activeConvIdRef = useRef(activeConversationId)
   const onMessageRef = useRef(onMessage)
+  const onSentRef = useRef(onSent)
   const onDeliveredRef = useRef(onDelivered)
   const onErrorRef = useRef(onError)
   const onConnectRef = useRef(onConnect)
@@ -25,10 +26,11 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
   useEffect(() => {
     activeConvIdRef.current = activeConversationId
     onMessageRef.current = onMessage
+    onSentRef.current = onSent
     onDeliveredRef.current = onDelivered
     onErrorRef.current = onError
     onConnectRef.current = onConnect
-  }, [activeConversationId, onMessage, onDelivered, onError, onConnect])
+  }, [activeConversationId, onMessage, onSent, onDelivered, onError, onConnect])
 
   const connect = useCallback(() => {
     const token = getToken()
@@ -96,6 +98,10 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
               } catch { /* ignore */ }
             }
           }
+        } else if (envelope.type === 'sent' && envelope.data) {
+          const s = envelope.data as { conversation_id: number; message_id: string }
+          markSentSent(s.conversation_id, s.message_id)
+          onSentRef.current?.(s.conversation_id, s.message_id)
         } else if (envelope.type === 'delivered' && envelope.data) {
           const d = envelope.data as { conversation_id: number; message_id: string }
           markSentDelivered(d.conversation_id, d.message_id)
