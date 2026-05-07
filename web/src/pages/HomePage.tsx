@@ -278,6 +278,7 @@ export default function HomePage() {
             onStartChat={handleStartChat}
             onAccepted={handleAccepted}
             onDeclined={handleDeclined}
+            onRefreshFriends={() => { loadFriends().catch(console.error) }}
           />
         ) : (
           <ProfilePanel username={currentUsername} />

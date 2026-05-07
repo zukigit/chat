@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
-import { getToken } from '../auth'
+import { getToken, getUserId } from '../auth'
 import { loadConfig } from '../config'
+import { acceptFriendRequest, rejectFriendRequest } from '../api/friendsApi'
 
 interface SearchResultUser {
   user_id: string
@@ -10,6 +11,7 @@ interface SearchResultUser {
   display_name: string
   avatar_url: string
   friendship_status: string
+  friendship_initiator_userid: string
 }
 
 interface Props {
@@ -17,11 +19,13 @@ interface Props {
   onClose: () => void
   onOpen: () => void
   onStartChat?: (username: string) => Promise<void>
+  onAccepted?: (username: string) => void
+  onDeclined?: (username: string) => void
 }
 
-type RequestState = 'idle' | 'loading' | 'success' | 'error'
+type RequestState = 'idle' | 'loading' | 'success' | 'error' | 'accepted' | 'declined'
 
-function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (username: string) => Promise<void> }) {
+function SearchResults({ open, onStartChat, onAccepted, onDeclined }: { open: boolean; onStartChat?: (username: string) => Promise<void>; onAccepted?: (username: string) => void; onDeclined?: (username: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [results, setResults] = useState<SearchResultUser[]>([])
   const [requestStates, setRequestStates] = useState<Record<string, RequestState>>({})
@@ -29,6 +33,8 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [chatLoadingId, setChatLoadingId] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const currentUserId = useRef('')
 
   useEffect(() => {
     if (open) {
@@ -38,7 +44,9 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
       setSearching(false)
       setHasSearched(false)
       setChatLoadingId(null)
+      setActionLoading(null)
       if (inputRef.current) inputRef.current.value = ''
+      currentUserId.current = getUserId() ?? ''
     }
   }, [open])
 
@@ -96,6 +104,36 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
     }
   }
 
+  async function handleAccept(username: string, userId: string) {
+    if (actionLoading) return
+    setActionLoading(`${userId}-accept`)
+    setRequestErrors(e => { const n = { ...e }; delete n[userId]; return n })
+    try {
+      await acceptFriendRequest(username)
+      setRequestStates(s => ({ ...s, [userId]: 'accepted' }))
+      onAccepted?.(username)
+    } catch (err) {
+      setRequestErrors(e => ({ ...e, [userId]: (err as Error).message }))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handleDecline(username: string, userId: string) {
+    if (actionLoading) return
+    setActionLoading(`${userId}-decline`)
+    setRequestErrors(e => { const n = { ...e }; delete n[userId]; return n })
+    try {
+      await rejectFriendRequest(username)
+      setRequestStates(s => ({ ...s, [userId]: 'declined' }))
+      onDeclined?.(username)
+    } catch (err) {
+      setRequestErrors(e => ({ ...e, [userId]: (err as Error).message }))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   async function handleChat(u: SearchResultUser) {
     if (!onStartChat || chatLoadingId) return
     setChatLoadingId(u.user_id)
@@ -140,6 +178,8 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
           const state = requestStates[u.user_id] ?? 'idle'
           const isAccepted = u.friendship_status === 'accepted'
           const isPending = u.friendship_status === 'pending'
+          const isIncomingRequest = isPending && u.friendship_initiator_userid !== currentUserId.current
+          const isOutgoingRequest = isPending && u.friendship_initiator_userid === currentUserId.current
           return (
             <div key={u.user_id} className="modal-user-row">
               <div className="avatar" style={{ background: avatarColor(u.user_name) }}>
@@ -152,7 +192,7 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
                   <div className="error-text">{requestErrors[u.user_id]}</div>
                 )}
               </div>
-              {isAccepted ? (
+              {(isAccepted || state === 'accepted') ? (
                 <button
                   className="action-btn primary modal-action-fixed"
                   title="Send message"
@@ -167,7 +207,24 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
                     'Chat'
                   )}
                 </button>
-              ) : isPending || state === 'success' ? (
+              ) : isIncomingRequest && state !== 'declined' ? (
+                <div className="modal-request-actions">
+                  <button
+                    className="action-btn primary modal-action-sm"
+                    onClick={() => handleAccept(u.user_name, u.user_id)}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === `${u.user_id}-accept` ? '…' : 'Accept'}
+                  </button>
+                  <button
+                    className="action-btn secondary modal-action-sm"
+                    onClick={() => handleDecline(u.user_name, u.user_id)}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === `${u.user_id}-decline` ? '…' : 'Decline'}
+                  </button>
+                </div>
+              ) : isOutgoingRequest || state === 'success' ? (
                 <span className="modal-added-label modal-action-fixed">Sent</span>
               ) : state === 'loading' ? (
                 <span className="modal-action-fixed" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -188,7 +245,7 @@ function SearchResults({ open, onStartChat }: { open: boolean; onStartChat?: (us
   )
 }
 
-export default function AddFriendModal({ open, onClose, onStartChat }: Props) {
+export default function AddFriendModal({ open, onClose, onStartChat, onAccepted, onDeclined }: Props) {
   return (
     <div className={`modal-overlay${open ? ' modal-open' : ''}`} onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -201,7 +258,7 @@ export default function AddFriendModal({ open, onClose, onStartChat }: Props) {
             </svg>
           </button>
         </div>
-        <SearchResults open={open} onStartChat={onStartChat} />
+        <SearchResults open={open} onStartChat={onStartChat} onAccepted={onAccepted} onDeclined={onDeclined} />
       </div>
     </div>
   )

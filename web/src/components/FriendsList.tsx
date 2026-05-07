@@ -11,9 +11,10 @@ interface Props {
   onStartChat: (friend: Friend) => Promise<void>
   onAccepted?: (req: FriendRequest) => void
   onDeclined?: (req: FriendRequest) => void
+  onRefreshFriends?: () => void
 }
 
-export default function FriendsList({ friends, friendRequests, onStartChat, onAccepted, onDeclined }: Props) {
+export default function FriendsList({ friends, friendRequests, onStartChat, onAccepted, onDeclined, onRefreshFriends }: Props) {
   const [requestsOpen, setRequestsOpen] = useState(true)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -164,7 +165,13 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
           const friend = friends.find(f => f.username === username)
           if (friend) {
             await onStartChat(friend)
+          } else {
+            await onStartChat({ id: username, username, displayName: username })
           }
+        }} onAccepted={() => {
+          onRefreshFriends?.()
+        }} onDeclined={() => {
+          onRefreshFriends?.()
         }} />
       </div>
     </>

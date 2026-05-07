@@ -490,6 +490,17 @@
   justify-content: center;
 }
 
+.modal-request-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.modal-action-sm {
+  padding: 3px 8px;
+  min-width: auto;
+}
+
 /* ── Error ── */
 .error-text {
   font-size: 11px;
