@@ -157,8 +157,10 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
         </div>
         <button className="fab" title="Search Users" onClick={() => setShowAddModal(true)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <circle cx="18" cy="16" r="3" />
+            <line x1="22" y1="22" x2="20.5" y2="20.5" />
           </svg>
         </button>
         <AddFriendModal open={showAddModal} onClose={() => setShowAddModal(false)} onOpen={() => setShowAddModal(true)} onStartChat={async (username: string) => {
