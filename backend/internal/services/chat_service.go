@@ -190,6 +190,10 @@ func (s *ChatServer) createOrGetDmConversation(ctx context.Context, q *db.Querie
 // SendMessage posts a message to a conversation on behalf of the authenticated caller.
 // The caller must be a member of the conversation.
 func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
+	if s.notif == nil {
+		return nil, status.Error(codes.Internal, "s.notif is nil")
+	}
+
 	callerID, err := lib.CallerUUID(ctx)
 	if err != nil {
 		return nil, err
@@ -198,27 +202,27 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 	if req.GetContent() == "" {
 		return nil, status.Error(codes.InvalidArgument, "content is required")
 	}
+
 	if req.GetConversationId() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
+	}
+
+	if req.GetMessageId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "message_id is required")
 	}
 
 	msgType := db.MessageType(req.GetMessageType())
 	if msgType == "" {
 		msgType = db.MessageTypeText
 	}
+
 	switch msgType {
 	case db.MessageTypeText, db.MessageTypeImage, db.MessageTypeFile, db.MessageTypeAudio:
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid message_type %q", msgType)
 	}
 
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "SendMessage: begin tx: %v", err)
-	}
-	defer tx.Rollback()
-
-	q := db.New(tx)
+	q := db.New(s.sqlDB)
 
 	isMember, err := q.IsMember(ctx, db.IsMemberParams{
 		ConversationID: req.GetConversationId(),
@@ -227,10 +231,12 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "SendMessage: check membership: %v", err)
 	}
+
 	if !isMember {
 		return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
 	}
 
+	// get reply message id
 	var replyTo uuid.NullUUID
 	if r := req.GetReplyToMessageId(); r != "" {
 		parsed, err := uuid.Parse(r)
@@ -240,19 +246,25 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		replyTo = uuid.NullUUID{Valid: true, UUID: parsed}
 	}
 
-	if req.GetMessageId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "message_id is required")
-	}
+	// get message id
 	msgID, err := uuid.Parse(req.GetMessageId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid message_id: %v", err)
 	}
 
+	// get caller login id
 	callerLoginID, err := uuid.Parse(lib.CallerLoginID(ctx))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "SendMessage: parse login_id: %v", err)
 	}
 
+	// Get all members of the conversation.
+	members, err := q.GetConversationMembers(ctx, req.GetConversationId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SendMessage: get members: %v", err)
+	}
+
+	// prepare message
 	msg := db.Message{
 		ID:               msgID,
 		ConversationID:   req.GetConversationId(),
@@ -265,38 +277,30 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		MediaUrl:         sql.NullString{},
 	}
 
-	// Notify all conversation members except the sender.
-	members, err := q.GetConversationMembers(ctx, req.GetConversationId())
+	msgBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventMessage, msg)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "SendMessage: get members: %v", err)
+		return nil, status.Errorf(codes.Internal, "SendMessage: create message envelope: %v", err)
 	}
+
+	// publish the message to NATs
+	for _, m := range members {
+		s.notif.publishIfOnline(m.UserID, lib.ChatSubjectPrefix, msgBytes)
+	}
+
+	// notify other members
+	// every errors from here on will be ignored
 	callerName := lib.CallerFrom(ctx)
 	for _, m := range members {
 		if m.UserID == callerID {
 			continue
 		}
-		if err := s.notif.Send(ctx, q, db.CreateNotificationParams{
+		s.notif.Send(ctx, q, db.CreateNotificationParams{
 			UserID:      m.UserID,
 			SenderID:    uuid.NullUUID{Valid: true, UUID: callerID},
 			Type:        db.NotificationTypeMessage,
 			Message:     fmt.Sprintf("%s sent a message", callerName),
 			ReferenceID: sql.NullInt64{Valid: true, Int64: req.GetConversationId()},
-		}); err != nil {
-			return nil, status.Errorf(codes.Internal, "SendMessage: notify member: %v", err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, status.Errorf(codes.Internal, "SendMessage: commit: %v", err)
-	}
-
-	if s.notif != nil {
-		msgBytes, err := lib.NewChatResponseEnvelope(lib.ChatEventMessage, msg)
-		if err == nil {
-			for _, m := range members {
-				s.notif.publishIfOnline(m.UserID, lib.ChatSubjectPrefix, msgBytes)
-			}
-		}
+		})
 	}
 
 	return &pb.SendMessageResponse{MessageId: msg.ID.String()}, nil

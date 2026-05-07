@@ -90,7 +90,10 @@ func TestCreateConversation_Group(t *testing.T) {
 
 func TestSendMessage(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	chatServer := services.NewChatServer(sqlDB, nil)
+	js := setupTestNats(t)
+
+	notifServer := services.NewNotificationServer(sqlDB, js)
+	chatServer := services.NewChatServer(sqlDB, notifServer)
 	ids := createTestUsers(t, sqlDB, "alice", "bob", "carol")
 	makeFriends(t, sqlDB, ids["alice"], ids["bob"])
 
