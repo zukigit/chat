@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import type { ApiConversation } from '../api/conversationsApi'
 import type { StoredMessage } from '../messageStore'
+import SearchConversationModal from './SearchConversationModal'
 
 interface Props {
   conversations: ApiConversation[]
@@ -12,16 +14,31 @@ interface Props {
 }
 
 export default function ConversationList({ conversations, activeId, currentUsername, messages, onSelect }: Props) {
+  const [showSearchModal, setShowSearchModal] = useState(false)
+
+  const searchIcon = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  )
+
   if (conversations.length === 0) {
     return (
-      <div className="sidebar-list-empty">
-        No conversations yet
+      <div className="friends-wrapper">
+        <div className="sidebar-list-empty">
+          No conversations yet
+        </div>
+        <button className="fab" title="Search Conversations" onClick={() => setShowSearchModal(true)}>
+          {searchIcon}
+        </button>
+        <SearchConversationModal open={showSearchModal} onClose={() => setShowSearchModal(false)} onSelect={onSelect} />
       </div>
     )
   }
 
   return (
-    <>
+    <div className="friends-wrapper">
       <div className="sidebar-list">
         {conversations.map(c => {
           const otherMember = c.members.find(m => m.username !== currentUsername)
@@ -55,6 +72,10 @@ export default function ConversationList({ conversations, activeId, currentUsern
           )
         })}
       </div>
-    </>
+      <button className="fab" title="Search Conversations" onClick={() => setShowSearchModal(true)}>
+        {searchIcon}
+      </button>
+      <SearchConversationModal open={showSearchModal} onClose={() => setShowSearchModal(false)} onSelect={onSelect} />
+    </div>
   )
 }

@@ -2,7 +2,7 @@ const CONFIG_KEY = 'chat_config'
 
 export interface Config {
   gatewayUrl: string
-  version: number
+  chatRequestVersion: number
 }
 
 export function loadConfig(): Config | null {

@@ -83,6 +83,10 @@ message GetConversationsResponse {
 
 message GetConversationsRequest {}
 
+message GetConversationsByNameRequest {
+  string name = 1;
+}
+
 service Chat {
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
@@ -90,5 +94,6 @@ service Chat {
   rpc UpdateLastReadMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
   rpc UpdateLastDeliveredMessage(UpdateMessageRequest) returns (UpdateMessageResponse);
   rpc GetConversations(GetConversationsRequest) returns (GetConversationsResponse);
+  rpc GetConversationsByName(GetConversationsByNameRequest) returns (GetConversationsResponse);
 }
 

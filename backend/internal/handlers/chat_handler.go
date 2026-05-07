@@ -156,3 +156,44 @@ func (h *ChatHandler) GetConversations(w http.ResponseWriter, r *http.Request) {
 		Data:    resp,
 	})
 }
+
+// GetConversationsByName handles GET /conversations/search
+// Query params: name (required)
+func (h *ChatHandler) GetConversationsByName(w http.ResponseWriter, r *http.Request) {
+	token, ok := lib.BearerToken(r)
+	if !ok {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{
+			Success: false,
+			Message: "missing or malformed Authorization header",
+		})
+		return
+	}
+
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{
+			Success: false,
+			Message: "name query parameter is required",
+		})
+		return
+	}
+
+	resp, err := h.client.GetConversationsByName(r.Context(), token, name)
+	if err != nil {
+		st, _ := status.FromError(err)
+		switch st.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: st.Message()})
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: st.Message()})
+		}
+		return
+	}
+
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Data:    resp,
+	})
+}

@@ -37,13 +37,21 @@ type createConversationRequest struct {
 	MembersUsername []string `json:"members_username"`
 }
 
-// chatSendRequest is the JSON payload a client sends over the chat WebSocket
+// sendMessageRequest is the JSON payload a client sends over the chat WebSocket
 // to post a message to a conversation.
-type chatSendRequest struct {
+type sendMessageRequest struct {
 	ConversationID   int64  `json:"conversation_id"`
 	Content          string `json:"content"`
 	MessageType      string `json:"message_type,omitempty"`
 	ReplyToMessageID int64  `json:"reply_to_message_id,omitempty"`
+}
+
+// readMessageRequest is the JSON payload a client sends over the chat
+// WebSocket to mark messages in a conversation as read.
+type readMessageRequest struct {
+	ConversationID int64  `json:"conversation_id"`
+	MessageID      int64  `json:"message_id"`
+	SenderID       string `json:"sender_id"`
 }
 
 var upgrader = websocket.Upgrader{

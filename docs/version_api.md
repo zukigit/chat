@@ -1,6 +1,6 @@
 # Version API
 
-Returns the current chat protocol version number. Clients can use this to confirm compatibility before connecting.
+Returns the current chat protocol version numbers. Clients should call this before establishing a WebSocket chat session to ensure they use the correct `ChatRequestEnvelope` version.
 
 Base path: `http://<GATEWAY_ADDRESS>:8080` (or as configured by `GATEWAY_LISTEN_ADDRESS`)
 
@@ -20,9 +20,13 @@ Base path: `http://<GATEWAY_ADDRESS>:8080` (or as configured by `GATEWAY_LISTEN_
 {
   "success": true,
   "data": {
-    "version": 1
+    "chat_request_version": 1
   }
 }
 ```
 
-The `version` field reflects `ChatProtocolVersion` in the backend (`lib/chat_envelope.go`). It is incremented on breaking changes to the WebSocket message envelope format.
+| Field                  | Type  | Description                                                        |
+|------------------------|-------|--------------------------------------------------------------------|
+| `chat_request_version` | `int` | Version to use in `ChatRequestEnvelope.version` for client requests |
+
+The server-to-client `ChatResponseEnvelope.version` is included in every response frame — clients do not need to fetch it separately.

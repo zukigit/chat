@@ -172,8 +172,8 @@ func (s *AuthServer) SearchUsers(ctx context.Context, req *auth.SearchUsersReque
 	queries := db.New(s.sqlDB)
 
 	users, err := queries.SearchUsers(ctx, db.SearchUsersParams{
-		Column1: sql.NullString{String: req.Query, Valid: true},
-		UserID:  callerID,
+		Column1:     sql.NullString{String: req.Query, Valid: true},
+		User1Userid: callerID,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "search users: %v", err)
@@ -181,11 +181,16 @@ func (s *AuthServer) SearchUsers(ctx context.Context, req *auth.SearchUsersReque
 
 	var results []*auth.UserResult
 	for _, u := range users {
+		var friendshipStatus string
+		if s, ok := u.FriendshipStatus.(string); ok {
+			friendshipStatus = s
+		}
 		result := &auth.UserResult{
-			UserId:      u.UserID.String(),
-			UserName:    u.UserName,
-			DisplayName: u.DisplayName.String,
-			AvatarUrl:   u.AvatarUrl.String,
+			UserId:           u.UserID.String(),
+			UserName:         u.UserName,
+			DisplayName:      u.DisplayName.String,
+			AvatarUrl:        u.AvatarUrl.String,
+			FriendshipStatus: friendshipStatus,
 		}
 		results = append(results, result)
 	}

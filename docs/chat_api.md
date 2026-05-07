@@ -252,3 +252,80 @@ Returned when the caller is not a member of the specified conversation.
   "message": "<error detail>"
 }
 ```
+
+---
+
+## 4. Search Conversations by Name
+
+Searches conversations that the authenticated user is a member of.
+- For **group** conversations: matches against the conversation `name`.
+- For **DM** conversations: matches against the other member's `username`.
+
+- **URL path:** `/conversations/search`
+- **Method:** `GET`
+
+### Query Parameters
+
+| Parameter | Type     | Required | Description                                                        |
+|-----------|----------|----------|--------------------------------------------------------------------|
+| `name`    | `string` | Yes      | Search pattern (case-insensitive substring match)                  |
+
+### Example Request
+
+```
+GET /conversations/search?name=alice
+Authorization: Bearer <JWT_STRING>
+```
+
+### Responses
+
+#### 200 OK (Success)
+
+```json
+{
+  "success": true,
+  "data": {
+    "conversations": [
+      {
+        "id": 42,
+        "is_group": false,
+        "name": "",
+        "updated_at": "2024-01-15T10:30:00Z",
+        "members": [
+          {
+            "user_id": "550e8400-e29b-41d4-a716-446655440000",
+            "username": "alice",
+            "display_name": "Alice",
+            "avatar_url": ""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### 400 Bad Request
+Returned when `name` query parameter is missing or empty.
+```json
+{
+  "success": false,
+  "message": "name query parameter is required"
+}
+```
+
+#### 401 Unauthorized
+```json
+{
+  "success": false,
+  "message": "missing or malformed Authorization header"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "success": false,
+  "message": "<error detail>"
+}
+```

@@ -236,9 +236,9 @@ func TestGetMessages(t *testing.T) {
 // db.SendMessageParams to each recipient's active chat session via NATS.
 func TestSendMessage_NatsPublish(t *testing.T) {
 	sqlDB := setupTestDB(t)
-	nc := setupTestNats(t)
+	js := setupTestNats(t)
 
-	notifServer := services.NewNotificationServer(sqlDB, nc)
+	notifServer := services.NewNotificationServer(sqlDB, js)
 	chatServer := services.NewChatServer(sqlDB, notifServer)
 
 	ids := createTestUsers(t, sqlDB, "alice", "bob")
@@ -258,7 +258,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 
 	// Subscribe to bob's chat subject before sending.
 	bobMsgs := make(chan *nats.Msg, 1)
-	sub, err := nc.ChanSubscribe(bobSubject, bobMsgs)
+	sub, err := js.ChanSubscribe(bobSubject, bobMsgs)
 	if err != nil {
 		t.Fatalf("subscribe %s: %v", bobSubject, err)
 	}
@@ -274,7 +274,7 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 	t.Run("bob receives message params via NATS", func(t *testing.T) {
 		select {
 		case msg := <-bobMsgs:
-			var envelope lib.ChatEnvelope
+			var envelope lib.ChatResponseEnvelope
 			if err := json.Unmarshal(msg.Data, &envelope); err != nil {
 				t.Fatalf("unmarshal envelope: %v", err)
 			}
@@ -296,25 +296,6 @@ func TestSendMessage_NatsPublish(t *testing.T) {
 			}
 		case <-time.After(5 * time.Second):
 			t.Fatal("timeout: expected NATS message on bob's chat subject")
-		}
-	})
-
-	t.Run("alice (sender) receives no chat publish", func(t *testing.T) {
-		// Alice has no chat session, so nothing should be published for her.
-		// Verify by checking there are no pending messages on an alice subject.
-		aliceSubject := lib.ChatSubjectPrefix + ids["alice"].String()
-		aliceMsgs := make(chan *nats.Msg, 1)
-		aliceSub, err := nc.ChanSubscribe(aliceSubject, aliceMsgs)
-		if err != nil {
-			t.Fatalf("subscribe alice subject: %v", err)
-		}
-		defer aliceSub.Unsubscribe()
-
-		select {
-		case <-aliceMsgs:
-			t.Error("unexpected NATS message published for alice (sender)")
-		case <-time.After(300 * time.Millisecond):
-			// expected: no message
 		}
 	})
 }

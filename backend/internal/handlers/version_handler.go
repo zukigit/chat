@@ -10,6 +10,6 @@ import (
 func GetVersion(w http.ResponseWriter, r *http.Request) {
 	lib.WriteJSON(w, http.StatusOK, lib.Response{
 		Success: true,
-		Data:    map[string]int{"version": lib.ChatProtocolVersion},
+		Data:    map[string]int{"version": lib.ChatResponseEnvelopeVersion},
 	})
 }

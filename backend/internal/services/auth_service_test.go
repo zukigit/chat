@@ -122,10 +122,41 @@ func TestSearchUsers(t *testing.T) {
 		}
 	}
 
+	// Create a friendship between zuki and alice (accepted).
+	zuki, err := q.GetUserByUsername(t.Context(), "zuki")
+	if err != nil {
+		t.Fatalf("failed to fetch zuki: %v", err)
+	}
+	alice, err := q.GetUserByUsername(t.Context(), "alice")
+	if err != nil {
+		t.Fatalf("failed to fetch alice: %v", err)
+	}
+	// Ensure canonical ordering (smaller UUID first).
+	first, second := zuki.UserID, alice.UserID
+	if first.String() > second.String() {
+		first, second = second, first
+	}
+	_, err = q.SendFriendRequest(t.Context(), db.SendFriendRequestParams{
+		User1Userid:     first,
+		User2Userid:     second,
+		InitiatorUserid: zuki.UserID,
+	})
+	if err != nil {
+		t.Fatalf("failed to create friendship: %v", err)
+	}
+	_, err = q.UpdateFriendshipStatus(t.Context(), db.UpdateFriendshipStatusParams{
+		User1Userid: first,
+		User2Userid: second,
+		Status:      db.FriendshipStatusAccepted,
+	})
+	if err != nil {
+		t.Fatalf("failed to update friendship status: %v", err)
+	}
+
 	authServer := services.NewAuthServer(sqlDb)
 
-	// SearchUsers requires a caller identity in the context (it excludes the
-	// caller and existing friends from results). Use bob as the caller.
+	// SearchUsers returns all matching users (including friends), with
+	// friendship_status populated for existing friendships. Use bob as the caller.
 	caller, err := q.GetUserByUsername(t.Context(), "bob")
 	if err != nil {
 		t.Fatalf("failed to fetch caller user: %v", err)
@@ -163,5 +194,32 @@ func TestSearchUsers(t *testing.T) {
 				t.Errorf("expected %d results, got %d", tt.wantCount, len(resp.Users))
 			}
 		})
+	}
+
+	// Verify friendship_status is populated correctly.
+	// Search as zuki — should see alice with friendship_status="accepted".
+	zukiCtx := ctxWithUser(zuki.UserName, zuki.UserID)
+	resp, err := authServer.SearchUsers(zukiCtx, &auth.SearchUsersRequest{Query: "alice"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Users) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(resp.Users))
+	}
+	if resp.Users[0].FriendshipStatus != "accepted" {
+		t.Errorf("expected friendship_status=%q, got %q", "accepted", resp.Users[0].FriendshipStatus)
+	}
+
+	// Search as bob — should see alice with empty friendship_status.
+	bobCtx := ctxWithUser(caller.UserName, caller.UserID)
+	resp, err = authServer.SearchUsers(bobCtx, &auth.SearchUsersRequest{Query: "alice"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Users) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(resp.Users))
+	}
+	if resp.Users[0].FriendshipStatus != "" {
+		t.Errorf("expected empty friendship_status, got %q", resp.Users[0].FriendshipStatus)
 	}
 }

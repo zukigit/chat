@@ -16,7 +16,7 @@ export interface SentMessage {
   tempId: string
   conversation_id: number
   content: string
-  status: 'sending' | 'sent' | 'delivered'
+  status: 'sending' | 'sent' | 'delivered' | 'seen'
   created_at?: string
 }
 
@@ -67,7 +67,7 @@ export function addMessage(msg: StoredMessage): void {
     all[key].sort((a, b) => a.id - b.id)
   }
   saveAll(all)
-  const sent = loadSent().filter(s => !(s.conversation_id === msg.conversation_id && s.content === msg.content))
+  const sent = loadSent().filter(s => !(s.conversation_id === msg.conversation_id && s.content === msg.content && !s.tempId.startsWith('sent-remote-')))
   saveSent(sent)
 }
 
@@ -80,13 +80,31 @@ export function addSentMessage(conversationId: number, content: string): SentMes
   return sent
 }
 
-export function markSentDelivered(conversationId: number): void {
+export function addRemoteSentMessage(conversationId: number, content: string): void {
   const all = loadSent()
-  const s = all.find(x => x.conversation_id === conversationId && x.status === 'sending')
-  if (s) {
-    s.status = 'delivered'
+  if (all.some(s => s.conversation_id === conversationId && s.content === content && s.tempId.startsWith('sent-remote-'))) return
+  const tempId = `sent-remote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  all.push({ tempId, conversation_id: conversationId, content, status: 'sending', created_at: new Date().toISOString() })
+  saveSent(all)
+}
+
+export function markSentDelivered(_conversationId: number, _messageId?: number): void {
+  const all = loadSent()
+  const sending = all.filter(x => x.conversation_id === _conversationId && x.status === 'sending')
+  if (sending.length > 0) {
+    sending[sending.length - 1].status = 'delivered'
     saveSent(all)
   }
+}
+
+export function markSentSeen(_conversationId: number, _messageId?: number): void {
+  const all = loadSent()
+  all.forEach(s => {
+    if (s.conversation_id === _conversationId && (s.status === 'sent' || s.status === 'delivered')) {
+      s.status = 'seen'
+    }
+  })
+  saveSent(all)
 }
 
 export function markSentByContent(conversationId: number, content: string): void {

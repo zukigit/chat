@@ -131,6 +131,7 @@ func makeFriends(t *testing.T, sqlDB *sql.DB, id1, id2 uuid.UUID) {
 func ctxWithUser(username string, userID uuid.UUID) context.Context {
 	ctx := context.WithValue(context.Background(), lib.ContextKeyUsername, username)
 	ctx = context.WithValue(ctx, lib.ContextKeyUserID, userID.String())
+	ctx = context.WithValue(ctx, lib.ContextKeyLoginID, uuid.NewString())
 	return ctx
 }
 
@@ -144,7 +145,7 @@ func grpcCode(err error) codes.Code {
 
 // setupTestNats starts a throwaway NATS container and returns a connected
 // *nats.Conn. The container and connection are cleaned up when the test ends.
-func setupTestNats(t *testing.T) *nats.Conn {
+func setupTestNats(t *testing.T) nats.JetStreamContext {
 	t.Helper()
 	ctx := context.Background()
 
@@ -152,6 +153,7 @@ func setupTestNats(t *testing.T) *nats.Conn {
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "nats:latest",
 			ExposedPorts: []string{"4222/tcp"},
+			Cmd:          []string{"-js"},
 			WaitingFor:   wait.ForLog("Server is ready"),
 		},
 		Started: true,
@@ -170,11 +172,11 @@ func setupTestNats(t *testing.T) *nats.Conn {
 		t.Fatalf("setupTestNats: get port: %v", err)
 	}
 
-	nc, err := nats.Connect(fmt.Sprintf("nats://%s:%s", host, port.Port()))
+	js, nc, err := lib.GetJetStream(fmt.Sprintf("nats://%s:%s", host, port.Port()))
 	if err != nil {
-		t.Fatalf("setupTestNats: connect: %v", err)
+		t.Fatalf("setupTestNats: get JetStream: %v", err)
 	}
-	t.Cleanup(nc.Close)
+	t.Cleanup(func() { nc.Close() })
 
-	return nc
+	return js
 }

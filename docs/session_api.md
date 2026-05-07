@@ -32,7 +32,7 @@ If the token is missing, invalid, or the session has been invalidated (logout), 
 
 ## Message Envelope Format
 
-All messages pushed **from the server to the client** over both sessions use the `ChatEnvelope` JSON structure:
+All messages pushed **from the server to the client** over both sessions use the `ChatResponseEnvelope` JSON structure:
 
 ```json
 {
@@ -45,7 +45,7 @@ All messages pushed **from the server to the client** over both sessions use the
 | Field     | Type     | Description                                  |
 |-----------|----------|----------------------------------------------|
 | `version` | `int`    | Protocol version (currently `1`)             |
-| `type`    | `string` | Event type: `"message"` or `"delivered"`     |
+| `type`    | `string` | Event type: `"message"`, `"delivered"`, `"read"`, or `"error"` |
 | `data`    | `object` | Event-specific payload (see types below)     |
 
 ### Event: `message`
@@ -87,6 +87,41 @@ Notifies the sender that their message has been delivered to a recipient.
 }
 ```
 
+### Event: `read`
+
+Notifies the sender that their message has been read by the recipient.
+
+```json
+{
+  "version": 1,
+  "type": "read",
+  "data": {
+    "conversation_id": 42,
+    "message_id": 149
+  }
+}
+```
+
+### Event: `error`
+
+An error occurred during the WebSocket session. Sent over the WebSocket connection (after upgrade) when the server encounters a problem processing a request or subscribing to NATS.
+
+```json
+{
+  "version": 1,
+  "type": "error",
+  "data": {
+    "code": 500,
+    "message": "failed to send message: connection refused"
+  }
+}
+```
+
+| Field     | Type     | Description                                  |
+|-----------|----------|----------------------------------------------|
+| `code`    | `int`    | HTTP-style error code (`400` for client errors, `500` for server errors) |
+| `message` | `string` | Human-readable error description             |
+
 ---
 
 ## 1. Notification Session
@@ -113,6 +148,21 @@ Establishes a persistent WebSocket connection for receiving real-time notificati
 | 401    | Missing/invalid token or session not found          |
 | 500    | Failed to create JetStream consumer or upgrade WS   |
 
+### Error Responses (WebSocket, after upgrade)
+
+If the JetStream subscription fails after the WebSocket upgrade, an `error` event is sent:
+
+```json
+{
+  "version": 1,
+  "type": "error",
+  "data": {
+    "code": 500,
+    "message": "failed to subscribe to notifications: ..."
+  }
+}
+```
+
 ---
 
 ## 2. Chat Session
@@ -126,21 +176,39 @@ Establishes a bidirectional WebSocket connection for sending and receiving chat 
 ### Behavior
 
 **Receiving messages (server → client):**
-- NATS messages are pushed as `ChatEnvelope` JSON text frames to the client.
+- NATS messages are pushed as `ChatResponseEnvelope` JSON text frames to the client.
 - For `"message"` events, the gateway automatically calls `UpdateLastDeliveredMessage` to track delivery and notify the sender with a `"delivered"` event.
 - Messages are acknowledged after successful write.
 - The consumer persists for 24 hours after last active connection.
 
 **Sending messages (client → server):**
 
-The client sends JSON frames to post a message to a conversation:
+The client sends JSON frames wrapped in a `ChatRequestEnvelope`:
 
 ```json
 {
-  "conversation_id": 42,
-  "content": "hello!",
-  "message_type": "text",
-  "reply_to_message_id": 0
+  "version": 1,
+  "type": "<request_type>",
+  "data": { ... }
+}
+```
+
+The `version` must match the current `chat_request_version` returned by `GET /version`.
+
+### Request: `send`
+
+Post a message to a conversation:
+
+```json
+{
+  "version": 1,
+  "type": "send",
+  "data": {
+    "conversation_id": 42,
+    "content": "hello!",
+    "message_type": "text",
+    "reply_to_message_id": 0
+  }
 }
 ```
 
@@ -151,7 +219,29 @@ The client sends JSON frames to post a message to a conversation:
 | `message_type`       | `string` | No       | Message type (e.g. `"text"`, `"image"`); default `"text"` |
 | `reply_to_message_id`| `int64`  | No       | ID of the message being replied to (`0` = none)    |
 
-Invalid or unparseable frames from the client are silently ignored (the connection remains open).
+### Request: `read`
+
+Mark messages in a conversation as read:
+
+```json
+{
+  "version": 1,
+  "type": "read",
+  "data": {
+    "conversation_id": 42,
+    "message_id": 149,
+    "sender_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+| Field                | Type     | Required | Description                                        |
+|----------------------|----------|----------|----------------------------------------------------|
+| `conversation_id`    | `int64`  | Yes      | Target conversation                                |
+| `message_id`         | `int64`  | Yes      | ID of the message that was read                    |
+| `sender_id`          | `string` | Yes      | UUID of the original message sender                |
+
+Invalid or unparseable frames from the client result in an `error` event sent back over the WebSocket (the connection remains open).
 
 ### Error Responses (HTTP, before upgrade)
 
@@ -159,3 +249,21 @@ Invalid or unparseable frames from the client are silently ignored (the connecti
 |--------|-----------------------------------------------------|
 | 401    | Missing/invalid token or session not found          |
 | 500    | Failed to create JetStream consumer or upgrade WS   |
+
+### Error Responses (WebSocket, after upgrade)
+
+Errors that occur after the WebSocket upgrade are sent as `error` events:
+
+| Cause | Code | Example Message |
+|-------|------|-----------------|
+| Invalid message format | 400 | `"invalid message format: ..."` |
+| Invalid send request payload | 400 | `"invalid send request: ..."` |
+| Invalid read request payload | 400 | `"invalid read request: ..."` |
+| Unknown request type | 400 | `"unknown request type: \"foo\""` |
+| Failed to send message (gRPC error) | 500 | `"failed to send message: ..."` |
+| Failed to update read status (gRPC error) | 500 | `"failed to update read status: ..."` |
+| Failed to subscribe to NATS | 500 | `"failed to subscribe to chat: ..."` |
+| Invalid server message from NATS | 500 | `"invalid server message: ..."` |
+| Invalid message data from NATS | 500 | `"invalid message data: ..."` |
+| Failed to write to WebSocket | 500 | `"failed to deliver message: ..."` |
+| Failed to update delivery status | 500 | `"failed to update delivery status: ..."` |

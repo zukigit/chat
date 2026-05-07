@@ -199,17 +199,27 @@ Authorization: Bearer <JWT_STRING>
       "user_id": "550e8400-e29b-41d4-a716-446655440000",
       "user_name": "zuki",
       "display_name": "Zuki",
-      "avatar_url": "https://example.com/avatar1.png"
+      "avatar_url": "https://example.com/avatar1.png",
+      "friendship_status": ""
     },
     {
       "user_id": "660e8400-e29b-41d4-a716-446655440001",
-      "user_name": "zuki_sama",
-      "display_name": "Zuki Kazumi",
-      "avatar_url": "https://example.com/avatar2.png"
+      "user_name": "alice",
+      "display_name": "Alice",
+      "avatar_url": "https://example.com/avatar2.png",
+      "friendship_status": "accepted"
     }
   ]
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `user_id` | `string` (UUID) | User's unique ID |
+| `user_name` | `string` | Username |
+| `display_name` | `string` | Display name (may be empty) |
+| `avatar_url` | `string` | Avatar URL (may be empty) |
+| `friendship_status` | `string` | `"pending"`, `"accepted"`, or `""` if no friendship exists |
 
 If no users match, returns an empty array:
 

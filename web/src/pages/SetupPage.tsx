@@ -17,9 +17,9 @@ export default function SetupPage() {
       const res = await fetch(`${url}/version`)
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       const json = await res.json()
-      const version: number = json?.data?.version
-      if (!version) throw new Error('Invalid version response')
-      saveConfig({ gatewayUrl: url, version })
+      const chatRequestVersion: number = json?.data?.chat_request_version
+      if (!chatRequestVersion) throw new Error('Invalid version response')
+      saveConfig({ gatewayUrl: url, chatRequestVersion })
       navigate('/')
     } catch (err) {
       if (err instanceof TypeError) {

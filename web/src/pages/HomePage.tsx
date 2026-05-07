@@ -14,6 +14,7 @@ import { fetchFriends } from '../api/friendsApi'
 import { fetchConversations, createConversation, type ApiConversation } from '../api/conversationsApi'
 import { avatarColor, avatarInitials } from '../components/avatarUtils'
 import { useChatSession } from '../useChatSession'
+import { useNotificationSession } from '../useNotificationSession'
 import { getMessages, getSentMessages, clearMessages, type StoredMessage, type SentMessage } from '../messageStore'
 
 type Tab = 'conversations' | 'friends' | 'profile'
@@ -26,12 +27,27 @@ export default function HomePage() {
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
-  const [refreshingFriends, setRefreshingFriends] = useState(false)
   const [allMessages, setAllMessages] = useState<Record<number, StoredMessage[]>>({})
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
+  const [hasUnreadNoti, setHasUnreadNoti] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  const loadConversationsRef = useRef(() => {})
+  const loadFriendsRef = useRef(() => {})
+
+  useEffect(() => {
+    loadConversationsRef.current = loadConversations
+    loadFriendsRef.current = loadFriends
+  })
+
   const handleIncomingMessage = useCallback((msg: StoredMessage) => {
+    setConversations(prev => {
+      const exists = prev.some(c => c.id === msg.conversation_id)
+      if (!exists) {
+        setTimeout(() => loadConversationsRef.current(), 0)
+      }
+      return prev
+    })
     setAllMessages(prev => {
       const convId = msg.conversation_id
       const existing = prev[convId] ?? []
@@ -41,13 +57,32 @@ export default function HomePage() {
     setSentMessages(getSentMessages(msg.conversation_id))
   }, [])
 
-  const handleDelivered = useCallback((conversationId: number, messageId: number) => {
+  const handleDelivered = useCallback((conversationId: number) => {
     setSentMessages(getSentMessages(conversationId))
   }, [])
 
-  const { connected, error: wsError, retryCountdown, send } = useChatSession(handleIncomingMessage, handleDelivered, () => {
-    loadConversations().catch(console.error)
-  })
+  const handleNotification = useCallback((noti: { type: string }) => {
+    if (noti.type === 'friend_request') {
+      setHasUnreadNoti(true)
+      loadFriendsRef.current()
+    }
+  }, [])
+
+  const clearNotiBadge = useCallback(() => {
+    setHasUnreadNoti(false)
+  }, [])
+
+  const { connected, error: wsError, retryCountdown, send, markAllRead } = useChatSession(
+    activeConv?.id ?? null,
+    handleIncomingMessage,
+    handleDelivered,
+    (code, message) => {
+      console.error(`WebSocket error [${code}]: ${message}`)
+    },
+    () => { loadConversationsRef.current() }
+  )
+
+  useNotificationSession(handleNotification)
 
   useEffect(() => {
     loadFriends().catch(console.error)
@@ -63,8 +98,14 @@ export default function HomePage() {
     setAllMessages(restored)
     if (activeConv) {
       setSentMessages(getSentMessages(activeConv.id))
+      const username = getUsername() ?? ''
+      const currentUserId = activeConv.members.find(mem => mem.username === username)?.user_id ?? ''
+      const msgs = restored[activeConv.id] ?? []
+      if (msgs.length > 0) {
+        markAllRead(activeConv.id, msgs, currentUserId)
+      }
     }
-  }, [conversations, activeConv])
+  }, [conversations, activeConv, markAllRead])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -142,9 +183,14 @@ export default function HomePage() {
   const currentSent = activeConv ? sentMessages.filter(s => s.conversation_id === activeConv.id) : []
   const currentUsername = getUsername() ?? ''
 
-  function handleSendMessage(conversationId: number, content: string, tempId: string) {
+  function handleSendMessage(conversationId: number, content: string, _tempId: string) {
     send(conversationId, content)
     setSentMessages(getSentMessages(conversationId))
+  }
+
+  function handleTabChange(newTab: Tab) {
+    setTab(newTab)
+    clearNotiBadge()
   }
 
   return (
@@ -173,26 +219,30 @@ export default function HomePage() {
                 <span className="hamburger-icon">
                   <span /><span /><span />
                 </span>
+                {hasUnreadNoti && <span className="notification-dot" />}
               </button>
             )}
             {menuOpen && tab !== 'friends' && (
               <div className="dropdown">
-                <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('profile') }}>
+                <button className="dropdown-item" onClick={() => { setMenuOpen(false); handleTabChange('profile') }}>
                   <div className="avatar avatar-sm" style={{ background: avatarColor(currentUsername), width: 20, height: 20, fontSize: 9 }}>
                     {avatarInitials(currentUsername, currentUsername)}
                   </div>
                   {currentUsername}
                 </button>
                 <div className="dropdown-divider" />
-                <button className="dropdown-item" onClick={() => { setMenuOpen(false); setTab('friends') }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                  Friends
-                </button>
+                <div className="dropdown-item-wrap">
+                  <button className="dropdown-item" onClick={() => { setMenuOpen(false); handleTabChange('friends') }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    Friends
+                  </button>
+                  {hasUnreadNoti && <span className="dropdown-noti-dot" />}
+                </div>
                 <div className="dropdown-divider" />
                 <button className="dropdown-item danger" onClick={() => { setMenuOpen(false); handleLogout() }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -205,35 +255,12 @@ export default function HomePage() {
               </div>
             )}
           </div>
-          <input
-            className="sidebar-search-inline"
-            placeholder={tab === 'friends' ? 'Search Friends' : 'Search'}
-            readOnly
-          />
-          {tab === 'conversations' && (
-            <div className={`ws-status${connected ? ' connected' : wsError ? ' error' : ''}`} title={wsError ? `Retrying in ${retryCountdown}s` : (connected ? 'Connected' : 'Connecting...')}>
-              <span className="ws-dot" />
-            </div>
-          )}
-          {tab === 'friends' && (
-            <button
-              className={`icon-btn-circle${refreshingFriends ? ' spinning' : ''}`}
-              disabled={refreshingFriends}
-              title="Refresh"
-              onClick={async () => {
-                if (refreshingFriends) return
-                setRefreshingFriends(true)
-                try { await loadFriends() } finally { setRefreshingFriends(false) }
-              }}
-            >
-              <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
-                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
-              </svg>
-            </button>
-          )}
+          <span className="section-label">
+            {tab === 'conversations' ? 'Conversations' : tab === 'friends' ? 'Friends' : 'Profile'}
+          </span>
+          <div className={`ws-status${connected ? ' connected' : wsError ? ' error' : ''}`} title={wsError ? `Retrying in ${retryCountdown}s` : (connected ? 'Connected' : 'Connecting...')}>
+            <span className="ws-dot" />
+          </div>
         </div>
 
         {tab === 'conversations' ? (
@@ -262,4 +289,3 @@ export default function HomePage() {
     </div>
   )
 }
-

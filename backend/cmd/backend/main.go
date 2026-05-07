@@ -24,18 +24,20 @@ func main() {
 	dbSslMode := lib.Getenv("DB_SSLMODE", "disable")
 	dsn := fmt.Sprintf("postgres://chat:%s@%s/chat?sslmode=%s", dbPasswd, dbHost, dbSslMode)
 
+	// database connection
 	sqlDB, err := sql.Open("postgres", dsn)
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	natsURL := lib.Getenv("NATS_URL", nats.DefaultURL)
-	nc, err := nats.Connect(natsURL)
+	// get JetStream
+	js, nc, err := lib.GetJetStream(lib.Getenv("NATS_URL", nats.DefaultURL))
 	if err != nil {
-		lib.ErrorLog.Fatalf("Failed to connect to NATS: %v", err)
+		lib.ErrorLog.Fatalf("Failed to set up JetStream: %v", err)
 	}
 	defer nc.Close()
 
+	// gRPC server setup
 	srv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.UnaryRecoveryInterceptor,
@@ -47,19 +49,22 @@ func main() {
 		),
 	)
 
+	// services registration
 	auth.RegisterAuthServer(srv, services.NewAuthServer(sqlDB))
-	notifServer := services.NewNotificationServer(sqlDB, nc)
+	notifServer := services.NewNotificationServer(sqlDB, js)
 	notification.RegisterNotificationServer(srv, notifServer)
 	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB, notifServer))
 	session.RegisterSessionServer(srv, services.NewSessionServer(sqlDB))
 	chat.RegisterChatServer(srv, services.NewChatServer(sqlDB, notifServer))
 
-	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
+	// start listening
 	listener, err := net.Listen("tcp", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to listen on %s: %v", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"), err)
 	}
+	lib.InfoLog.Printf("Backend listening on %s", lib.Getenv("BACKEND_LISTEN_ADDRESS", ":1234"))
 
+	// serve
 	if err := srv.Serve(listener); err != nil {
 		lib.ErrorLog.Fatalf("Failed to serve: %v", err)
 	}
