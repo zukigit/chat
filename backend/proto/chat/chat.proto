@@ -16,6 +16,7 @@ message CreateConversationResponse {
 
 message SendMessageRequest {
   int64  conversation_id      = 1;
+  string message_id           = 5;
   string content              = 2;
   string message_type         = 3; // "text" | "image" | "file" | "audio" (default: "text")
   optional string reply_to_message_id = 4;

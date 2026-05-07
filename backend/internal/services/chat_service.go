@@ -240,13 +240,21 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		replyTo = uuid.NullUUID{Valid: true, UUID: parsed}
 	}
 
+	if req.GetMessageId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "message_id is required")
+	}
+	msgID, err := uuid.Parse(req.GetMessageId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid message_id: %v", err)
+	}
+
 	callerLoginID, err := uuid.Parse(lib.CallerLoginID(ctx))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "SendMessage: parse login_id: %v", err)
 	}
 
 	msg := db.Message{
-		ID:               uuid.New(),
+		ID:               msgID,
 		ConversationID:   req.GetConversationId(),
 		SenderID:         callerID,
 		SenderLoginID:    callerLoginID,

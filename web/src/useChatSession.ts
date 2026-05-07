@@ -126,7 +126,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
   }, [connect])
 
-  const send = useCallback((conversationId: number, content: string, messageType = 'text', replyTo = '') => {
+  const send = useCallback((conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '') => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
       markSentFailed(conversationId, content)
       return
@@ -137,6 +137,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
       type: 'send',
       data: {
         conversation_id: conversationId,
+        message_id: messageId,
         content,
         message_type: messageType,
       },
@@ -169,7 +170,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
   }, [markRead])
 
-  const retrySend = useCallback((_tempId: string, conversationId: number, content: string, messageType = 'text', replyTo = '') => {
+  const retrySend = useCallback((_tempId: string, conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '') => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
       markSentFailed(conversationId, content)
       return
@@ -180,6 +181,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
       type: 'send',
       data: {
         conversation_id: conversationId,
+        message_id: messageId,
         content,
         message_type: messageType,
       },

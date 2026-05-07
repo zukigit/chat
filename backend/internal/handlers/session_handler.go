@@ -185,7 +185,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 					s.sendWSError(conn, 400, fmt.Sprintf("invalid send request: %v", err))
 					continue
 				}
-				if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
+				if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.MessageID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
 					s.sendWSError(conn, 500, fmt.Sprintf("failed to send message: %v", err))
 				}
 			case lib.ChatRequestRead:

@@ -173,13 +173,13 @@ export default function HomePage() {
   const currentSent = activeConv ? sentMessages.filter(s => s.conversation_id === activeConv.id) : []
   const currentUsername = getUsername() ?? ''
 
-  function handleSendMessage(conversationId: number, content: string, _tempId: string) {
-    send(conversationId, content)
+  function handleSendMessage(conversationId: number, content: string, messageId: string) {
+    send(conversationId, messageId, content)
     setSentMessages(getSentMessages(conversationId))
   }
 
   function handleRetryMessage(tempId: string, conversationId: number, content: string) {
-    retrySend(tempId, conversationId, content)
+    retrySend(tempId, conversationId, tempId, content)
     setSentMessages(getSentMessages(conversationId))
   }
 

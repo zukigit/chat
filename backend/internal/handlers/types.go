@@ -41,6 +41,7 @@ type createConversationRequest struct {
 // to post a message to a conversation.
 type sendMessageRequest struct {
 	ConversationID   int64  `json:"conversation_id"`
+	MessageID        string `json:"message_id"`
 	Content          string `json:"content"`
 	MessageType      string `json:"message_type,omitempty"`
 	ReplyToMessageID string `json:"reply_to_message_id,omitempty"`

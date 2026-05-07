@@ -50,9 +50,10 @@ func (c *ChatClient) CreateConversation(ctx context.Context, token string, isGro
 
 // SendMessage sends a message to a conversation via gRPC.
 // messageType defaults to "text" if empty. replyToMessageID is empty string if not a reply.
-func (c *ChatClient) SendMessage(ctx context.Context, token string, conversationID int64, content, messageType string, replyToMessageID string) (string, error) {
+func (c *ChatClient) SendMessage(ctx context.Context, token string, conversationID int64, messageID, content, messageType string, replyToMessageID string) (string, error) {
 	req := &pb.SendMessageRequest{
 		ConversationId: conversationID,
+		MessageId:      messageID,
 		Content:        content,
 		MessageType:    messageType,
 	}

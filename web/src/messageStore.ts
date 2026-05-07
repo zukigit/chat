@@ -71,8 +71,18 @@ export function addMessage(msg: StoredMessage): void {
   saveSent(sent)
 }
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 export function addSentMessage(conversationId: number, content: string): SentMessage {
-  const tempId = `sent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const tempId = generateUUID()
   const sent: SentMessage = { tempId, conversation_id: conversationId, content, status: 'sending', created_at: new Date().toISOString() }
   const all = loadSent()
   all.push(sent)
@@ -83,7 +93,7 @@ export function addSentMessage(conversationId: number, content: string): SentMes
 export function addRemoteSentMessage(conversationId: number, content: string): void {
   const all = loadSent()
   if (all.some(s => s.conversation_id === conversationId && s.content === content && s.tempId.startsWith('sent-remote-'))) return
-  const tempId = `sent-remote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const tempId = `sent-remote-${generateUUID()}`
   all.push({ tempId, conversation_id: conversationId, content, status: 'sending', created_at: new Date().toISOString() })
   saveSent(all)
 }
