@@ -1,7 +1,7 @@
 meta {
-  name: sessions_chat_user2
+  name: sessions_chat_user2 copy
   type: ws
-  seq: 8
+  seq: 21
 }
 
 ws {
@@ -11,7 +11,7 @@ ws {
 }
 
 headers {
-  Authorization: Bearer {{TOKEN_USER2}}
+  Authorization: Bearer {{TOKEN_TMP}}
 }
 
 body:ws {
@@ -23,7 +23,7 @@ body:ws {
       "type": "send",
       "data": {
         "conversation_id": 1,
-        "content": "Hello, world 1!",
+        "content": "Hello, world!",
         "message_type": "text"
       }
     }
