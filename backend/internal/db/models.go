@@ -285,13 +285,6 @@ type Notification struct {
 	CreatedAt   time.Time        `json:"created_at"`
 }
 
-type Session struct {
-	ID         uuid.UUID `json:"id"`
-	UserUserid uuid.UUID `json:"user_userid"`
-	LoginID    uuid.UUID `json:"login_id"`
-	CreatedAt  time.Time `json:"created_at"`
-}
-
 type User struct {
 	UserID       uuid.UUID      `json:"user_id"`
 	UserName     string         `json:"user_name"`

@@ -54,7 +54,7 @@ func main() {
 	notifServer := services.NewNotificationServer(sqlDB, js)
 	notification.RegisterNotificationServer(srv, notifServer)
 	friendship.RegisterFriendshipServer(srv, services.NewFriendshipServer(sqlDB, notifServer))
-	session.RegisterSessionServer(srv, services.NewSessionServer(sqlDB))
+	session.RegisterSessionServer(srv, services.NewSessionServer())
 	chat.RegisterChatServer(srv, services.NewChatServer(sqlDB, notifServer))
 
 	// start listening

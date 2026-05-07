@@ -91,14 +91,6 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read          BOOLEAN           NOT NULL DEFAULT FALSE,
     created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );
--- ── Sessions ───────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS sessions (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_userid  UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    login_id     UUID        NOT NULL UNIQUE,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- ── Indexes ────────────────────────────────────────────────────────────────────
 
 -- users: look up by user_id (PK index created automatically; this covers FK joins)
@@ -136,7 +128,3 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user2_status_time
 -- friendships: lookup by initiator
 CREATE INDEX IF NOT EXISTS idx_friendships_initiator
     ON friendships (initiator_userid);
-
--- sessions: look up active sessions for a user
-CREATE INDEX IF NOT EXISTS idx_sessions_user
-    ON sessions (user_userid);

@@ -1,53 +1,66 @@
 package services_test
 
 import (
-"context"
-"testing"
+	"context"
+	"testing"
 
-"github.com/google/uuid"
-"github.com/zukigit/chat/backend/internal/db"
-"github.com/zukigit/chat/backend/internal/services"
-pb "github.com/zukigit/chat/backend/proto/session"
-"google.golang.org/grpc/codes"
+	"github.com/zukigit/chat/backend/internal/lib"
+	"github.com/zukigit/chat/backend/internal/services"
+	pb "github.com/zukigit/chat/backend/proto/session"
+	"google.golang.org/grpc/codes"
 )
 
-func TestValidateSession(t *testing.T) {
-sqlDB := setupTestDB(t)
-sessionServer := services.NewSessionServer(sqlDB)
+func TestGetListenPath(t *testing.T) {
+	sessionServer := services.NewSessionServer()
 
-ids := createTestUsers(t, sqlDB, "alice")
-loginID := uuid.New()
+	cases := []struct {
+		name    string
+		userID  string
+		loginID string
+		reqType string
+		wantErr codes.Code
+		want    string
+	}{
+		{
+			name:    "chat type",
+			userID:  "user-1",
+			loginID: "login-1",
+			reqType: "chat",
+			wantErr: codes.OK,
+			want:    lib.ChatSubjectPrefix + "user-1",
+		},
+		{
+			name:    "notification type",
+			userID:  "user-2",
+			loginID: "login-2",
+			reqType: "notification",
+			wantErr: codes.OK,
+			want:    lib.NotiSubjectPrefix + "user-2",
+		},
+		{
+			name:    "unknown type",
+			userID:  "user-3",
+			loginID: "login-3",
+			reqType: "unknown",
+			wantErr: codes.InvalidArgument,
+			want:    "",
+		},
+	}
 
-// Insert a session row directly so ValidateSession can find it.
-if err := db.New(sqlDB).CreateSession(context.Background(), db.CreateSessionParams{
-UserUserid: ids["alice"],
-LoginID:    loginID,
-}); err != nil {
-t.Fatalf("setup CreateSession: %v", err)
-}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.WithValue(context.Background(), lib.ContextKeyUserID, tc.userID)
+			ctx = context.WithValue(ctx, lib.ContextKeyLoginID, tc.loginID)
 
-cases := []struct {
-name    string
-loginID string
-wantErr codes.Code
-}{
-{"valid login_id", loginID.String(), codes.OK},
-{"unknown login_id", uuid.NewString(), codes.Unauthenticated},
-{"invalid uuid", "not-a-uuid", codes.InvalidArgument},
-{"empty login_id", "", codes.InvalidArgument},
-}
-
-for _, tc := range cases {
-t.Run(tc.name, func(t *testing.T) {
-resp, err := sessionServer.ValidateSession(context.Background(), &pb.ValidateSessionRequest{
-LoginId: tc.loginID,
-})
-if got := grpcCode(err); got != tc.wantErr {
-t.Errorf("got %v, want %v (err: %v)", got, tc.wantErr, err)
-}
-if tc.wantErr == codes.OK && resp.GetUserId() != ids["alice"].String() {
-t.Errorf("user_id: got %q, want %q", resp.GetUserId(), ids["alice"].String())
-}
-})
-}
+			resp, err := sessionServer.GetListenPath(ctx, &pb.GetListenPathRequest{
+				Type: tc.reqType,
+			})
+			if got := grpcCode(err); got != tc.wantErr {
+				t.Errorf("got %v, want %v (err: %v)", got, tc.wantErr, err)
+			}
+			if tc.wantErr == codes.OK && resp.GetListenPath() != tc.want {
+				t.Errorf("listen_path: got %q, want %q", resp.GetListenPath(), tc.want)
+			}
+		})
+	}
 }

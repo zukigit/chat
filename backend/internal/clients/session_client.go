@@ -33,14 +33,14 @@ func (c *SessionClient) Close() {
 	c.conn.Close()
 }
 
-// ValidateSession asks the backend to confirm that login_id exists in the sessions
-// table (i.e. the user has not logged out) and returns the owning user_id.
-func (c *SessionClient) ValidateSession(ctx context.Context, token, loginID string) (string, error) {
-	resp, err := c.client.ValidateSession(lib.WithToken(ctx, token), &pb.ValidateSessionRequest{
-		LoginId: loginID,
+// GetListenPath asks the backend for the NATS subject path to listen on.
+// The backend validates the JWT and returns a path like sessions.chat.<user_id>.<login_id>.
+func (c *SessionClient) GetListenPath(ctx context.Context, token, listenType string) (string, error) {
+	resp, err := c.client.GetListenPath(lib.WithToken(ctx, token), &pb.GetListenPathRequest{
+		Type: listenType,
 	})
 	if err != nil {
 		return "", err
 	}
-	return resp.UserId, nil
+	return resp.ListenPath, nil
 }

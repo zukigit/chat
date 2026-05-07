@@ -2,43 +2,39 @@ package services
 
 import (
 	"context"
-	"database/sql"
 
-	"github.com/google/uuid"
-	"github.com/zukigit/chat/backend/internal/db"
+	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/proto/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type SessionServer struct {
-	sqlDB *sql.DB
 	session.UnimplementedSessionServer
 }
 
-func NewSessionServer(sqlDB *sql.DB) *SessionServer {
-	if sqlDB == nil {
-		return nil
-	}
-	return &SessionServer{sqlDB: sqlDB}
+func NewSessionServer() *SessionServer {
+	return &SessionServer{}
 }
 
-// ValidateSession checks that login_id exists in the sessions table and returns
-// the owning user_id. The JWT itself is already verified by the gRPC interceptor.
-func (s *SessionServer) ValidateSession(ctx context.Context, req *session.ValidateSessionRequest) (*session.ValidateSessionResponse, error) {
-	loginID, err := uuid.Parse(req.GetLoginId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid login_id")
+// GetListenPath returns the NATS subject path for the caller based on their JWT claims.
+// The JWT is already validated by the gRPC interceptor.
+// Format: sessions.noti.<user_id> or sessions.chat.<user_id>
+// The caller's login_id is used separately for the durable consumer name.
+func (s *SessionServer) GetListenPath(ctx context.Context, req *session.GetListenPathRequest) (*session.GetListenPathResponse, error) {
+	userID := lib.CallerIDFrom(ctx)
+	loginID := lib.CallerLoginID(ctx)
+
+	if userID == "" || loginID == "" {
+		return nil, status.Error(codes.Unauthenticated, "missing user_id or login_id in token")
 	}
 
-	q := db.New(s.sqlDB)
-	userID, err := q.ValidateSession(ctx, loginID)
-	if err == sql.ErrNoRows {
-		return nil, status.Error(codes.Unauthenticated, "session not found or expired")
+	switch req.GetType() {
+	case "chat":
+		return &session.GetListenPathResponse{ListenPath: lib.ChatSubjectPrefix + userID}, nil
+	case "notification":
+		return &session.GetListenPathResponse{ListenPath: lib.NotiSubjectPrefix + userID}, nil
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "unknown type: %q (must be 'chat' or 'notification')", req.GetType())
 	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "ValidateSession: %v", err)
-	}
-
-	return &session.ValidateSessionResponse{UserId: userID.String()}, nil
 }

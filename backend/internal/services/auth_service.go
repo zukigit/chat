@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/proto/auth"
@@ -67,26 +66,6 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 		return nil, status.Errorf(codes.Internal, "login: generate token: %v", err)
 	}
 
-	// Parse the claims back to get the login_id we embedded.
-	claims, err := lib.ValidateToken(token)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "login: validate token: %v", err)
-	}
-
-	loginID, err := uuid.Parse(claims.LoginID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "login: parse login_id: %v", err)
-	}
-
-	// Record this login session so ValidateSession and publishIfOnline can find it.
-	queries2 := db.New(s.sqlDB)
-	if err := queries2.CreateSession(ctx, db.CreateSessionParams{
-		UserUserid: user.UserID,
-		LoginID:    loginID,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "login: create session: %v", err)
-	}
-
 	return &auth.LoginResponse{Token: token}, nil
 }
 
@@ -140,21 +119,9 @@ func (s *AuthServer) Signup(ctx context.Context, req *auth.SignupRequest) (*auth
 	return &auth.SignupResponse{}, nil
 }
 
-// Logout deletes the caller's session row, invalidating the login_id embedded
-// in the JWT. The gRPC interceptor already verified the token and stored
-// login_id in the context.
+// Logout is a no-op since sessions are no longer tracked in the database.
+// Token invalidation is handled via TTL (JWT expiry).
 func (s *AuthServer) Logout(ctx context.Context, _ *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	loginIDStr := lib.CallerLoginID(ctx)
-	loginID, err := uuid.Parse(loginIDStr)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "missing or invalid login_id in token")
-	}
-
-	q := db.New(s.sqlDB)
-	if err := q.DeleteSessionByLoginID(ctx, loginID); err != nil && err != sql.ErrNoRows {
-		return nil, status.Errorf(codes.Internal, "logout: delete session: %v", err)
-	}
-
 	return &auth.LogoutResponse{}, nil
 }
 

@@ -48,16 +48,18 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Decode claims without signature verification (gateway has no JWT secret).
-	// Actual auth is enforced by the gRPC interceptor inside ValidateSession.
 	claims, err := lib.ParseTokenUnverified(token)
 	if err != nil || claims.LoginID == "" || claims.UserID == "" {
 		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Invalid token"})
 		return
 	}
 
-	// Confirm the session is still active (user has not logged out).
-	if _, err := s.client.ValidateSession(r.Context(), token, claims.LoginID); err != nil {
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	// Get the NATS listen path from the backend (includes login_id).
+	listenPath, err := s.client.GetListenPath(ctx, token, "notification")
+	if err != nil {
 		st, _ := status.FromError(err)
 		switch st.Code() {
 		case codes.Unauthenticated:
@@ -67,9 +69,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		}
 		return
 	}
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -95,7 +94,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	}()
 
 	// Deliver incoming NATS messages to the WS client.
-	sub, err := s.js.Subscribe(lib.NotiSubjectPrefix+claims.UserID, func(msg *nats.Msg) {
+	sub, err := s.js.Subscribe(listenPath, func(msg *nats.Msg) {
 		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
 			lib.ErrorLog.Printf("Error writing to websocket: loginID: %s, err: %v", claims.LoginID, err)
 			return
@@ -103,7 +102,6 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		msg.Ack()
 	}, nats.Durable("noti-"+claims.LoginID), nats.BindStream("SESSIONS"))
 	if err != nil {
-
 		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to notifications: %v", err))
 		cancel()
 		return
@@ -136,7 +134,12 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := s.client.ValidateSession(r.Context(), token, claims.LoginID); err != nil {
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	// Get the NATS listen path from the backend (includes login_id).
+	listenPath, err := s.client.GetListenPath(ctx, token, "chat")
+	if err != nil {
 		st, _ := status.FromError(err)
 		switch st.Code() {
 		case codes.Unauthenticated:
@@ -146,9 +149,6 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -204,7 +204,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// get messages from NATS and deliver to WS client
-	sub, err := s.js.Subscribe(lib.ChatSubjectPrefix+claims.UserID, func(msg *nats.Msg) {
+	sub, err := s.js.Subscribe(listenPath, func(msg *nats.Msg) {
 		var env lib.ChatResponseEnvelope
 		if err := json.Unmarshal(msg.Data, &env); err != nil {
 			lib.ErrorLog.Printf("chat session: unmarshal envelope: loginID: %s, err: %v", claims.LoginID, err)

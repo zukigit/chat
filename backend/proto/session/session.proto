@@ -4,14 +4,14 @@ package session;
 
 option go_package = "proto/session/";
 
-message ValidateSessionRequest {
-  string login_id = 1;
+message GetListenPathRequest {
+  string type = 1; // "chat" or "notification"
 }
 
-message ValidateSessionResponse {
-  string user_id = 1;
+message GetListenPathResponse {
+  string listen_path = 1;
 }
 
 service Session {
-  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
+  rpc GetListenPath(GetListenPathRequest) returns (GetListenPathResponse);
 }
