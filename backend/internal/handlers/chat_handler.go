@@ -97,14 +97,7 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		limit = int32(v)
 	}
 
-	var cursor int64
-	if s := q.Get("cursor"); s != "" {
-		cursor, err = strconv.ParseInt(s, 10, 64)
-		if err != nil {
-			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: "invalid cursor"})
-			return
-		}
-	}
+	cursor := q.Get("cursor")
 
 	resp, err := h.client.GetMessages(r.Context(), token, convID, limit, cursor)
 	if err != nil {

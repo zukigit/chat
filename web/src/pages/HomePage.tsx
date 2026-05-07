@@ -52,7 +52,7 @@ export default function HomePage() {
       const convId = msg.conversation_id
       const existing = prev[convId] ?? []
       if (existing.some(m => m.id === msg.id)) return prev
-      return { ...prev, [convId]: [...existing, msg].sort((a, b) => a.id - b.id) }
+      return { ...prev, [convId]: [...existing, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) }
     })
     setSentMessages(getSentMessages(msg.conversation_id))
   }, [])

@@ -18,14 +18,14 @@ const (
 
 // DeliveredEvent is the Data payload for ChatEventDelivered envelopes.
 type DeliveredEvent struct {
-	ConversationID int64 `json:"conversation_id"`
-	MessageID      int64 `json:"message_id"`
+	ConversationID int64  `json:"conversation_id"`
+	MessageID      string `json:"message_id"`
 }
 
 // ReadEvent is the Data payload for ChatEventRead envelopes.
 type ReadEvent struct {
-	ConversationID int64 `json:"conversation_id"`
-	MessageID      int64 `json:"message_id"`
+	ConversationID int64  `json:"conversation_id"`
+	MessageID      string `json:"message_id"`
 }
 
 // ErrorEvent is the Data payload for ChatEventError envelopes.

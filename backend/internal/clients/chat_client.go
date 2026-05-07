@@ -49,26 +49,26 @@ func (c *ChatClient) CreateConversation(ctx context.Context, token string, isGro
 }
 
 // SendMessage sends a message to a conversation via gRPC.
-// messageType defaults to "text" if empty. replyToMessageID is 0 if not a reply.
-func (c *ChatClient) SendMessage(ctx context.Context, token string, conversationID int64, content, messageType string, replyToMessageID int64) (int64, error) {
+// messageType defaults to "text" if empty. replyToMessageID is empty string if not a reply.
+func (c *ChatClient) SendMessage(ctx context.Context, token string, conversationID int64, content, messageType string, replyToMessageID string) (string, error) {
 	req := &pb.SendMessageRequest{
 		ConversationId: conversationID,
 		Content:        content,
 		MessageType:    messageType,
 	}
-	if replyToMessageID != 0 {
+	if replyToMessageID != "" {
 		req.ReplyToMessageId = &replyToMessageID
 	}
 	resp, err := c.client.SendMessage(lib.WithToken(ctx, token), req)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return resp.GetMessageId(), nil
 }
 
 // GetMessages retrieves paginated messages from a conversation via gRPC.
-// cursor is the last seen message_id (0 for the first page).
-func (c *ChatClient) GetMessages(ctx context.Context, token string, conversationID int64, limit int32, cursor int64) (*pb.GetMessagesResponse, error) {
+// cursor is the last seen message_id (empty for the first page).
+func (c *ChatClient) GetMessages(ctx context.Context, token string, conversationID int64, limit int32, cursor string) (*pb.GetMessagesResponse, error) {
 	return c.client.GetMessages(lib.WithToken(ctx, token), &pb.GetMessagesRequest{
 		ConversationId: conversationID,
 		Limit:          limit,
@@ -78,7 +78,7 @@ func (c *ChatClient) GetMessages(ctx context.Context, token string, conversation
 
 // UpdateLastDeliveredMessage tells the backend that the given message was delivered to the caller.
 // senderID is the UUID of the original message author — the backend uses it to push a receipt.
-func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token string, conversationID, messageID int64, senderID string) error {
+func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token string, conversationID int64, messageID string, senderID string) error {
 	_, err := c.client.UpdateLastDeliveredMessage(lib.WithToken(ctx, token), &pb.UpdateMessageRequest{
 		ConversationId: conversationID,
 		MessageId:      messageID,
@@ -89,7 +89,7 @@ func (c *ChatClient) UpdateLastDeliveredMessage(ctx context.Context, token strin
 
 // UpdateLastReadMessage tells the backend that the caller has read up to the given message.
 // senderID is the UUID of the original message author — the backend uses it to push a read receipt.
-func (c *ChatClient) UpdateLastReadMessage(ctx context.Context, token string, conversationID, messageID int64, senderID string) error {
+func (c *ChatClient) UpdateLastReadMessage(ctx context.Context, token string, conversationID int64, messageID string, senderID string) error {
 	_, err := c.client.UpdateLastReadMessage(lib.WithToken(ctx, token), &pb.UpdateMessageRequest{
 		ConversationId: conversationID,
 		MessageId:      messageID,

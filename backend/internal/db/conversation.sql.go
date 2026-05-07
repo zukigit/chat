@@ -329,13 +329,12 @@ UPDATE conversation_members
 SET last_delivered_message_id = $3
 WHERE conversation_id = $1
   AND user_id = $2
-  AND last_delivered_message_id < $3
 `
 
 type UpdateLastDeliveredMessageIDParams struct {
-	ConversationID         int64     `json:"conversation_id"`
-	UserID                 uuid.UUID `json:"user_id"`
-	LastDeliveredMessageID int64     `json:"last_delivered_message_id"`
+	ConversationID         int64         `json:"conversation_id"`
+	UserID                 uuid.UUID     `json:"user_id"`
+	LastDeliveredMessageID uuid.NullUUID `json:"last_delivered_message_id"`
 }
 
 func (q *Queries) UpdateLastDeliveredMessageID(ctx context.Context, arg UpdateLastDeliveredMessageIDParams) (sql.Result, error) {
@@ -347,13 +346,12 @@ UPDATE conversation_members
 SET last_read_message_id = $3
 WHERE conversation_id = $1
   AND user_id = $2
-  AND last_read_message_id < $3
 `
 
 type UpdateLastReadMessageIDParams struct {
-	ConversationID    int64     `json:"conversation_id"`
-	UserID            uuid.UUID `json:"user_id"`
-	LastReadMessageID int64     `json:"last_read_message_id"`
+	ConversationID    int64         `json:"conversation_id"`
+	UserID            uuid.UUID     `json:"user_id"`
+	LastReadMessageID uuid.NullUUID `json:"last_read_message_id"`
 }
 
 func (q *Queries) UpdateLastReadMessageID(ctx context.Context, arg UpdateLastReadMessageIDParams) error {

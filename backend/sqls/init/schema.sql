@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TYPE message_type AS ENUM ('text', 'image', 'file', 'audio');
 
 CREATE TABLE IF NOT EXISTS messages (
-    id                  BIGSERIAL    PRIMARY KEY,
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id     BIGINT       NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id           UUID         NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
     sender_login_id     UUID         NOT NULL,
-    reply_to_message_id BIGINT       REFERENCES messages(id) ON DELETE SET NULL,
+    reply_to_message_id UUID         REFERENCES messages(id) ON DELETE SET NULL,
     content             TEXT         NOT NULL,
     message_type        message_type NOT NULL DEFAULT 'text',
     media_url           TEXT,                     -- S3/CDN URL for non-text messages
@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS conversation_members (
     conversation_id             BIGINT      NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     user_id                     UUID        NOT NULL REFERENCES users(user_id)  ON DELETE CASCADE,
     role                        member_role NOT NULL DEFAULT 'member',
-    last_read_message_id        BIGINT NOT NULL DEFAULT 0,
-    last_delivered_message_id   BIGINT NOT NULL DEFAULT 0,
+    last_read_message_id        UUID,
+    last_delivered_message_id   UUID,
     joined_at                   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (conversation_id, user_id)
 );

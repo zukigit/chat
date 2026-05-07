@@ -6,10 +6,10 @@ import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSeen, type
 interface ChatResponseEnvelope {
   version: number
   type: string
-  data: StoredMessage | { conversation_id: number; message_id: number } | { code: number; message: string }
+  data: StoredMessage | { conversation_id: number; message_id: string } | { code: number; message: string }
 }
 
-export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: number) => void, onError?: (code: number, message: string) => void, onConnect?: () => void) {
+export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string) => void, onConnect?: () => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const countdownTimer = useRef<number | null>(null)
@@ -97,11 +97,11 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
             }
           }
         } else if (envelope.type === 'delivered' && envelope.data) {
-          const d = envelope.data as { conversation_id: number; message_id: number }
+          const d = envelope.data as { conversation_id: number; message_id: string }
           markSentDelivered(d.conversation_id, d.message_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
         } else if (envelope.type === 'read' && envelope.data) {
-          const d = envelope.data as { conversation_id: number; message_id: number }
+          const d = envelope.data as { conversation_id: number; message_id: string }
           markSentSeen(d.conversation_id, d.message_id)
           onDeliveredRef.current?.(d.conversation_id, d.message_id)
         } else if (envelope.type === 'error' && envelope.data) {
@@ -126,22 +126,25 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
   }, [connect])
 
-  const send = useCallback((conversationId: number, content: string, messageType = 'text', replyTo = 0) => {
+  const send = useCallback((conversationId: number, content: string, messageType = 'text', replyTo = '') => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return
     const config = loadConfig()
-    wsRef.current.send(JSON.stringify({
+    const payload: Record<string, unknown> = {
       version: config?.chatRequestVersion ?? 1,
       type: 'send',
       data: {
         conversation_id: conversationId,
         content,
         message_type: messageType,
-        reply_to_message_id: replyTo,
       },
-    }))
+    }
+    if (replyTo) {
+      ;(payload.data as Record<string, unknown>).reply_to_message_id = replyTo
+    }
+    wsRef.current.send(JSON.stringify(payload))
   }, [])
 
-  const markRead = useCallback((conversationId: number, messageId: number, senderId: string) => {
+  const markRead = useCallback((conversationId: number, messageId: string, senderId: string) => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return
     const config = loadConfig()
     wsRef.current.send(JSON.stringify({
@@ -166,7 +169,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
   return { connected, error, retryCountdown, send, markRead, markAllRead, connect }
 }
 
-function sendRead(ws: WebSocket | null, conversationId: number, messageId: number, senderId: string) {
+function sendRead(ws: WebSocket | null, conversationId: number, messageId: string, senderId: string) {
   if (ws?.readyState !== WebSocket.OPEN) return
   const config = loadConfig()
   ws.send(JSON.stringify({

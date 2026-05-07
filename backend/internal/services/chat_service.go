@@ -236,9 +236,13 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
 	}
 
-	var replyTo sql.NullInt64
-	if r := req.GetReplyToMessageId(); r != 0 {
-		replyTo = sql.NullInt64{Valid: true, Int64: r}
+	var replyTo uuid.NullUUID
+	if r := req.GetReplyToMessageId(); r != "" {
+		parsed, err := uuid.Parse(r)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid reply_to_message_id: %v", err)
+		}
+		replyTo = uuid.NullUUID{Valid: true, UUID: parsed}
 	}
 
 	callerLoginID, err := uuid.Parse(lib.CallerLoginID(ctx))
@@ -246,7 +250,9 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		return nil, status.Errorf(codes.Internal, "SendMessage: parse login_id: %v", err)
 	}
 
+	msgID := uuid.New()
 	msg, err := q.SendMessage(ctx, db.SendMessageParams{
+		ID:               msgID,
 		ConversationID:   req.GetConversationId(),
 		SenderID:         callerID,
 		SenderLoginID:    callerLoginID,
@@ -293,7 +299,7 @@ func (s *ChatServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest
 		}
 	}
 
-	return &pb.SendMessageResponse{MessageId: msg.ID}, nil
+	return &pb.SendMessageResponse{MessageId: msg.ID.String()}, nil
 }
 
 // GetMessages returns a paginated list of messages in a conversation.
@@ -331,9 +337,18 @@ func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest
 		return nil, status.Error(codes.PermissionDenied, "caller is not a member of this conversation")
 	}
 
+	var cursor uuid.NullUUID
+	if c := req.GetCursor(); c != "" {
+		parsed, err := uuid.Parse(c)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid cursor: %v", err)
+		}
+		cursor = uuid.NullUUID{Valid: true, UUID: parsed}
+	}
+
 	rows, err := q.GetConversationMessages(ctx, db.GetConversationMessagesParams{
 		ConversationID: req.GetConversationId(),
-		ID:             req.GetCursor(),
+		Column2:        cursor.UUID,
 		Limit:          limit,
 	})
 	if err != nil {
@@ -343,7 +358,7 @@ func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest
 	messages := make([]*pb.Message, 0, len(rows))
 	for _, r := range rows {
 		m := &pb.Message{
-			MessageId:   r.ID,
+			MessageId:   r.ID.String(),
 			SenderId:    r.SenderID.String(),
 			Content:     r.Content,
 			MessageType: string(r.MessageType),
@@ -351,14 +366,14 @@ func (s *ChatServer) GetMessages(ctx context.Context, req *pb.GetMessagesRequest
 			CreatedAt:   r.CreatedAt.Format(time.RFC3339),
 		}
 		if r.ReplyToMessageID.Valid {
-			m.ReplyToMessageId = r.ReplyToMessageID.Int64
+			m.ReplyToMessageId = r.ReplyToMessageID.UUID.String()
 		}
 		messages = append(messages, m)
 	}
 
-	var nextCursor int64
-	if int32(len(rows)) == limit {
-		nextCursor = rows[len(rows)-1].ID
+	var nextCursor string
+	if len(rows) > 0 {
+		nextCursor = rows[len(rows)-1].ID.String()
 	}
 
 	return &pb.GetMessagesResponse{
@@ -477,15 +492,20 @@ func (s *ChatServer) UpdateLastReadMessage(ctx context.Context, req *pb.UpdateMe
 	if req.GetConversationId() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
 	}
-	if req.GetMessageId() == 0 {
+	if req.GetMessageId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "message_id is required")
+	}
+
+	msgID, err := uuid.Parse(req.GetMessageId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid message_id: %v", err)
 	}
 
 	q := db.New(s.sqlDB)
 	if err := q.UpdateLastReadMessageID(ctx, db.UpdateLastReadMessageIDParams{
 		ConversationID:    req.GetConversationId(),
 		UserID:            callerID,
-		LastReadMessageID: req.GetMessageId(),
+		LastReadMessageID: uuid.NullUUID{Valid: true, UUID: msgID},
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "UpdateLastReadMessage: %v", err)
 	}
@@ -516,15 +536,20 @@ func (s *ChatServer) UpdateLastDeliveredMessage(ctx context.Context, req *pb.Upd
 	if req.GetConversationId() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "conversation_id is required")
 	}
-	if req.GetMessageId() == 0 {
+	if req.GetMessageId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "message_id is required")
+	}
+
+	msgID, err := uuid.Parse(req.GetMessageId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid message_id: %v", err)
 	}
 
 	q := db.New(s.sqlDB)
 	result, err := q.UpdateLastDeliveredMessageID(ctx, db.UpdateLastDeliveredMessageIDParams{
 		ConversationID:         req.GetConversationId(),
 		UserID:                 callerID,
-		LastDeliveredMessageID: req.GetMessageId(),
+		LastDeliveredMessageID: uuid.NullUUID{Valid: true, UUID: msgID},
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "UpdateLastDeliveredMessage: %v", err)

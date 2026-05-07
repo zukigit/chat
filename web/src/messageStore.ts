@@ -1,8 +1,8 @@
 export interface StoredMessage {
-  id: number
+  id: string
   conversation_id: number
   sender_id: string
-  reply_to_message_id: number | null
+  reply_to_message_id: string | null
   content: string
   message_type: string
   media_url: string | null
@@ -64,7 +64,7 @@ export function addMessage(msg: StoredMessage): void {
   if (!all[key]) all[key] = []
   if (!all[key].some(m => m.id === msg.id)) {
     all[key].push(msg)
-    all[key].sort((a, b) => a.id - b.id)
+    all[key].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   }
   saveAll(all)
   const sent = loadSent().filter(s => !(s.conversation_id === msg.conversation_id && s.content === msg.content && !s.tempId.startsWith('sent-remote-')))
@@ -88,7 +88,7 @@ export function addRemoteSentMessage(conversationId: number, content: string): v
   saveSent(all)
 }
 
-export function markSentDelivered(_conversationId: number, _messageId?: number): void {
+export function markSentDelivered(_conversationId: number, _messageId?: string): void {
   const all = loadSent()
   const sending = all.filter(x => x.conversation_id === _conversationId && x.status === 'sending')
   if (sending.length > 0) {
@@ -97,7 +97,7 @@ export function markSentDelivered(_conversationId: number, _messageId?: number):
   }
 }
 
-export function markSentSeen(_conversationId: number, _messageId?: number): void {
+export function markSentSeen(_conversationId: number, _messageId?: string): void {
   const all = loadSent()
   all.forEach(s => {
     if (s.conversation_id === _conversationId && (s.status === 'sent' || s.status === 'delivered')) {

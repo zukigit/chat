@@ -81,12 +81,10 @@ RETURNING user1_id, user2_id, conversation_id;
 UPDATE conversation_members
 SET last_read_message_id = $3
 WHERE conversation_id = $1
-  AND user_id = $2
-  AND last_read_message_id < $3;
+  AND user_id = $2;
 
 -- name: UpdateLastDeliveredMessageID :execresult
 UPDATE conversation_members
 SET last_delivered_message_id = $3
 WHERE conversation_id = $1
-  AND user_id = $2
-  AND last_delivered_message_id < $3;
+  AND user_id = $2;

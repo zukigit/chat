@@ -236,12 +236,12 @@ type Conversation struct {
 }
 
 type ConversationMember struct {
-	ConversationID         int64      `json:"conversation_id"`
-	UserID                 uuid.UUID  `json:"user_id"`
-	Role                   MemberRole `json:"role"`
-	LastReadMessageID      int64      `json:"last_read_message_id"`
-	LastDeliveredMessageID int64      `json:"last_delivered_message_id"`
-	JoinedAt               time.Time  `json:"joined_at"`
+	ConversationID         int64         `json:"conversation_id"`
+	UserID                 uuid.UUID     `json:"user_id"`
+	Role                   MemberRole    `json:"role"`
+	LastReadMessageID      uuid.NullUUID `json:"last_read_message_id"`
+	LastDeliveredMessageID uuid.NullUUID `json:"last_delivered_message_id"`
+	JoinedAt               time.Time     `json:"joined_at"`
 }
 
 type DmPeer struct {
@@ -260,11 +260,11 @@ type Friendship struct {
 }
 
 type Message struct {
-	ID               int64          `json:"id"`
+	ID               uuid.UUID      `json:"id"`
 	ConversationID   int64          `json:"conversation_id"`
 	SenderID         uuid.UUID      `json:"sender_id"`
 	SenderLoginID    uuid.UUID      `json:"sender_login_id"`
-	ReplyToMessageID sql.NullInt64  `json:"reply_to_message_id"`
+	ReplyToMessageID uuid.NullUUID  `json:"reply_to_message_id"`
 	Content          string         `json:"content"`
 	MessageType      MessageType    `json:"message_type"`
 	MediaUrl         sql.NullString `json:"media_url"`

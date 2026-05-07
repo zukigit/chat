@@ -232,7 +232,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if isMessageEvent {
-			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID, message.SenderID.String()); err != nil {
+			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID.String(), message.SenderID.String()); err != nil {
 				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: consumerName: %s, err: %v", consumerName, err)
 			}
 		}
