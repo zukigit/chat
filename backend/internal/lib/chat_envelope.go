@@ -37,8 +37,10 @@ type ReadEvent struct {
 
 // ErrorEvent is the Data payload for ChatEventError envelopes.
 type ErrorEvent struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	ConversationID int64  `json:"conversation_id"`
+	MessageID      string `json:"message_id"`
+	Code           int    `json:"code"`
+	Message        string `json:"message"`
 }
 
 // ChatResponseEnvelope is the typed wrapper for all NATS chat payloads

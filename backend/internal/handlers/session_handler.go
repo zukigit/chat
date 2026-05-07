@@ -29,8 +29,13 @@ func NewSessionHandler(client *clients.SessionClient, chatClient *clients.ChatCl
 
 // sendWSError sends an error message to the client over the WebSocket connection
 // using the ChatResponseEnvelope with type "error".
-func (s *SessionHandler) sendWSError(conn *websocket.Conn, code int, message string) {
-	data, err := lib.NewChatResponseEnvelope(lib.ChatEventError, lib.ErrorEvent{Code: code, Message: message})
+func (s *SessionHandler) sendWSError(conn *websocket.Conn, code int, message string, conversactionID int64, messageID string) {
+	data, err := lib.NewChatResponseEnvelope(lib.ChatEventError, lib.ErrorEvent{
+		Code:           code,
+		Message:        message,
+		ConversationID: conversactionID,
+		MessageID:      messageID,
+	})
 	if err != nil {
 		lib.ErrorLog.Printf("Failed to marshal WS error: %v", err)
 		return
@@ -102,7 +107,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		msg.Ack()
 	}, nats.Durable(consumerName), nats.BindStream("SESSIONS"))
 	if err != nil {
-		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to notifications: %v", err))
+		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to notifications: %v", err), 0, "")
 		cancel()
 		return
 	}
@@ -168,13 +173,15 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		for {
 			_, data, err := conn.ReadMessage()
 			if err != nil {
+				lib.ErrorLog.Printf("Error reading from websocket: consumerName: %s, err: %v", consumerName, err)
+
 				cancel()
 				return
 			}
 
 			var env lib.ChatRequestEnvelope
 			if err := json.Unmarshal(data, &env); err != nil {
-				s.sendWSError(conn, 400, fmt.Sprintf("invalid message format: %v", err))
+				s.sendWSError(conn, 400, fmt.Sprintf("invalid message format: %v", err), 0, "")
 				continue
 			}
 
@@ -182,23 +189,23 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 			case lib.ChatRequestSend:
 				var req sendMessageRequest
 				if err := json.Unmarshal(env.Data, &req); err != nil {
-					s.sendWSError(conn, 400, fmt.Sprintf("invalid send request: %v", err))
+					s.sendWSError(conn, 400, fmt.Sprintf("invalid send request: %v", err), 0, "")
 					continue
 				}
 				if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.MessageID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
-					s.sendWSError(conn, 500, fmt.Sprintf("failed to send message: %v", err))
+					s.sendWSError(conn, 500, fmt.Sprintf("failed to send message: %v", err), req.ConversationID, req.MessageID)
 				}
 			case lib.ChatRequestRead:
 				var req readMessageRequest
 				if err := json.Unmarshal(env.Data, &req); err != nil {
-					s.sendWSError(conn, 400, fmt.Sprintf("invalid read request: %v", err))
+					s.sendWSError(conn, 400, fmt.Sprintf("invalid read request: %v", err), 0, "")
 					continue
 				}
 				if err := s.chatClient.UpdateLastReadMessage(ctx, token, req.ConversationID, req.MessageID, req.SenderID); err != nil {
-					s.sendWSError(conn, 500, fmt.Sprintf("failed to update read status: %v", err))
+					s.sendWSError(conn, 500, fmt.Sprintf("failed to update read status: %v", err), req.ConversationID, req.MessageID)
 				}
 			default:
-				s.sendWSError(conn, 400, fmt.Sprintf("unknown request type: %q", env.Type))
+				s.sendWSError(conn, 400, fmt.Sprintf("unknown request type: %q", env.Type), 0, "")
 			}
 		}
 	}()
@@ -240,7 +247,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		msg.Ack()
 	}, nats.Durable(consumerName), nats.BindStream("SESSIONS"))
 	if err != nil {
-		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to chat: %v", err))
+		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to chat: %v", err), 0, "")
 		cancel()
 		return
 	}
