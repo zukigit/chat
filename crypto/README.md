@@ -1,0 +1,1 @@
+# Shared crypto lib for message encryption and decryption
