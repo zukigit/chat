@@ -44,37 +44,6 @@ func (s *SessionHandler) sendWSError(conn *websocket.Conn, code int, message str
 }
 
 func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Request) {
-	token, ok := lib.BearerToken(r)
-	if !ok {
-		token = r.URL.Query().Get("token")
-	}
-	if token == "" {
-		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Missing token"})
-		return
-	}
-
-	claims, err := lib.ParseTokenUnverified(token)
-	if err != nil || claims.LoginID == "" || claims.UserID == "" {
-		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Invalid token"})
-		return
-	}
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	// Get the NATS listen path and consumer name from the backend.
-	listenPath, consumerName, err := s.client.GetListenPath(ctx, token, "notification")
-	if err != nil {
-		st, _ := status.FromError(err)
-		switch st.Code() {
-		case codes.Unauthenticated:
-			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
-		default:
-			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: st.Message()})
-		}
-		return
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
@@ -87,6 +56,44 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		conn.Close()
 	}()
+
+	// Read the first message to authenticate.
+	_, data, err := conn.ReadMessage()
+	if err != nil {
+		lib.ErrorLog.Printf("NotificationSession: failed to read auth message: %v", err)
+		return
+	}
+	var env lib.ChatRequestEnvelope
+	if err := json.Unmarshal(data, &env); err != nil || env.Type != lib.ChatRequestAuth {
+		s.sendWSError(conn, 400, fmt.Sprintf("cant get ChatRequestEnvelope, err: %s", err.Error()), 0, "")
+		return
+	}
+	var auth authRequest
+	if err := json.Unmarshal(env.Data, &auth); err != nil || auth.Token == "" {
+		s.sendWSError(conn, 401, fmt.Sprintf("cant get auth request, err: %s", err.Error()), 0, "")
+		return
+	}
+
+	claims, err := lib.ParseTokenUnverified(auth.Token)
+	if err != nil || claims.LoginID == "" || claims.UserID == "" {
+		s.sendWSError(conn, 401, fmt.Sprintf("Invalid token, err: %s", err.Error()), 0, "")
+		return
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	listenPath, consumerName, err := s.client.GetListenPath(ctx, auth.Token, "notification")
+	if err != nil {
+		st, _ := status.FromError(err)
+		switch st.Code() {
+		case codes.Unauthenticated:
+			s.sendWSError(conn, 401, st.Message(), 0, "")
+		default:
+			s.sendWSError(conn, 500, st.Message(), 0, "")
+		}
+		return
+	}
 
 	// Read channel from WS client so we detect close/disconnect.
 	go func() {
@@ -101,7 +108,7 @@ func (s *SessionHandler) NotificationSession(w http.ResponseWriter, r *http.Requ
 	// Deliver incoming NATS messages to the WS client.
 	sub, err := s.js.Subscribe(listenPath, func(msg *nats.Msg) {
 		if err := conn.WriteMessage(websocket.TextMessage, msg.Data); err != nil {
-			lib.ErrorLog.Printf("Error writing to websocket: consumerName: %s, err: %v", consumerName, err)
+			s.sendWSError(conn, 500, fmt.Sprintf("Error writing to websocket: %v", err), 0, "")
 			return
 		}
 		msg.Ack()
@@ -124,37 +131,6 @@ func (s *SessionHandler) GetChatEnvelopeRequestVersion(w http.ResponseWriter, r 
 }
 
 func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
-	token, ok := lib.BearerToken(r)
-	if !ok {
-		token = r.URL.Query().Get("token")
-	}
-	if token == "" {
-		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Missing token"})
-		return
-	}
-
-	claims, err := lib.ParseTokenUnverified(token)
-	if err != nil || claims.LoginID == "" || claims.UserID == "" {
-		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "Invalid token"})
-		return
-	}
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	// Get the NATS listen path and consumer name from the backend.
-	listenPath, consumerName, err := s.client.GetListenPath(ctx, token, "chat")
-	if err != nil {
-		st, _ := status.FromError(err)
-		switch st.Code() {
-		case codes.Unauthenticated:
-			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: st.Message()})
-		default:
-			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: st.Message()})
-		}
-		return
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{
@@ -168,13 +144,50 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 	}()
 
+	// Read the first message to authenticate.
+	_, data, err := conn.ReadMessage()
+	if err != nil {
+		s.sendWSError(conn, 400, fmt.Sprintf("failed to read auth message: %v", err), 0, "")
+		return
+	}
+	var env lib.ChatRequestEnvelope
+	if err := json.Unmarshal(data, &env); err != nil || env.Type != lib.ChatRequestAuth {
+		s.sendWSError(conn, 400, fmt.Sprintf("first message must be auth request: %v", err), 0, "")
+		return
+	}
+	var auth authRequest
+	if err := json.Unmarshal(env.Data, &auth); err != nil || auth.Token == "" {
+		s.sendWSError(conn, 401, fmt.Sprintf("missing or malformed token in auth message: %v", err), 0, "")
+		return
+	}
+
+	claims, err := lib.ParseTokenUnverified(auth.Token)
+	if err != nil || claims.LoginID == "" || claims.UserID == "" {
+		s.sendWSError(conn, 401, fmt.Sprintf("Invalid token: %v", err), 0, "")
+		return
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	listenPath, consumerName, err := s.client.GetListenPath(ctx, auth.Token, "chat")
+	if err != nil {
+		st, _ := status.FromError(err)
+		switch st.Code() {
+		case codes.Unauthenticated:
+			s.sendWSError(conn, 401, st.Message(), 0, "")
+		default:
+			s.sendWSError(conn, 500, st.Message(), 0, "")
+		}
+		return
+	}
+
 	// Read messages from the WS client and forward them to the chat backend.
 	go func() {
 		for {
 			_, data, err := conn.ReadMessage()
 			if err != nil {
-				lib.ErrorLog.Printf("Error reading from websocket: consumerName: %s, err: %v", consumerName, err)
-
+				s.sendWSError(conn, 400, fmt.Sprintf("Error reading from websocket: %v", err), 0, "")
 				cancel()
 				return
 			}
@@ -192,7 +205,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 					s.sendWSError(conn, 400, fmt.Sprintf("invalid send request: %v", err), 0, "")
 					continue
 				}
-				if _, err := s.chatClient.SendMessage(ctx, token, req.ConversationID, req.MessageID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
+				if _, err := s.chatClient.SendMessage(ctx, auth.Token, req.ConversationID, req.MessageID, req.Content, req.MessageType, req.ReplyToMessageID); err != nil {
 					s.sendWSError(conn, 500, fmt.Sprintf("failed to send message: %v", err), req.ConversationID, req.MessageID)
 					continue
 				}
@@ -202,7 +215,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 					s.sendWSError(conn, 400, fmt.Sprintf("invalid read request: %v", err), 0, "")
 					continue
 				}
-				if err := s.chatClient.UpdateLastReadMessage(ctx, token, req.ConversationID, req.MessageID, req.SenderID); err != nil {
+				if err := s.chatClient.UpdateLastReadMessage(ctx, auth.Token, req.ConversationID, req.MessageID, req.SenderID); err != nil {
 					s.sendWSError(conn, 500, fmt.Sprintf("failed to update read status: %v", err), req.ConversationID, req.MessageID)
 				}
 			default:
@@ -240,7 +253,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if isMessageEvent {
-			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), token, message.ConversationID, message.ID.String(), message.SenderID.String()); err != nil {
+			if err := s.chatClient.UpdateLastDeliveredMessage(context.Background(), auth.Token, message.ConversationID, message.ID.String(), message.SenderID.String()); err != nil {
 				lib.ErrorLog.Printf("chat session: UpdateLastDeliveredMessage: consumerName: %s, err: %v", consumerName, err)
 			}
 		}
@@ -248,7 +261,7 @@ func (s *SessionHandler) ChatSession(w http.ResponseWriter, r *http.Request) {
 		msg.Ack()
 	}, nats.Durable(consumerName), nats.BindStream("SESSIONS"))
 	if err != nil {
-		s.sendWSError(conn, 500, fmt.Sprintf("failed to subscribe to chat: %v", err), 0, "")
+		lib.ErrorLog.Printf("failed to subscribe to chat: consumerName: %s, err: %v", consumerName, err)
 		cancel()
 		return
 	}

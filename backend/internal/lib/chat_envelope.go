@@ -75,6 +75,7 @@ type ChatRequestType string
 const (
 	ChatRequestSend ChatRequestType = "send"
 	ChatRequestRead ChatRequestType = "read"
+	ChatRequestAuth ChatRequestType = "auth"
 )
 
 // ChatRequestEnvelope is the typed wrapper for all WebSocket messages

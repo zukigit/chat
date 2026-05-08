@@ -35,11 +35,12 @@ export function useNotificationSession(onNotification?: (noti: Notification) => 
 
     setError(null)
     const gatewayUrl = config.gatewayUrl.replace(/^http/, 'ws')
-    const ws = new WebSocket(`${gatewayUrl}/sessions/notification?token=${encodeURIComponent(token)}`)
+    const ws = new WebSocket(`${gatewayUrl}/sessions/notification`)
 
     ws.onopen = () => {
       setConnected(true)
       setError(null)
+      ws.send(JSON.stringify({ version: 1, type: 'auth', data: { token } }))
       onConnectRef.current?.()
     }
     ws.onclose = () => {

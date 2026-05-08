@@ -42,12 +42,13 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     setError(null)
     setRetryCountdown(0)
     const gatewayUrl = config.gatewayUrl.replace(/^http/, 'ws')
-    const ws = new WebSocket(`${gatewayUrl}/sessions/chat?token=${encodeURIComponent(token)}`)
+    const ws = new WebSocket(`${gatewayUrl}/sessions/chat`)
 
     ws.onopen = () => {
       setConnected(true)
       setError(null)
       setRetryCountdown(0)
+      ws.send(JSON.stringify({ version: 1, type: 'auth', data: { token } }))
       onConnectRef.current?.()
     }
     ws.onclose = () => {

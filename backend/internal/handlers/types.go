@@ -55,6 +55,12 @@ type readMessageRequest struct {
 	SenderID       string `json:"sender_id"`
 }
 
+// authRequest is the JSON payload a client sends as the first message
+// over a WebSocket connection to authenticate the session.
+type authRequest struct {
+	Token string `json:"token"`
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
