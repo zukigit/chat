@@ -377,6 +377,270 @@ func (x *SearchUsersResponse) GetUsers() []*UserResult {
 	return nil
 }
 
+type GetGithubOAuthURLRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetGithubOAuthURLRequest) Reset() {
+	*x = GetGithubOAuthURLRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetGithubOAuthURLRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetGithubOAuthURLRequest) ProtoMessage() {}
+
+func (x *GetGithubOAuthURLRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetGithubOAuthURLRequest.ProtoReflect.Descriptor instead.
+func (*GetGithubOAuthURLRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{7}
+}
+
+type GetGithubOAuthURLResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetGithubOAuthURLResponse) Reset() {
+	*x = GetGithubOAuthURLResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetGithubOAuthURLResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetGithubOAuthURLResponse) ProtoMessage() {}
+
+func (x *GetGithubOAuthURLResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetGithubOAuthURLResponse.ProtoReflect.Descriptor instead.
+func (*GetGithubOAuthURLResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetGithubOAuthURLResponse) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+type GithubOAuthCallbackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GithubOAuthCallbackRequest) Reset() {
+	*x = GithubOAuthCallbackRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GithubOAuthCallbackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GithubOAuthCallbackRequest) ProtoMessage() {}
+
+func (x *GithubOAuthCallbackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GithubOAuthCallbackRequest.ProtoReflect.Descriptor instead.
+func (*GithubOAuthCallbackRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GithubOAuthCallbackRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type GithubOAuthCallbackResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ShortLivedToken string                 `protobuf:"bytes,1,opt,name=shortLivedToken,proto3" json:"shortLivedToken,omitempty"`
+	Username        string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GithubOAuthCallbackResponse) Reset() {
+	*x = GithubOAuthCallbackResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GithubOAuthCallbackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GithubOAuthCallbackResponse) ProtoMessage() {}
+
+func (x *GithubOAuthCallbackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GithubOAuthCallbackResponse.ProtoReflect.Descriptor instead.
+func (*GithubOAuthCallbackResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GithubOAuthCallbackResponse) GetShortLivedToken() string {
+	if x != nil {
+		return x.ShortLivedToken
+	}
+	return ""
+}
+
+func (x *GithubOAuthCallbackResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type ExchangeTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExchangeTokenRequest) Reset() {
+	*x = ExchangeTokenRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeTokenRequest) ProtoMessage() {}
+
+func (x *ExchangeTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExchangeTokenRequest.ProtoReflect.Descriptor instead.
+func (*ExchangeTokenRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{11}
+}
+
+type ExchangeTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // long-lived JWT (24h)
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExchangeTokenResponse) Reset() {
+	*x = ExchangeTokenResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeTokenResponse) ProtoMessage() {}
+
+func (x *ExchangeTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExchangeTokenResponse.ProtoReflect.Descriptor instead.
+func (*ExchangeTokenResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ExchangeTokenResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *ExchangeTokenResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
 var File_proto_auth_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_auth_proto_rawDesc = "" +
@@ -403,11 +667,26 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\x11friendship_status\x18\x05 \x01(\tR\x10friendshipStatus\x12>\n" +
 	"\x1bfriendship_initiator_userid\x18\x06 \x01(\tR\x19friendshipInitiatorUserid\"=\n" +
 	"\x13SearchUsersResponse\x12&\n" +
-	"\x05users\x18\x01 \x03(\v2\x10.auth.UserResultR\x05users2\xb1\x01\n" +
+	"\x05users\x18\x01 \x03(\v2\x10.auth.UserResultR\x05users\"\x1a\n" +
+	"\x18GetGithubOAuthURLRequest\"-\n" +
+	"\x19GetGithubOAuthURLResponse\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\"0\n" +
+	"\x1aGithubOAuthCallbackRequest\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\"c\n" +
+	"\x1bGithubOAuthCallbackResponse\x12(\n" +
+	"\x0fshortLivedToken\x18\x01 \x01(\tR\x0fshortLivedToken\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\"\x16\n" +
+	"\x14ExchangeTokenRequest\"I\n" +
+	"\x15ExchangeTokenResponse\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername2\xad\x03\n" +
 	"\x04Auth\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
 	"\x06Signup\x12\x13.auth.SignupRequest\x1a\x14.auth.SignupResponse\x12B\n" +
-	"\vSearchUsers\x12\x18.auth.SearchUsersRequest\x1a\x19.auth.SearchUsersResponseB\rZ\vproto/auth/b\x06proto3"
+	"\vSearchUsers\x12\x18.auth.SearchUsersRequest\x1a\x19.auth.SearchUsersResponse\x12T\n" +
+	"\x11GetGithubOAuthURL\x12\x1e.auth.GetGithubOAuthURLRequest\x1a\x1f.auth.GetGithubOAuthURLResponse\x12Z\n" +
+	"\x13GithubOAuthCallback\x12 .auth.GithubOAuthCallbackRequest\x1a!.auth.GithubOAuthCallbackResponse\x12H\n" +
+	"\rExchangeToken\x12\x1a.auth.ExchangeTokenRequest\x1a\x1b.auth.ExchangeTokenResponseB\rZ\vproto/auth/b\x06proto3"
 
 var (
 	file_proto_auth_auth_proto_rawDescOnce sync.Once
@@ -421,29 +700,41 @@ func file_proto_auth_auth_proto_rawDescGZIP() []byte {
 	return file_proto_auth_auth_proto_rawDescData
 }
 
-var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_proto_auth_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),        // 0: auth.LoginRequest
-	(*LoginResponse)(nil),       // 1: auth.LoginResponse
-	(*SignupRequest)(nil),       // 2: auth.SignupRequest
-	(*SignupResponse)(nil),      // 3: auth.SignupResponse
-	(*SearchUsersRequest)(nil),  // 4: auth.SearchUsersRequest
-	(*UserResult)(nil),          // 5: auth.UserResult
-	(*SearchUsersResponse)(nil), // 6: auth.SearchUsersResponse
+	(*LoginRequest)(nil),                // 0: auth.LoginRequest
+	(*LoginResponse)(nil),               // 1: auth.LoginResponse
+	(*SignupRequest)(nil),               // 2: auth.SignupRequest
+	(*SignupResponse)(nil),              // 3: auth.SignupResponse
+	(*SearchUsersRequest)(nil),          // 4: auth.SearchUsersRequest
+	(*UserResult)(nil),                  // 5: auth.UserResult
+	(*SearchUsersResponse)(nil),         // 6: auth.SearchUsersResponse
+	(*GetGithubOAuthURLRequest)(nil),    // 7: auth.GetGithubOAuthURLRequest
+	(*GetGithubOAuthURLResponse)(nil),   // 8: auth.GetGithubOAuthURLResponse
+	(*GithubOAuthCallbackRequest)(nil),  // 9: auth.GithubOAuthCallbackRequest
+	(*GithubOAuthCallbackResponse)(nil), // 10: auth.GithubOAuthCallbackResponse
+	(*ExchangeTokenRequest)(nil),        // 11: auth.ExchangeTokenRequest
+	(*ExchangeTokenResponse)(nil),       // 12: auth.ExchangeTokenResponse
 }
 var file_proto_auth_auth_proto_depIdxs = []int32{
-	5, // 0: auth.SearchUsersResponse.users:type_name -> auth.UserResult
-	0, // 1: auth.Auth.Login:input_type -> auth.LoginRequest
-	2, // 2: auth.Auth.Signup:input_type -> auth.SignupRequest
-	4, // 3: auth.Auth.SearchUsers:input_type -> auth.SearchUsersRequest
-	1, // 4: auth.Auth.Login:output_type -> auth.LoginResponse
-	3, // 5: auth.Auth.Signup:output_type -> auth.SignupResponse
-	6, // 6: auth.Auth.SearchUsers:output_type -> auth.SearchUsersResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5,  // 0: auth.SearchUsersResponse.users:type_name -> auth.UserResult
+	0,  // 1: auth.Auth.Login:input_type -> auth.LoginRequest
+	2,  // 2: auth.Auth.Signup:input_type -> auth.SignupRequest
+	4,  // 3: auth.Auth.SearchUsers:input_type -> auth.SearchUsersRequest
+	7,  // 4: auth.Auth.GetGithubOAuthURL:input_type -> auth.GetGithubOAuthURLRequest
+	9,  // 5: auth.Auth.GithubOAuthCallback:input_type -> auth.GithubOAuthCallbackRequest
+	11, // 6: auth.Auth.ExchangeToken:input_type -> auth.ExchangeTokenRequest
+	1,  // 7: auth.Auth.Login:output_type -> auth.LoginResponse
+	3,  // 8: auth.Auth.Signup:output_type -> auth.SignupResponse
+	6,  // 9: auth.Auth.SearchUsers:output_type -> auth.SearchUsersResponse
+	8,  // 10: auth.Auth.GetGithubOAuthURL:output_type -> auth.GetGithubOAuthURLResponse
+	10, // 11: auth.Auth.GithubOAuthCallback:output_type -> auth.GithubOAuthCallbackResponse
+	12, // 12: auth.Auth.ExchangeToken:output_type -> auth.ExchangeTokenResponse
+	7,  // [7:13] is the sub-list for method output_type
+	1,  // [1:7] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_proto_auth_auth_proto_init() }
@@ -457,7 +748,7 @@ func file_proto_auth_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_auth_proto_rawDesc), len(file_proto_auth_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

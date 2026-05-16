@@ -26,22 +26,29 @@ func jwtSecret() []byte {
 	return []byte(secret)
 }
 
-// GenerateToken signs a JWT for the given userID and username with a 24-hour expiry.
-// A fresh login_id UUID is embedded so each login session has a stable identifier
-// used as the durable NATS consumer name.
-func GenerateToken(userID, username string) (string, error) {
+// GenerateTokenWithExpiry signs a JWT for the given userID and username with a
+// configurable expiry duration. Use 60*time.Second for OAuth redirect tokens
+// and 24*time.Hour for session tokens.
+func GenerateTokenWithExpiry(userID, username string, expiry time.Duration) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		LoginID:  uuid.NewString(),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret())
+}
+
+// GenerateToken signs a JWT for the given userID and username with a 24-hour expiry.
+// A fresh login_id UUID is embedded so each login session has a stable identifier
+// used as the durable NATS consumer name.
+func GenerateToken(userID, username string) (string, error) {
+	return GenerateTokenWithExpiry(userID, username, 24*time.Hour)
 }
 
 // ValidateToken parses and validates a JWT string, returning the embedded Claims.

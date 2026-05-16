@@ -19,9 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Auth_Login_FullMethodName       = "/auth.Auth/Login"
-	Auth_Signup_FullMethodName      = "/auth.Auth/Signup"
-	Auth_SearchUsers_FullMethodName = "/auth.Auth/SearchUsers"
+	Auth_Login_FullMethodName               = "/auth.Auth/Login"
+	Auth_Signup_FullMethodName              = "/auth.Auth/Signup"
+	Auth_SearchUsers_FullMethodName         = "/auth.Auth/SearchUsers"
+	Auth_GetGithubOAuthURL_FullMethodName   = "/auth.Auth/GetGithubOAuthURL"
+	Auth_GithubOAuthCallback_FullMethodName = "/auth.Auth/GithubOAuthCallback"
+	Auth_ExchangeToken_FullMethodName       = "/auth.Auth/ExchangeToken"
 )
 
 // AuthClient is the client API for Auth service.
@@ -31,6 +34,9 @@ type AuthClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Signup(ctx context.Context, in *SignupRequest, opts ...grpc.CallOption) (*SignupResponse, error)
 	SearchUsers(ctx context.Context, in *SearchUsersRequest, opts ...grpc.CallOption) (*SearchUsersResponse, error)
+	GetGithubOAuthURL(ctx context.Context, in *GetGithubOAuthURLRequest, opts ...grpc.CallOption) (*GetGithubOAuthURLResponse, error)
+	GithubOAuthCallback(ctx context.Context, in *GithubOAuthCallbackRequest, opts ...grpc.CallOption) (*GithubOAuthCallbackResponse, error)
+	ExchangeToken(ctx context.Context, in *ExchangeTokenRequest, opts ...grpc.CallOption) (*ExchangeTokenResponse, error)
 }
 
 type authClient struct {
@@ -71,6 +77,36 @@ func (c *authClient) SearchUsers(ctx context.Context, in *SearchUsersRequest, op
 	return out, nil
 }
 
+func (c *authClient) GetGithubOAuthURL(ctx context.Context, in *GetGithubOAuthURLRequest, opts ...grpc.CallOption) (*GetGithubOAuthURLResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetGithubOAuthURLResponse)
+	err := c.cc.Invoke(ctx, Auth_GetGithubOAuthURL_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) GithubOAuthCallback(ctx context.Context, in *GithubOAuthCallbackRequest, opts ...grpc.CallOption) (*GithubOAuthCallbackResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GithubOAuthCallbackResponse)
+	err := c.cc.Invoke(ctx, Auth_GithubOAuthCallback_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) ExchangeToken(ctx context.Context, in *ExchangeTokenRequest, opts ...grpc.CallOption) (*ExchangeTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeTokenResponse)
+	err := c.cc.Invoke(ctx, Auth_ExchangeToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility.
@@ -78,6 +114,9 @@ type AuthServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Signup(context.Context, *SignupRequest) (*SignupResponse, error)
 	SearchUsers(context.Context, *SearchUsersRequest) (*SearchUsersResponse, error)
+	GetGithubOAuthURL(context.Context, *GetGithubOAuthURLRequest) (*GetGithubOAuthURLResponse, error)
+	GithubOAuthCallback(context.Context, *GithubOAuthCallbackRequest) (*GithubOAuthCallbackResponse, error)
+	ExchangeToken(context.Context, *ExchangeTokenRequest) (*ExchangeTokenResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -96,6 +135,15 @@ func (UnimplementedAuthServer) Signup(context.Context, *SignupRequest) (*SignupR
 }
 func (UnimplementedAuthServer) SearchUsers(context.Context, *SearchUsersRequest) (*SearchUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SearchUsers not implemented")
+}
+func (UnimplementedAuthServer) GetGithubOAuthURL(context.Context, *GetGithubOAuthURLRequest) (*GetGithubOAuthURLResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetGithubOAuthURL not implemented")
+}
+func (UnimplementedAuthServer) GithubOAuthCallback(context.Context, *GithubOAuthCallbackRequest) (*GithubOAuthCallbackResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GithubOAuthCallback not implemented")
+}
+func (UnimplementedAuthServer) ExchangeToken(context.Context, *ExchangeTokenRequest) (*ExchangeTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExchangeToken not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 func (UnimplementedAuthServer) testEmbeddedByValue()              {}
@@ -172,6 +220,60 @@ func _Auth_SearchUsers_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_GetGithubOAuthURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGithubOAuthURLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GetGithubOAuthURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_GetGithubOAuthURL_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GetGithubOAuthURL(ctx, req.(*GetGithubOAuthURLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_GithubOAuthCallback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GithubOAuthCallbackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GithubOAuthCallback(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_GithubOAuthCallback_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GithubOAuthCallback(ctx, req.(*GithubOAuthCallbackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_ExchangeToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExchangeTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).ExchangeToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_ExchangeToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).ExchangeToken(ctx, req.(*ExchangeTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +292,18 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SearchUsers",
 			Handler:    _Auth_SearchUsers_Handler,
+		},
+		{
+			MethodName: "GetGithubOAuthURL",
+			Handler:    _Auth_GetGithubOAuthURL_Handler,
+		},
+		{
+			MethodName: "GithubOAuthCallback",
+			Handler:    _Auth_GithubOAuthCallback_Handler,
+		},
+		{
+			MethodName: "ExchangeToken",
+			Handler:    _Auth_ExchangeToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

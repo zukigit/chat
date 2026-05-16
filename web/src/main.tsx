@@ -7,6 +7,7 @@ import PrivateRoute from './components/PrivateRoute'
 import SetupPage from './pages/SetupPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import CallbackPage from './pages/CallbackPage'
 import HomePage from './pages/HomePage'
 
 createRoot(document.getElementById('root')!).render(
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/setup" element={<SetupPage />} />
+      <Route path="/callback" element={<CallbackPage />} />
 
       {/* Private routes */}
       <Route element={<PrivateRoute />}>

@@ -60,3 +60,33 @@ func (a *AuthClient) SearchUsers(ctx context.Context, token, query string) (*aut
 		Query: query,
 	})
 }
+
+// GetGithubOAuthURL retrieves the GitHub OAuth authorization URL.
+func (a *AuthClient) GetGithubOAuthURL(ctx context.Context) (string, error) {
+	resp, err := a.client.GetGithubOAuthURL(ctx, &auth.GetGithubOAuthURLRequest{})
+	if err != nil {
+		return "", err
+	}
+	return resp.Url, nil
+}
+
+// GithubOAuthCallback exchanges the GitHub OAuth code for a short-lived JWT.
+func (a *AuthClient) GithubOAuthCallback(ctx context.Context, code string) (shortLivedToken, username string, err error) {
+	resp, err := a.client.GithubOAuthCallback(ctx, &auth.GithubOAuthCallbackRequest{Code: code})
+	if err != nil {
+		return "", "", err
+	}
+	return resp.ShortLivedToken, resp.Username, nil
+}
+
+// ExchangeToken exchanges a short-lived OAuth token for a long-lived session token.
+func (a *AuthClient) ExchangeToken(ctx context.Context, shortLivedToken string) (longLivedToken, username string, err error) {
+	resp, err := a.client.ExchangeToken(
+		lib.WithToken(ctx, shortLivedToken),
+		&auth.ExchangeTokenRequest{},
+	)
+	if err != nil {
+		return "", "", err
+	}
+	return resp.Token, resp.Username, nil
+}

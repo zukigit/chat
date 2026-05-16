@@ -72,6 +72,10 @@ func main() {
 	r.HandleFunc("/signup", authHandler.Signup).Methods(http.MethodPost)
 	r.HandleFunc("/users/search", authHandler.SearchUsers).Methods(http.MethodGet)
 
+	r.HandleFunc("/oauth/github/url", authHandler.GetGithubOAuthURL).Methods(http.MethodPost)
+	r.HandleFunc("/oauth/github/callback", authHandler.GithubOAuthCallback).Methods(http.MethodGet)
+	r.HandleFunc("/token/exchange", authHandler.ExchangeToken).Methods(http.MethodPost)
+
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)
@@ -84,9 +88,8 @@ func main() {
 	r.HandleFunc("/conversations/search", chatHandler.GetConversationsByName).Methods(http.MethodGet)
 
 	cors := gorhandlers.CORS(
-		// frontend url is dynamic
 		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "")}),
-		gorhandlers.AllowedMethods([]string{"GET", "POST"}),
+		gorhandlers.AllowedMethods([]string{"GET", "POST", "OPTIONS"}),
 		gorhandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)
 

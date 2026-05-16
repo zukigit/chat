@@ -37,8 +37,42 @@ message SearchUsersResponse {
   repeated UserResult users = 1;
 }
 
+// --- GitHub OAuth ---
+
+message GetGithubOAuthURLRequest {
+  // No fields. The gateway/backend knows its own callback URL from configuration.
+}
+
+message GetGithubOAuthURLResponse {
+  string url = 1;
+}
+
+message GithubOAuthCallbackRequest {
+  string code = 1;
+}
+
+message GithubOAuthCallbackResponse {
+  string shortLivedToken = 1;
+  string username = 2;
+}
+
+// --- Token Exchange ---
+
+message ExchangeTokenRequest {
+  // Token arrives via gRPC metadata (Authorization: Bearer <short_lived_token>).
+  // No body fields needed.
+}
+
+message ExchangeTokenResponse {
+  string token = 1;     // long-lived JWT (24h)
+  string username = 2;
+}
+
 service Auth {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Signup(SignupRequest) returns (SignupResponse);
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  rpc GetGithubOAuthURL(GetGithubOAuthURLRequest) returns (GetGithubOAuthURLResponse);
+  rpc GithubOAuthCallback(GithubOAuthCallbackRequest) returns (GithubOAuthCallbackResponse);
+  rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse);
 }

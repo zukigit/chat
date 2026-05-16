@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 
 	"github.com/zukigit/chat/backend/internal/clients"
 	"github.com/zukigit/chat/backend/internal/lib"
@@ -164,5 +165,62 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Message: "users found",
 		Data:    resp.Users,
+	})
+}
+
+// GetGithubOAuthURL handles POST /oauth/github/url
+// Returns the GitHub OAuth authorization URL.
+func (h *AuthHandler) GetGithubOAuthURL(w http.ResponseWriter, r *http.Request) {
+	url, err := h.authClient.GetGithubOAuthURL(r.Context())
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
+		return
+	}
+	lib.WriteJSON(w, http.StatusOK, lib.Response{Success: true, Data: map[string]string{"url": url}})
+}
+
+// GithubOAuthCallback handles GET /oauth/github/callback
+// GitHub redirects here after user authorization. The gateway exchanges the code
+// for a short-lived token and redirects to the frontend.
+func (h *AuthHandler) GithubOAuthCallback(w http.ResponseWriter, r *http.Request) {
+	frontendURL := lib.Getenv("FRONTEND_URL", "")
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Redirect(w, r, frontendURL+"?error=missing_code", http.StatusFound)
+		return
+	}
+	shortLivedToken, username, err := h.authClient.GithubOAuthCallback(r.Context(), code)
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		http.Redirect(w, r, frontendURL+"?error="+url.QueryEscape(grpcStatus.Message()), http.StatusFound)
+		return
+	}
+	_ = username
+	http.Redirect(w, r, frontendURL+"/callback?token="+url.QueryEscape(shortLivedToken), http.StatusFound)
+}
+
+// ExchangeToken handles POST /token/exchange
+// Exchanges a short-lived OAuth token for a long-lived session token.
+func (h *AuthHandler) ExchangeToken(w http.ResponseWriter, r *http.Request) {
+	shortLivedToken, ok := lib.BearerToken(r)
+	if !ok || shortLivedToken == "" {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "missing or malformed Authorization header"})
+		return
+	}
+	longLivedToken, username, err := h.authClient.ExchangeToken(r.Context(), shortLivedToken)
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		switch grpcStatus.Code() {
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: grpcStatus.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
+		}
+		return
+	}
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Data:    map[string]string{"token": longLivedToken, "username": username},
 	})
 }

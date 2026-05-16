@@ -15,8 +15,10 @@ import (
 // However, if a valid token IS present, those methods will reject the request
 // (the user is already logged in).
 var publicMethods = map[string]bool{
-	"/auth.Auth/Login":  true,
-	"/auth.Auth/Signup": true,
+	"/auth.Auth/Login":               true,
+	"/auth.Auth/Signup":              true,
+	"/auth.Auth/GetGithubOAuthURL":   true,
+	"/auth.Auth/GithubOAuthCallback": true,
 }
 
 // extractBearerToken reads the "authorization" metadata header and returns
