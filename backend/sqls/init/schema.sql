@@ -8,10 +8,11 @@ CREATE TABLE IF NOT EXISTS users (
     hashed_passwd TEXT,
     signup_type   signup_type  NOT NULL DEFAULT 'email',
     display_name  VARCHAR(100),
-    avatar_url    TEXT,
-    last_seen_at  TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    avatar_url             TEXT,
+    encrypted_private_key  TEXT,
+    last_seen_at           TIMESTAMPTZ,
+    created_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     CHECK (signup_type != 'email' OR hashed_passwd IS NOT NULL)
 );
 
@@ -78,6 +79,15 @@ CREATE TABLE IF NOT EXISTS dm_peers (
     UNIQUE (conversation_id)
 );
 
+-- ── Public Keys ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public_keys (
+    id          BIGSERIAL    PRIMARY KEY,
+    user_id     UUID         NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    key         TEXT         NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 -- ── Notifications ──────────────────────────────────────────────────────────────
 CREATE TYPE notification_type AS ENUM ('message', 'friend_request');
 
@@ -128,3 +138,7 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user2_status_time
 -- friendships: lookup by initiator
 CREATE INDEX IF NOT EXISTS idx_friendships_initiator
     ON friendships (initiator_userid);
+
+-- public_keys: lookup by user_id
+CREATE INDEX IF NOT EXISTS idx_public_keys_user
+    ON public_keys (user_id);

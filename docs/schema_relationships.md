@@ -11,6 +11,7 @@ erDiagram
         signup_type signup_type
         varchar display_name
         text avatar_url
+        text encrypted_private_key
         timestamptz last_seen_at
         timestamptz created_at
         timestamptz updated_at
@@ -67,12 +68,21 @@ erDiagram
         timestamptz created_at
     }
 
+    public_keys {
+        bigserial id PK
+        uuid user_id FK
+        text key
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
     dm_peers {
         uuid user1_id PK_FK
         uuid user2_id PK_FK
         bigint conversation_id FK
     }
 
+    users ||--o{ public_keys : "has (user_id)"
     users ||--o{ friendships : "requests (user1_userid)"
     users ||--o{ friendships : "receives (user2_userid)"
     users ||--o{ friendships : "initiates (initiator_userid)"
@@ -103,6 +113,7 @@ Central table. Every other table references it.
 | `signup_type` | `signup_type` | `email`, `google`, `github` |
 | `display_name` | `VARCHAR(100)` | nullable |
 | `avatar_url` | `TEXT` | nullable |
+| `encrypted_private_key` | `TEXT` | nullable — encrypted at-rest E2EE private key |
 | `last_seen_at` | `TIMESTAMPTZ` | nullable |
 | `created_at` | `TIMESTAMPTZ` | |
 | `updated_at` | `TIMESTAMPTZ` | |
@@ -144,6 +155,19 @@ Fast lookup table for DM conversations. Maps a canonical user pair to a `convers
 | `user1_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
 | `user2_id` | `UUID` | **PK, FK** → `users.user_id` (CASCADE) |
 | `conversation_id` | `BIGINT` | **FK, UNIQUE** → `conversations.id` (CASCADE) |
+
+---
+
+### `public_keys`
+Stores public keys for end-to-end encryption.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `BIGSERIAL` | **PK** |
+| `user_id` | `UUID` | **FK** → `users.user_id` (CASCADE) |
+| `key` | `TEXT` | Public key data |
+| `created_at` | `TIMESTAMPTZ` | |
+| `updated_at` | `TIMESTAMPTZ` | |
 
 ---
 
@@ -213,6 +237,7 @@ Notifies a user of an event.
 | `users` | `dm_peers` | `user1_id` | one-to-many |
 | `users` | `dm_peers` | `user2_id` | one-to-many |
 | `conversations` | `dm_peers` | `conversation_id` | one-to-one |
+| `users` | `public_keys` | `user_id` | one-to-many |
 
 ---
 
@@ -229,3 +254,4 @@ Notifies a user of an event.
 | `idx_friendships_user2_status` | `friendships` | `(user2_userid, status)` | Accepted friends lookup per user (other side) |
 | `idx_friendships_user2_status_time` | `friendships` | `(user2_userid, status, created_at DESC)` | Pending incoming friend requests |
 | `idx_friendships_initiator` | `friendships` | `initiator_userid` | Look up friendships by initiator |
+| `idx_public_keys_user` | `public_keys` | `user_id` | Look up public keys by user |
