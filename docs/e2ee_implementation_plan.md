@@ -1,4 +1,4 @@
-# E2EE Implementation Plan — zukigit/chat
+# E2EE Implementation Plan — zukigit/chat (age-encryption)
 
 ## Overview
 
@@ -6,6 +6,11 @@ This document outlines the step-by-step plan to add End-to-End Encryption (E2EE)
 zukigit/chat project. The system uses **OAuth for authentication** and a **user-set PIN** as
 the only secret that unlocks the encryption key. The server stores only encrypted blobs and
 public keys — it can never decrypt messages.
+
+Encryption is handled by **[age](https://age-encryption.org/)** (`filippo.io/age` on the
+backend, `age-encryption` npm package on the frontend). age natively supports **multiple
+recipients**: a single message is encrypted once and can be decrypted by any of N recipients
+without re-encrypting the payload. This makes group/room messaging efficient and future-proof.
 
 **Stack:** Go backend · TypeScript frontend · PostgreSQL · NATS · Docker
 
@@ -16,23 +21,43 @@ public keys — it can never decrypt messages.
 ```
 User sets PIN once
       │
-      └──► PBKDF2 + AES-GCM ──► encrypts ECDH private key ──► server stores encrypted blob
-                                                                server stores public key
+      └──► PBKDF2 + AES-GCM ──► encrypts age X25519 identity (private key) ──► server stores encrypted blob
+                                                                                  server stores age recipient (public key)
 
 Per session:
-OAuth login ──► fetch encrypted blob ──► user enters PIN ──► decrypt private key
+OAuth login ──► fetch encrypted blob ──► user enters PIN ──► decrypt age identity
                                                                       │
-                                                          import as non-extractable CryptoKey
-                                                          into JS memory (not localStorage)
+                                                          hold identity in JS memory only
+                                                          (not localStorage, not extractable)
                                                                       │
                                                           PIN and raw key bytes are discarded
 
-Messaging:
-Sender fetches recipient public key ──► ECDH derive shared secret ──► AES-GCM encrypt message
-                                                                               │
-                                                                    send ciphertext to server
-                                                          Server stores/forwards ciphertext only
+Messaging (supports N recipients):
+Sender fetches public keys of ALL recipients (including self for sender-copy)
+      │
+      ▼
+age.encrypt(plaintext, [recipient1, recipient2, ...recipientN])
+      │                    └─ each recipient gets their own encrypted file key header stanza
+      ▼
+Single age ciphertext ──► send to server  (server stores/forwards opaque bytes)
+
+Decryption:
+Receiver's age identity ──► age.decrypt(ciphertext) ──► plaintext
+      (age finds the matching header stanza automatically)
 ```
+
+---
+
+## Why age Instead of Raw ECDH
+
+| Concern | Raw ECDH (previous plan) | age |
+|---|---|---|
+| Multiple recipients | Re-encrypt per recipient or complex KEM wrapping | Built-in: one ciphertext, N recipient stanzas |
+| Key format | SPKI/PKCS8 base64, manual import | `age1...` bech32 strings, simple API |
+| Algorithm agility risk | Manual AES-GCM wiring | age spec is fixed; no negotiation |
+| Group/room messages | O(N) encryptions | O(1) encryption, O(1) decryption |
+| Forward secrecy (optional) | Manual ephemeral key management | age supports passphrase & X25519 recipients natively |
+| Auditability | Custom crypto glue | Audited spec + reference implementations |
 
 ---
 
@@ -40,49 +65,65 @@ Sender fetches recipient public key ──► ECDH derive shared secret ──�
 
 **File:** `backend/sqls/init/` — add a new migration file.
 
-### 1.1 Key columns — already done ✅
+### 1.1 Key columns
 
-The following are already in place:
+Replace ECDH SPKI columns with age-compatible columns. The shape is nearly identical
+but the values are age-formatted strings.
 
+```sql
+-- users: stores the age identity (private key) encrypted by the user's PIN
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS encrypted_age_identity TEXT;
+  -- AES-GCM blob: salt(16) + iv(12) + ciphertext of the raw age identity bytes
+  -- Replaces: encrypted_private_key
+
+-- public_keys: stores the age recipient string (public key)
+-- Column rename is optional; the stored value changes from SPKI base64 to age1... string
+ALTER TABLE public_keys
+  RENAME COLUMN key TO age_recipient;
+  -- Value example: "age1xy3qfp8z..."
+  -- Replaces: base64 SPKI
 ```
-users
-  └── encrypted_private_key  TEXT    -- AES-GCM blob, useless without PIN
 
-public_keys
-  └── key                    TEXT    -- SPKI base64, safe as plaintext
-  └── user_id                FK → users
-```
-
-The separate `public_keys` table is a better design than a single column — it naturally
-supports multiple keys per user in the future (e.g. per-device keys or key rotation).
-
-**No changes needed to these tables.**
+The separate `public_keys` table stays, and its multi-key-per-user design is now even more
+useful: each device can have its own age recipient, all added as recipients to every message
+sent to that user.
 
 ### 1.2 Update messages table
 
 ```sql
 ALTER TABLE messages
-  ADD COLUMN iv TEXT NOT NULL DEFAULT '';
+  ADD COLUMN IF NOT EXISTS age_ciphertext TEXT NOT NULL DEFAULT '';
+  -- Full age binary payload, base64-encoded.
+  -- The IV is embedded inside the age format; no separate iv column needed.
+  -- The existing `content` column can be dropped or left for migration purposes.
 ```
-
-Every encrypted message needs its own random IV stored alongside the ciphertext.
-The existing `content` column will store the base64 ciphertext instead of plaintext.
 
 ---
 
 ## Phase 2 — Backend API (Go)
 
-Add two new REST endpoints. The gateway service proxies these to the backend.
+Add/update REST endpoints. The gateway service proxies these to the backend.
 
-### 2.1 Save keys — `POST /api/users/keys`
+### 2.1 Go dependency
+
+```bash
+go get filippo.io/age
+```
+
+The backend itself **does not encrypt or decrypt messages** — it is a dumb relay.
+`filippo.io/age` is imported only if the backend ever needs to validate key format
+or issue keys server-side (not required in this plan).
+
+### 2.2 Save keys — `POST /api/users/keys`
 
 Called once during signup after key generation on the client.
 
 ```
 Request body:
 {
-  "public_key":            "base64 SPKI...",
-  "encrypted_private_key": "base64 blob (salt+iv+ciphertext)..."
+  "age_recipient":           "age1xy3qfp8z...",         -- X25519 public key (bech32)
+  "encrypted_age_identity":  "base64 blob (salt+iv+ciphertext of age identity bytes)..."
 }
 
 Response:
@@ -90,56 +131,85 @@ Response:
 ```
 
 Handler:
+
 ```
 validate JWT → get user_id
   │
-  ├──► UPDATE users SET encrypted_private_key = $1 WHERE id = $2
-  └──► INSERT INTO public_keys (user_id, key) VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET key = EXCLUDED.key
+  ├──► UPDATE users SET encrypted_age_identity = $1 WHERE id = $2
+  └──► INSERT INTO public_keys (user_id, age_recipient) VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET age_recipient = EXCLUDED.age_recipient
 ```
 
-> If `public_keys` has a unique constraint on `user_id`, upsert as above.
-> If it supports multiple keys per user (no unique constraint), use plain INSERT.
+> For multi-device support (no unique constraint on user_id), use plain INSERT
+> and return a key_id so the client can reference individual keys.
 
-### 2.2 Fetch own keys — `GET /api/users/keys`
+### 2.3 Fetch own keys — `GET /api/users/keys`
 
-Called on every login to retrieve the encrypted blob and public key for this user.
+Called on every login.
 
 ```
 Response:
 {
-  "public_key":            "base64 SPKI...",   -- from public_keys.key
-  "encrypted_private_key": "base64 blob..."    -- from users.encrypted_private_key
+  "age_recipient":          "age1xy3qfp8z...",
+  "encrypted_age_identity": "base64 blob..."
 }
 ```
 
 Handler:
+
 ```sql
-SELECT u.encrypted_private_key, pk.key AS public_key
+SELECT u.encrypted_age_identity, pk.age_recipient
 FROM users u
 JOIN public_keys pk ON pk.user_id = u.id
 WHERE u.id = $1   -- authenticated user_id from JWT
 ```
 
-### 2.3 Fetch another user's public key — `GET /api/users/:id/public-key`
+### 2.4 Fetch another user's public keys — `GET /api/users/:id/public-keys`
 
-Called before encrypting a message to that user.
+Returns **all** age recipients for a user (one per device). The sender must encrypt
+to all of them so the recipient can read the message on any device.
 
 ```
 Response:
-{ "public_key": "base64 SPKI..." }
+{
+  "age_recipients": [
+    "age1xy3qfp8z...",
+    "age1ab7mn2k..."
+  ]
+}
 ```
 
 Handler:
+
 ```sql
-SELECT key FROM public_keys WHERE user_id = $1
+SELECT age_recipient FROM public_keys WHERE user_id = $1
 ```
 
-### 2.4 Update message handler
+### 2.5 Fetch public keys for a room/group — `GET /api/rooms/:id/members/public-keys`
 
-The existing send-message handler must stop reading/writing plaintext.
-It now accepts `content` (base64 ciphertext) and `iv` (base64) and stores them as-is.
-The server performs no decryption — it is a dumb relay.
+For group chats, returns recipients for all room members at once to avoid N+1 fetches.
+
+```
+Response:
+{
+  "recipients_by_user": {
+    "user_42": ["age1xy3qfp8z...", "age1ab7mn2k..."],
+    "user_99": ["age1cd8op3j..."]
+  }
+}
+```
+
+### 2.6 Update message handler
+
+Accept `age_ciphertext` (base64 age payload) and store as-is. No decryption on server.
+
+```
+Request body:
+{
+  "room_id":        123,
+  "age_ciphertext": "base64 age binary..."
+}
+```
 
 ---
 
@@ -147,28 +217,37 @@ The server performs no decryption — it is a dumb relay.
 
 **New file:** `web/src/lib/crypto.ts`
 
-This module handles all cryptographic operations using the browser's native **Web Crypto API**
-(zero external dependencies).
+Uses the **`age-encryption`** npm package plus the browser's native Web Crypto API for
+PIN-based key wrapping.
+
+```bash
+npm install age-encryption
+```
 
 ### 3.1 Key generation (signup only)
 
 ```typescript
-export async function generateKeyPair(): Promise<CryptoKeyPair> {
-  return crypto.subtle.generateKey(
-    { name: "ECDH", namedCurve: "P-256" },
-    true,          // extractable so we can export and encrypt it
-    ["deriveKey"]
-  );
+import * as age from "age-encryption";
+
+export async function generateAgeIdentity(): Promise<age.Identity> {
+  // age.generateIdentity() returns a new X25519 identity (private key object)
+  // identity.toString() → "AGE-SECRET-KEY-1..."  (bech32, keep secret)
+  // identity.recipient().toString() → "age1..."   (bech32, share publicly)
+  return age.generateIdentity();
 }
 ```
 
-### 3.2 Encrypt private key with PIN
+### 3.2 Encrypt age identity with PIN (key wrapping)
+
+The raw age identity string is encrypted with a PIN-derived AES-GCM key before
+being sent to the server. This is identical in structure to the previous plan.
 
 ```typescript
-export async function encryptPrivateKey(
-  privateKeyBuffer: ArrayBuffer,
+export async function encryptAgeIdentity(
+  identityStr: string,   // "AGE-SECRET-KEY-1..."
   pin: string
 ): Promise<string> {
+  const identityBytes = new TextEncoder().encode(identityStr);
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv   = crypto.getRandomValues(new Uint8Array(12));
 
@@ -183,7 +262,7 @@ export async function encryptPrivateKey(
   );
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv }, wrappingKey, privateKeyBuffer
+    { name: "AES-GCM", iv }, wrappingKey, identityBytes
   );
 
   // Bundle: salt(16) + iv(12) + ciphertext
@@ -195,13 +274,13 @@ export async function encryptPrivateKey(
 310,000 PBKDF2 iterations is the OWASP 2023 recommendation — it makes brute-forcing a
 6-digit PIN take meaningful time even if the encrypted blob is leaked.
 
-### 3.3 Decrypt private key with PIN
+### 3.3 Decrypt age identity with PIN
 
 ```typescript
-export async function decryptPrivateKey(
+export async function decryptAgeIdentity(
   encryptedBlob: string,
   pin: string
-): Promise<ArrayBuffer> {
+): Promise<string> {
   const bundle     = base64ToBuffer(encryptedBlob);
   const salt       = bundle.slice(0, 16);
   const iv         = bundle.slice(16, 28);
@@ -217,112 +296,90 @@ export async function decryptPrivateKey(
     false, ["decrypt"]
   );
 
-  return crypto.subtle.decrypt({ name: "AES-GCM", iv }, wrappingKey, ciphertext);
-  // Wrong PIN throws here — catch this and show "Incorrect PIN" to user
+  const identityBytes = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv }, wrappingKey, ciphertext
+  );
+  // Wrong PIN throws here — catch and show "Incorrect PIN" to user
+  return new TextDecoder().decode(identityBytes);  // "AGE-SECRET-KEY-1..."
 }
 ```
 
-### 3.4 Session key store (in-memory only)
+### 3.4 Session identity store (in-memory only)
 
 ```typescript
 // Module-level — lives only for the duration of the browser session
-let _privateKey: CryptoKey | null = null;
+let _identity: age.Identity | null = null;
 
-export async function loadPrivateKey(
+export async function loadAgeIdentity(
   encryptedBlob: string,
   pin: string
 ): Promise<void> {
-  const privateKeyBuffer = await decryptPrivateKey(encryptedBlob, pin);
-
-  // Import as NON-EXTRACTABLE — XSS can use it to decrypt but can never read raw bytes
-  _privateKey = await crypto.subtle.importKey(
-    "pkcs8",
-    privateKeyBuffer,
-    { name: "ECDH", namedCurve: "P-256" },
-    false,          // ← non-extractable
-    ["deriveKey"]
-  );
-  // raw buffer is now garbage-collectable; PIN was never stored
+  const identityStr = await decryptAgeIdentity(encryptedBlob, pin);
+  _identity = age.parseIdentity(identityStr);
+  // identityStr is now garbage-collectable; PIN was never stored
 }
 
-export function getPrivateKey(): CryptoKey {
-  if (!_privateKey) throw new Error("Session locked — enter PIN");
-  return _privateKey;
+export function getIdentity(): age.Identity {
+  if (!_identity) throw new Error("Session locked — enter PIN");
+  return _identity;
 }
 
 export function lockSession(): void {
-  _privateKey = null;
+  _identity = null;
 }
 ```
 
-### 3.5 Message encryption
+### 3.5 Message encryption (multiple recipients)
 
 ```typescript
 export async function encryptMessage(
   plaintext: string,
-  recipientPublicKeyBase64: string
-): Promise<{ ciphertext: string; iv: string }> {
-  const recipientPublicKey = await crypto.subtle.importKey(
-    "spki",
-    base64ToBuffer(recipientPublicKeyBase64),
-    { name: "ECDH", namedCurve: "P-256" },
-    false, []
-  );
+  recipientStrings: string[]   // ["age1xy3qfp8z...", "age1ab7mn2k...", ...]
+): Promise<string> {
+  // Parse all recipient public keys
+  const recipients = recipientStrings.map(r => age.parseRecipient(r));
 
-  const sharedKey = await crypto.subtle.deriveKey(
-    { name: "ECDH", public: recipientPublicKey },
-    getPrivateKey(),
-    { name: "AES-GCM", length: 256 },
-    false, ["encrypt"]
-  );
+  // age.encrypt handles the multi-recipient header automatically:
+  //   - generates a random file key
+  //   - wraps it once per recipient (X25519 ECDH stanza)
+  //   - encrypts the payload once with the file key (ChaCha20-Poly1305)
+  const encrypter = new age.Encrypter();
+  recipients.forEach(r => encrypter.addRecipient(r));
 
-  const iv         = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    sharedKey,
-    new TextEncoder().encode(plaintext)
-  );
+  const plaintextBytes = new TextEncoder().encode(plaintext);
+  const ageCiphertext  = await encrypter.encrypt(plaintextBytes);
 
-  return { ciphertext: bufferToBase64(ciphertext), iv: bufferToBase64(iv) };
+  return bufferToBase64(ageCiphertext);
 }
 ```
+
+Callers should include **all recipient devices** plus the **sender's own recipient** so the
+sender can also read their own sent messages.
 
 ### 3.6 Message decryption
 
 ```typescript
 export async function decryptMessage(
-  ciphertextBase64: string,
-  ivBase64: string,
-  senderPublicKeyBase64: string
+  ageCiphertextBase64: string
 ): Promise<string> {
-  const senderPublicKey = await crypto.subtle.importKey(
-    "spki",
-    base64ToBuffer(senderPublicKeyBase64),
-    { name: "ECDH", namedCurve: "P-256" },
-    false, []
-  );
+  const ciphertextBytes = base64ToBuffer(ageCiphertextBase64);
 
-  const sharedKey = await crypto.subtle.deriveKey(
-    { name: "ECDH", public: senderPublicKey },
-    getPrivateKey(),
-    { name: "AES-GCM", length: 256 },
-    false, ["decrypt"]
-  );
+  // age.decrypt tries each identity stanza in the header until one matches
+  const decrypter = new age.Decrypter();
+  decrypter.addIdentity(getIdentity());
 
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: base64ToBuffer(ivBase64) },
-    sharedKey,
-    base64ToBuffer(ciphertextBase64)
-  );
-
-  return new TextDecoder().decode(decrypted);
+  const plaintext = await decrypter.decrypt(ciphertextBytes, "uint8array");
+  return new TextDecoder().decode(plaintext);
 }
 ```
+
+Note: the sender's public key is **no longer needed** for decryption. age's header
+contains all necessary key-agreement information. This simplifies the receive path.
 
 ### 3.7 Utilities
 
 ```typescript
-export const bufferToBase64 = (buf: ArrayBuffer): string =>
+export const bufferToBase64 = (buf: ArrayBuffer | Uint8Array): string =>
   btoa(String.fromCharCode(...new Uint8Array(buf)));
 
 export const base64ToBuffer = (b64: string): Uint8Array =>
@@ -344,16 +401,19 @@ Show PIN setup screen:
   [PIN input] [Confirm PIN input] [Continue]
         │
         ▼
-generateKeyPair()
-exportKey("spki",  keyPair.publicKey)  → publicKeyBuffer
-exportKey("pkcs8", keyPair.privateKey) → privateKeyBuffer
-encryptPrivateKey(privateKeyBuffer, pin) → encryptedBlob
+generateAgeIdentity()
+  → identity            (age.Identity — private)
+  → identity.recipient().toString()  → ageRecipient  (public, "age1...")
+  → identity.toString()              → identityStr   ("AGE-SECRET-KEY-1...")
         │
         ▼
-POST /api/users/keys { public_key, encrypted_private_key }
+encryptAgeIdentity(identityStr, pin) → encryptedBlob
         │
         ▼
-loadPrivateKey(encryptedBlob, pin)   ← private key into memory, PIN discarded
+POST /api/users/keys { age_recipient, encrypted_age_identity: encryptedBlob }
+        │
+        ▼
+loadAgeIdentity(encryptedBlob, pin)   ← identity into memory, PIN discarded
         │
         ▼
 Enter chat — fully unlocked ✅
@@ -365,45 +425,49 @@ Enter chat — fully unlocked ✅
 User completes OAuth login
         │
         ▼
-GET /api/users/keys → { encrypted_private_key, public_key }
+GET /api/users/keys → { age_recipient, encrypted_age_identity }
         │
         ▼
 Show PIN entry screen:
   "Enter your encryption PIN to unlock your messages"
   [PIN input] [Unlock]
         │
-        ├── Wrong PIN → crypto.subtle.decrypt throws → show "Incorrect PIN"
-        └── Correct PIN → loadPrivateKey() → enter chat ✅
+        ├── Wrong PIN → AES-GCM decrypt throws → show "Incorrect PIN"
+        └── Correct PIN → loadAgeIdentity() → enter chat ✅
 ```
 
-### 4.3 Sending a message
+### 4.3 Sending a message (DM or group)
 
 ```
 User types message and hits send
         │
         ▼
-GET /api/users/:recipientId/public-key  (can be cached per session)
+Collect all recipients:
+  GET /api/users/:recipientId/public-keys  → their age recipients (all devices)
+  +  own age recipient (from session, for sender-copy)
         │
         ▼
-encryptMessage(plaintext, recipientPublicKey)
-→ { ciphertext, iv }
+encryptMessage(plaintext, [...recipientAgeStrings, ownAgeRecipient])
+→ ageCiphertext  (single blob readable by all recipients)
         │
         ▼
-POST /api/messages { content: ciphertext, iv }   ← server sees no plaintext
+POST /api/messages { room_id, age_ciphertext }   ← server sees no plaintext
 ```
+
+For group/room messages use `GET /api/rooms/:id/members/public-keys` to fetch all
+recipients in one round trip.
 
 ### 4.4 Receiving a message
 
 ```
-Message arrives via NATS/WebSocket: { content: ciphertext, iv, sender_id }
+Message arrives via NATS/WebSocket: { age_ciphertext, sender_id, room_id }
         │
         ▼
-GET /api/users/:senderId/public-key  (cached)
-        │
-        ▼
-decryptMessage(ciphertext, iv, senderPublicKey)
+decryptMessage(age_ciphertext)
 → plaintext shown in UI
 ```
+
+No sender public key fetch needed — age resolves the correct stanza automatically.
 
 ---
 
@@ -421,18 +485,18 @@ Content-Security-Policy:
   style-src 'self' 'unsafe-inline';
 ```
 
-A strong CSP is the primary defence against XSS. Without it, even non-extractable
-in-memory keys can be abused by injected scripts.
+A strong CSP is the primary defence against XSS. Without it, even in-memory identities
+can be abused by injected scripts.
 
-### 5.2 Public key verification (optional, recommended)
+### 5.2 Public key (recipient) verification
 
-Users should be able to verify each other's key fingerprints out-of-band to prevent
-a server-substitution attack (where the server swaps a public key).
+Users should be able to verify each other's age recipient fingerprints out-of-band to
+prevent a server-substitution attack.
 
 ```typescript
-// Generate a short fingerprint for display in UI
-async function keyFingerprint(publicKeyBase64: string): Promise<string> {
-  const hash = await crypto.subtle.digest("SHA-256", base64ToBuffer(publicKeyBase64));
+export async function recipientFingerprint(ageRecipient: string): Promise<string> {
+  const bytes = new TextEncoder().encode(ageRecipient);
+  const hash  = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(hash))
     .slice(0, 8)
     .map(b => b.toString(16).padStart(2, "0"))
@@ -440,7 +504,7 @@ async function keyFingerprint(publicKeyBase64: string): Promise<string> {
     .toUpperCase();
 }
 // e.g. "A3:F1:7C:22:09:4B:E8:11"
-// Show in contact profile — users can compare over phone/video to verify
+// Show in contact profile — users compare over phone/video to verify
 ```
 
 ### 5.3 PIN strength guidance
@@ -451,8 +515,15 @@ if users choose "123456".
 
 ### 5.4 What the server must never do
 
-The backend handlers for messages must not attempt to parse or log `content`.
+The backend handlers for messages must not attempt to parse or log `age_ciphertext`.
 Add a lint/review rule: no decryption logic lives in the backend.
+
+### 5.5 Recipient list privacy
+
+The age ciphertext header reveals **how many** recipients a message has (one stanza
+per recipient) but not **who** they are. For additional metadata privacy, the frontend
+may pad the recipient count or use a symmetric re-encryption scheme, but this is out
+of scope for initial implementation.
 
 ---
 
@@ -461,29 +532,32 @@ Add a lint/review rule: no decryption logic lives in the backend.
 | Scenario | Behaviour |
 |---|---|
 | User forgets PIN | Cannot decrypt old messages — no recovery possible. Show clear warning at PIN setup. |
-| User clears browser data | In-memory key gone — re-enter PIN at next login (PIN + blob re-fetched from server). |
-| User opens a second tab | New tab has no in-memory key — PIN prompt appears for that tab separately. |
-| User logs out | Call `lockSession()` to null out the in-memory key immediately. |
-| Server is compromised | Attacker gets encrypted blobs + public keys — useless without PINs. Messages remain encrypted. |
-| New device | OAuth login → GET /api/users/keys → PIN prompt → unlocked. Works on any device. |
+| User clears browser data | In-memory identity gone — re-enter PIN at next login (PIN + blob re-fetched from server). |
+| User opens a second tab | New tab has no in-memory identity — PIN prompt appears for that tab separately. |
+| User logs out | Call `lockSession()` to null out the in-memory identity immediately. |
+| Server is compromised | Attacker gets encrypted blobs + age recipients — useless without PINs. Messages remain encrypted. |
+| New device | OAuth login → GET /api/users/keys → PIN prompt → unlocked. New device gets its own age identity; old messages encrypted to old identity are unreadable on the new device unless re-encrypted. |
+| New device (re-encryption) | Admin/sender can re-encrypt stored messages to the new device's recipient — out of scope v1. |
+| Group member added | Existing messages are not automatically re-encrypted. New member reads only messages sent after joining (standard forward-secrecy tradeoff). |
 
 ---
 
 ## Implementation Order
 
-1. **Database migration** — `messages` table only (`users.encrypted_private_key` and `public_keys.key` already exist)
-2. **Backend endpoints** — `POST /keys`, `GET /keys`, `GET /:id/public-key`
-3. **Backend message handler** — treat `content` as opaque ciphertext, store `iv`
-4. **`web/src/lib/crypto.ts`** — full crypto module
-5. **Signup page** — PIN setup UI + key generation flow
-6. **Login page** — PIN entry UI + key load flow
-7. **Message send** — replace plaintext send with `encryptMessage`
-8. **Message receive** — replace plaintext render with `decryptMessage`
-9. **CSP headers** — add to gateway config
-10. **Key fingerprint UI** — show in contact/profile view
+1. **Database migration** — rename/add `encrypted_age_identity`, `age_recipient`, `age_ciphertext` columns
+2. **Backend endpoints** — `POST /keys`, `GET /keys`, `GET /:id/public-keys`, `GET /rooms/:id/members/public-keys`
+3. **Backend message handler** — accept and store `age_ciphertext` as opaque blob; drop `iv` column
+4. **`npm install age-encryption`** — add to frontend
+5. **`web/src/lib/crypto.ts`** — full crypto module (age identity generation, PIN wrapping, encrypt/decrypt)
+6. **Signup page** — PIN setup UI + age identity generation flow
+7. **Login page** — PIN entry UI + identity load flow
+8. **Message send** — replace plaintext send with `encryptMessage(plaintext, allRecipients)`
+9. **Message receive** — replace plaintext render with `decryptMessage(ageCiphertext)`
+10. **CSP headers** — add to gateway config
+11. **Recipient fingerprint UI** — show in contact/profile view
 
 Each step is independently testable. Steps 1–3 can be done without touching the frontend,
-and steps 4–8 can be developed against a local backend with placeholder encrypted blobs.
+and steps 4–9 can be developed against a local backend with placeholder ciphertexts.
 
 ---
 
@@ -491,9 +565,10 @@ and steps 4–8 can be developed against a local backend with placeholder encryp
 
 | Data | Server stores | Server can read |
 |---|---|---|
-| Public keys | ✅ Yes | ✅ Yes (by design — they are public) |
-| Encrypted private key blob | ✅ Yes | ❌ No — useless without PIN |
-| Message ciphertext | ✅ Yes | ❌ No — useless without private keys |
-| Message IV | ✅ Yes | ❌ Not useful alone |
+| age recipients (public keys) | ✅ Yes | ✅ Yes (by design — they are public) |
+| Encrypted age identity blob | ✅ Yes | ❌ No — useless without PIN |
+| age ciphertext (messages) | ✅ Yes | ❌ No — useless without identities |
+| Number of message recipients | ✅ Yes (header stanza count) | ✅ Yes (metadata only) |
 | PIN | ❌ Never stored | ❌ Never |
 | Plaintext messages | ❌ Never | ❌ Never |
+| age identity (private key) | ❌ Never in plaintext | ❌ Never |
