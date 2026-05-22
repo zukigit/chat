@@ -55,7 +55,6 @@ sequenceDiagram
     F->>F: CryptoWorker returns age-encoded ciphertext string
     F->>GW: WS send { type: "send", data: { conversation_id, content: "<age-ciphertext>" } }
     GW->>BE: gRPC SendMessage (relays ciphertext as-is)
-    BE->>DB: INSERT INTO messages (content = "<age-ciphertext>", …)
 
     note over F, DB: ─── Phase 4: Receiving an Encrypted Message ───
 
@@ -252,7 +251,7 @@ Add three new methods to `AuthServer`.
 - Takes a list of user IDs.
 - Calls `GetPublicKeysByUserIDs` to fetch the **latest** public key for each user.
 - For each user ID, returns the public key with the highest `created_at`.
-- If a user ID has no public key, that user is omitted from the response — the frontend should treat this as an error (cannot encrypt to that user).
+- If a user ID has no public key, skip that user.
 
 ### Error Handling Summary
 
