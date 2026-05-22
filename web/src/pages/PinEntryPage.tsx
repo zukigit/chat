@@ -36,14 +36,14 @@ export default function PinEntryPage() {
     setError('')
     if (!pin) return
     setLoading(true)
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
     try {
       const privateKey = await decryptPrivateKey(encryptedPrivateKey, pin)
-      await setPrivateKey(privateKey)
+      setPrivateKey(privateKey)
       navigate('/')
     } catch {
       setError('Incorrect PIN. Please try again.')
       setPin('')
-    } finally {
       setLoading(false)
     }
   }
@@ -69,6 +69,7 @@ export default function PinEntryPage() {
               value={pin}
               onChange={e => setPin(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !disabled && handleUnlock()}
+              disabled={loading}
               autoFocus
             />
           </div>

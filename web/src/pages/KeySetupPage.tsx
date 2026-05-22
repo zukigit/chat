@@ -29,6 +29,7 @@ export default function KeySetupPage() {
       return
     }
     setLoading(true)
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
     try {
       const identity = await generateIdentity()
       const encryptedPrivateKey = await encryptPrivateKey(identity.privateKey, pin)
@@ -37,7 +38,6 @@ export default function KeySetupPage() {
       navigate('/')
     } catch (err: any) {
       setError(err.message ?? 'Failed to set up encryption keys')
-    } finally {
       setLoading(false)
     }
   }
@@ -63,6 +63,7 @@ export default function KeySetupPage() {
               placeholder="Enter a PIN (min 4 characters)"
               value={pin}
               onChange={e => setPin(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div className="auth-input-wrap">
@@ -74,6 +75,7 @@ export default function KeySetupPage() {
               value={confirmPin}
               onChange={e => setConfirmPin(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !disabled && handleSetup()}
+              disabled={loading}
             />
           </div>
         </div>
