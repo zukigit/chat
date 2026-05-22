@@ -641,6 +641,338 @@ func (x *ExchangeTokenResponse) GetUsername() string {
 	return ""
 }
 
+type SetupKeysRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	PublicKey           string                 `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`                                 // age X25519 public key (age1...)
+	EncryptedPrivateKey string                 `protobuf:"bytes,2,opt,name=encrypted_private_key,json=encryptedPrivateKey,proto3" json:"encrypted_private_key,omitempty"` // PIN-encrypted private key (base64)
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SetupKeysRequest) Reset() {
+	*x = SetupKeysRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupKeysRequest) ProtoMessage() {}
+
+func (x *SetupKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupKeysRequest.ProtoReflect.Descriptor instead.
+func (*SetupKeysRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SetupKeysRequest) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+func (x *SetupKeysRequest) GetEncryptedPrivateKey() string {
+	if x != nil {
+		return x.EncryptedPrivateKey
+	}
+	return ""
+}
+
+type SetupKeysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsE2EeReady   bool                   `protobuf:"varint,1,opt,name=is_e2ee_ready,json=isE2eeReady,proto3" json:"is_e2ee_ready,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetupKeysResponse) Reset() {
+	*x = SetupKeysResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupKeysResponse) ProtoMessage() {}
+
+func (x *SetupKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupKeysResponse.ProtoReflect.Descriptor instead.
+func (*SetupKeysResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SetupKeysResponse) GetIsE2EeReady() bool {
+	if x != nil {
+		return x.IsE2EeReady
+	}
+	return false
+}
+
+type GetMyKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMyKeysRequest) Reset() {
+	*x = GetMyKeysRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMyKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMyKeysRequest) ProtoMessage() {}
+
+func (x *GetMyKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMyKeysRequest.ProtoReflect.Descriptor instead.
+func (*GetMyKeysRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{15}
+}
+
+type GetMyKeysResponse struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	EncryptedPrivateKey string                 `protobuf:"bytes,1,opt,name=encrypted_private_key,json=encryptedPrivateKey,proto3" json:"encrypted_private_key,omitempty"` // base64-encoded PIN-encrypted private key
+	PublicKey           string                 `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`                                 // age X25519 public key
+	IsE2EeReady         bool                   `protobuf:"varint,3,opt,name=is_e2ee_ready,json=isE2eeReady,proto3" json:"is_e2ee_ready,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GetMyKeysResponse) Reset() {
+	*x = GetMyKeysResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMyKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMyKeysResponse) ProtoMessage() {}
+
+func (x *GetMyKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMyKeysResponse.ProtoReflect.Descriptor instead.
+func (*GetMyKeysResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetMyKeysResponse) GetEncryptedPrivateKey() string {
+	if x != nil {
+		return x.EncryptedPrivateKey
+	}
+	return ""
+}
+
+func (x *GetMyKeysResponse) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+func (x *GetMyKeysResponse) GetIsE2EeReady() bool {
+	if x != nil {
+		return x.IsE2EeReady
+	}
+	return false
+}
+
+type GetPublicKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserIds       []string               `protobuf:"bytes,1,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"` // UUIDs of users whose public keys to fetch
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPublicKeysRequest) Reset() {
+	*x = GetPublicKeysRequest{}
+	mi := &file_proto_auth_auth_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPublicKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPublicKeysRequest) ProtoMessage() {}
+
+func (x *GetPublicKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPublicKeysRequest.ProtoReflect.Descriptor instead.
+func (*GetPublicKeysRequest) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetPublicKeysRequest) GetUserIds() []string {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
+type PublicKeyEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PublicKey     string                 `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"` // age X25519 public key
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublicKeyEntry) Reset() {
+	*x = PublicKeyEntry{}
+	mi := &file_proto_auth_auth_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublicKeyEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublicKeyEntry) ProtoMessage() {}
+
+func (x *PublicKeyEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublicKeyEntry.ProtoReflect.Descriptor instead.
+func (*PublicKeyEntry) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *PublicKeyEntry) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *PublicKeyEntry) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+type GetPublicKeysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Keys          []*PublicKeyEntry      `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPublicKeysResponse) Reset() {
+	*x = GetPublicKeysResponse{}
+	mi := &file_proto_auth_auth_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPublicKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPublicKeysResponse) ProtoMessage() {}
+
+func (x *GetPublicKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_auth_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPublicKeysResponse.ProtoReflect.Descriptor instead.
+func (*GetPublicKeysResponse) Descriptor() ([]byte, []int) {
+	return file_proto_auth_auth_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetPublicKeysResponse) GetKeys() []*PublicKeyEntry {
+	if x != nil {
+		return x.Keys
+	}
+	return nil
+}
+
 var File_proto_auth_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_auth_proto_rawDesc = "" +
@@ -679,14 +1011,37 @@ const file_proto_auth_auth_proto_rawDesc = "" +
 	"\x14ExchangeTokenRequest\"I\n" +
 	"\x15ExchangeTokenResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
-	"\busername\x18\x02 \x01(\tR\busername2\xad\x03\n" +
+	"\busername\x18\x02 \x01(\tR\busername\"e\n" +
+	"\x10SetupKeysRequest\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x01 \x01(\tR\tpublicKey\x122\n" +
+	"\x15encrypted_private_key\x18\x02 \x01(\tR\x13encryptedPrivateKey\"7\n" +
+	"\x11SetupKeysResponse\x12\"\n" +
+	"\ris_e2ee_ready\x18\x01 \x01(\bR\visE2eeReady\"\x12\n" +
+	"\x10GetMyKeysRequest\"\x8a\x01\n" +
+	"\x11GetMyKeysResponse\x122\n" +
+	"\x15encrypted_private_key\x18\x01 \x01(\tR\x13encryptedPrivateKey\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x02 \x01(\tR\tpublicKey\x12\"\n" +
+	"\ris_e2ee_ready\x18\x03 \x01(\bR\visE2eeReady\"1\n" +
+	"\x14GetPublicKeysRequest\x12\x19\n" +
+	"\buser_ids\x18\x01 \x03(\tR\auserIds\"H\n" +
+	"\x0ePublicKeyEntry\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x02 \x01(\tR\tpublicKey\"A\n" +
+	"\x15GetPublicKeysResponse\x12(\n" +
+	"\x04keys\x18\x01 \x03(\v2\x14.auth.PublicKeyEntryR\x04keys2\xf3\x04\n" +
 	"\x04Auth\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
 	"\x06Signup\x12\x13.auth.SignupRequest\x1a\x14.auth.SignupResponse\x12B\n" +
 	"\vSearchUsers\x12\x18.auth.SearchUsersRequest\x1a\x19.auth.SearchUsersResponse\x12T\n" +
 	"\x11GetGithubOAuthURL\x12\x1e.auth.GetGithubOAuthURLRequest\x1a\x1f.auth.GetGithubOAuthURLResponse\x12Z\n" +
 	"\x13GithubOAuthCallback\x12 .auth.GithubOAuthCallbackRequest\x1a!.auth.GithubOAuthCallbackResponse\x12H\n" +
-	"\rExchangeToken\x12\x1a.auth.ExchangeTokenRequest\x1a\x1b.auth.ExchangeTokenResponseB\rZ\vproto/auth/b\x06proto3"
+	"\rExchangeToken\x12\x1a.auth.ExchangeTokenRequest\x1a\x1b.auth.ExchangeTokenResponse\x12<\n" +
+	"\tSetupKeys\x12\x16.auth.SetupKeysRequest\x1a\x17.auth.SetupKeysResponse\x12<\n" +
+	"\tGetMyKeys\x12\x16.auth.GetMyKeysRequest\x1a\x17.auth.GetMyKeysResponse\x12H\n" +
+	"\rGetPublicKeys\x12\x1a.auth.GetPublicKeysRequest\x1a\x1b.auth.GetPublicKeysResponseB\rZ\vproto/auth/b\x06proto3"
 
 var (
 	file_proto_auth_auth_proto_rawDescOnce sync.Once
@@ -700,7 +1055,7 @@ func file_proto_auth_auth_proto_rawDescGZIP() []byte {
 	return file_proto_auth_auth_proto_rawDescData
 }
 
-var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_proto_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_proto_auth_auth_proto_goTypes = []any{
 	(*LoginRequest)(nil),                // 0: auth.LoginRequest
 	(*LoginResponse)(nil),               // 1: auth.LoginResponse
@@ -715,26 +1070,40 @@ var file_proto_auth_auth_proto_goTypes = []any{
 	(*GithubOAuthCallbackResponse)(nil), // 10: auth.GithubOAuthCallbackResponse
 	(*ExchangeTokenRequest)(nil),        // 11: auth.ExchangeTokenRequest
 	(*ExchangeTokenResponse)(nil),       // 12: auth.ExchangeTokenResponse
+	(*SetupKeysRequest)(nil),            // 13: auth.SetupKeysRequest
+	(*SetupKeysResponse)(nil),           // 14: auth.SetupKeysResponse
+	(*GetMyKeysRequest)(nil),            // 15: auth.GetMyKeysRequest
+	(*GetMyKeysResponse)(nil),           // 16: auth.GetMyKeysResponse
+	(*GetPublicKeysRequest)(nil),        // 17: auth.GetPublicKeysRequest
+	(*PublicKeyEntry)(nil),              // 18: auth.PublicKeyEntry
+	(*GetPublicKeysResponse)(nil),       // 19: auth.GetPublicKeysResponse
 }
 var file_proto_auth_auth_proto_depIdxs = []int32{
 	5,  // 0: auth.SearchUsersResponse.users:type_name -> auth.UserResult
-	0,  // 1: auth.Auth.Login:input_type -> auth.LoginRequest
-	2,  // 2: auth.Auth.Signup:input_type -> auth.SignupRequest
-	4,  // 3: auth.Auth.SearchUsers:input_type -> auth.SearchUsersRequest
-	7,  // 4: auth.Auth.GetGithubOAuthURL:input_type -> auth.GetGithubOAuthURLRequest
-	9,  // 5: auth.Auth.GithubOAuthCallback:input_type -> auth.GithubOAuthCallbackRequest
-	11, // 6: auth.Auth.ExchangeToken:input_type -> auth.ExchangeTokenRequest
-	1,  // 7: auth.Auth.Login:output_type -> auth.LoginResponse
-	3,  // 8: auth.Auth.Signup:output_type -> auth.SignupResponse
-	6,  // 9: auth.Auth.SearchUsers:output_type -> auth.SearchUsersResponse
-	8,  // 10: auth.Auth.GetGithubOAuthURL:output_type -> auth.GetGithubOAuthURLResponse
-	10, // 11: auth.Auth.GithubOAuthCallback:output_type -> auth.GithubOAuthCallbackResponse
-	12, // 12: auth.Auth.ExchangeToken:output_type -> auth.ExchangeTokenResponse
-	7,  // [7:13] is the sub-list for method output_type
-	1,  // [1:7] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	18, // 1: auth.GetPublicKeysResponse.keys:type_name -> auth.PublicKeyEntry
+	0,  // 2: auth.Auth.Login:input_type -> auth.LoginRequest
+	2,  // 3: auth.Auth.Signup:input_type -> auth.SignupRequest
+	4,  // 4: auth.Auth.SearchUsers:input_type -> auth.SearchUsersRequest
+	7,  // 5: auth.Auth.GetGithubOAuthURL:input_type -> auth.GetGithubOAuthURLRequest
+	9,  // 6: auth.Auth.GithubOAuthCallback:input_type -> auth.GithubOAuthCallbackRequest
+	11, // 7: auth.Auth.ExchangeToken:input_type -> auth.ExchangeTokenRequest
+	13, // 8: auth.Auth.SetupKeys:input_type -> auth.SetupKeysRequest
+	15, // 9: auth.Auth.GetMyKeys:input_type -> auth.GetMyKeysRequest
+	17, // 10: auth.Auth.GetPublicKeys:input_type -> auth.GetPublicKeysRequest
+	1,  // 11: auth.Auth.Login:output_type -> auth.LoginResponse
+	3,  // 12: auth.Auth.Signup:output_type -> auth.SignupResponse
+	6,  // 13: auth.Auth.SearchUsers:output_type -> auth.SearchUsersResponse
+	8,  // 14: auth.Auth.GetGithubOAuthURL:output_type -> auth.GetGithubOAuthURLResponse
+	10, // 15: auth.Auth.GithubOAuthCallback:output_type -> auth.GithubOAuthCallbackResponse
+	12, // 16: auth.Auth.ExchangeToken:output_type -> auth.ExchangeTokenResponse
+	14, // 17: auth.Auth.SetupKeys:output_type -> auth.SetupKeysResponse
+	16, // 18: auth.Auth.GetMyKeys:output_type -> auth.GetMyKeysResponse
+	19, // 19: auth.Auth.GetPublicKeys:output_type -> auth.GetPublicKeysResponse
+	11, // [11:20] is the sub-list for method output_type
+	2,  // [2:11] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_auth_auth_proto_init() }
@@ -748,7 +1117,7 @@ func file_proto_auth_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_auth_proto_rawDesc), len(file_proto_auth_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

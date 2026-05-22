@@ -25,6 +25,9 @@ const (
 	Auth_GetGithubOAuthURL_FullMethodName   = "/auth.Auth/GetGithubOAuthURL"
 	Auth_GithubOAuthCallback_FullMethodName = "/auth.Auth/GithubOAuthCallback"
 	Auth_ExchangeToken_FullMethodName       = "/auth.Auth/ExchangeToken"
+	Auth_SetupKeys_FullMethodName           = "/auth.Auth/SetupKeys"
+	Auth_GetMyKeys_FullMethodName           = "/auth.Auth/GetMyKeys"
+	Auth_GetPublicKeys_FullMethodName       = "/auth.Auth/GetPublicKeys"
 )
 
 // AuthClient is the client API for Auth service.
@@ -37,6 +40,9 @@ type AuthClient interface {
 	GetGithubOAuthURL(ctx context.Context, in *GetGithubOAuthURLRequest, opts ...grpc.CallOption) (*GetGithubOAuthURLResponse, error)
 	GithubOAuthCallback(ctx context.Context, in *GithubOAuthCallbackRequest, opts ...grpc.CallOption) (*GithubOAuthCallbackResponse, error)
 	ExchangeToken(ctx context.Context, in *ExchangeTokenRequest, opts ...grpc.CallOption) (*ExchangeTokenResponse, error)
+	SetupKeys(ctx context.Context, in *SetupKeysRequest, opts ...grpc.CallOption) (*SetupKeysResponse, error)
+	GetMyKeys(ctx context.Context, in *GetMyKeysRequest, opts ...grpc.CallOption) (*GetMyKeysResponse, error)
+	GetPublicKeys(ctx context.Context, in *GetPublicKeysRequest, opts ...grpc.CallOption) (*GetPublicKeysResponse, error)
 }
 
 type authClient struct {
@@ -107,6 +113,36 @@ func (c *authClient) ExchangeToken(ctx context.Context, in *ExchangeTokenRequest
 	return out, nil
 }
 
+func (c *authClient) SetupKeys(ctx context.Context, in *SetupKeysRequest, opts ...grpc.CallOption) (*SetupKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetupKeysResponse)
+	err := c.cc.Invoke(ctx, Auth_SetupKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) GetMyKeys(ctx context.Context, in *GetMyKeysRequest, opts ...grpc.CallOption) (*GetMyKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMyKeysResponse)
+	err := c.cc.Invoke(ctx, Auth_GetMyKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) GetPublicKeys(ctx context.Context, in *GetPublicKeysRequest, opts ...grpc.CallOption) (*GetPublicKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPublicKeysResponse)
+	err := c.cc.Invoke(ctx, Auth_GetPublicKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility.
@@ -117,6 +153,9 @@ type AuthServer interface {
 	GetGithubOAuthURL(context.Context, *GetGithubOAuthURLRequest) (*GetGithubOAuthURLResponse, error)
 	GithubOAuthCallback(context.Context, *GithubOAuthCallbackRequest) (*GithubOAuthCallbackResponse, error)
 	ExchangeToken(context.Context, *ExchangeTokenRequest) (*ExchangeTokenResponse, error)
+	SetupKeys(context.Context, *SetupKeysRequest) (*SetupKeysResponse, error)
+	GetMyKeys(context.Context, *GetMyKeysRequest) (*GetMyKeysResponse, error)
+	GetPublicKeys(context.Context, *GetPublicKeysRequest) (*GetPublicKeysResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -144,6 +183,15 @@ func (UnimplementedAuthServer) GithubOAuthCallback(context.Context, *GithubOAuth
 }
 func (UnimplementedAuthServer) ExchangeToken(context.Context, *ExchangeTokenRequest) (*ExchangeTokenResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExchangeToken not implemented")
+}
+func (UnimplementedAuthServer) SetupKeys(context.Context, *SetupKeysRequest) (*SetupKeysResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetupKeys not implemented")
+}
+func (UnimplementedAuthServer) GetMyKeys(context.Context, *GetMyKeysRequest) (*GetMyKeysResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMyKeys not implemented")
+}
+func (UnimplementedAuthServer) GetPublicKeys(context.Context, *GetPublicKeysRequest) (*GetPublicKeysResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPublicKeys not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 func (UnimplementedAuthServer) testEmbeddedByValue()              {}
@@ -274,6 +322,60 @@ func _Auth_ExchangeToken_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_SetupKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetupKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).SetupKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_SetupKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).SetupKeys(ctx, req.(*SetupKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_GetMyKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMyKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GetMyKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_GetMyKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GetMyKeys(ctx, req.(*GetMyKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_GetPublicKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPublicKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GetPublicKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_GetPublicKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GetPublicKeys(ctx, req.(*GetPublicKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +406,18 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExchangeToken",
 			Handler:    _Auth_ExchangeToken_Handler,
+		},
+		{
+			MethodName: "SetupKeys",
+			Handler:    _Auth_SetupKeys_Handler,
+		},
+		{
+			MethodName: "GetMyKeys",
+			Handler:    _Auth_GetMyKeys_Handler,
+		},
+		{
+			MethodName: "GetPublicKeys",
+			Handler:    _Auth_GetPublicKeys_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

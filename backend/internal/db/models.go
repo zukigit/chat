@@ -301,6 +301,7 @@ type User struct {
 	DisplayName         sql.NullString `json:"display_name"`
 	AvatarUrl           sql.NullString `json:"avatar_url"`
 	EncryptedPrivateKey sql.NullString `json:"encrypted_private_key"`
+	IsE2eeReady         bool           `json:"is_e2ee_ready"`
 	LastSeenAt          sql.NullTime   `json:"last_seen_at"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`

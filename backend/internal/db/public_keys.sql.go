@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const createPublicKey = `-- name: CreatePublicKey :one
@@ -60,6 +61,27 @@ func (q *Queries) DeletePublicKey(ctx context.Context, arg DeletePublicKeyParams
 	return err
 }
 
+const getLatestPublicKeyByUserID = `-- name: GetLatestPublicKeyByUserID :one
+SELECT id, user_id, key, created_at, updated_at
+FROM public_keys
+WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestPublicKeyByUserID(ctx context.Context, userID uuid.UUID) (PublicKey, error) {
+	row := q.db.QueryRowContext(ctx, getLatestPublicKeyByUserID, userID)
+	var i PublicKey
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Key,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getPublicKeysByUser = `-- name: GetPublicKeysByUser :many
 SELECT id, user_id, key, created_at, updated_at
 FROM public_keys
@@ -69,6 +91,42 @@ ORDER BY created_at ASC
 
 func (q *Queries) GetPublicKeysByUser(ctx context.Context, userID uuid.UUID) ([]PublicKey, error) {
 	rows, err := q.db.QueryContext(ctx, getPublicKeysByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PublicKey
+	for rows.Next() {
+		var i PublicKey
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Key,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPublicKeysByUserIDs = `-- name: GetPublicKeysByUserIDs :many
+SELECT id, user_id, key, created_at, updated_at
+FROM public_keys
+WHERE user_id = ANY($1::uuid[])
+ORDER BY created_at ASC
+`
+
+func (q *Queries) GetPublicKeysByUserIDs(ctx context.Context, dollar_1 []uuid.UUID) ([]PublicKey, error) {
+	rows, err := q.db.QueryContext(ctx, getPublicKeysByUserIDs, pq.Array(dollar_1))
 	if err != nil {
 		return nil, err
 	}

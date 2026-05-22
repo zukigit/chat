@@ -68,6 +68,40 @@ message ExchangeTokenResponse {
   string username = 2;
 }
 
+// --- E2EE Key Management ---
+
+message SetupKeysRequest {
+  string public_key = 1;                // age X25519 public key (age1...)
+  string encrypted_private_key = 2;     // PIN-encrypted private key (base64)
+}
+
+message SetupKeysResponse {
+  bool is_e2ee_ready = 1;
+}
+
+message GetMyKeysRequest {
+  // No fields — user ID is extracted from the JWT in the gRPC context.
+}
+
+message GetMyKeysResponse {
+  string encrypted_private_key = 1;      // base64-encoded PIN-encrypted private key
+  string public_key = 2;                // age X25519 public key
+  bool is_e2ee_ready = 3;
+}
+
+message GetPublicKeysRequest {
+  repeated string user_ids = 1;          // UUIDs of users whose public keys to fetch
+}
+
+message PublicKeyEntry {
+  string user_id = 1;
+  string public_key = 2;                // age X25519 public key
+}
+
+message GetPublicKeysResponse {
+  repeated PublicKeyEntry keys = 1;
+}
+
 service Auth {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Signup(SignupRequest) returns (SignupResponse);
@@ -75,4 +109,7 @@ service Auth {
   rpc GetGithubOAuthURL(GetGithubOAuthURLRequest) returns (GetGithubOAuthURLResponse);
   rpc GithubOAuthCallback(GithubOAuthCallbackRequest) returns (GithubOAuthCallbackResponse);
   rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse);
+  rpc SetupKeys(SetupKeysRequest) returns (SetupKeysResponse);
+  rpc GetMyKeys(GetMyKeysRequest) returns (GetMyKeysResponse);
+  rpc GetPublicKeys(GetPublicKeysRequest) returns (GetPublicKeysResponse);
 }

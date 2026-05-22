@@ -224,3 +224,103 @@ func (h *AuthHandler) ExchangeToken(w http.ResponseWriter, r *http.Request) {
 		Data:    map[string]string{"token": longLivedToken, "username": username},
 	})
 }
+
+// SetupKeys handles POST /keys/setup
+// Stores the user's E2EE public key and PIN-encrypted private key.
+func (h *AuthHandler) SetupKeys(w http.ResponseWriter, r *http.Request) {
+	token, ok := lib.BearerToken(r)
+	if !ok || token == "" {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "missing or malformed Authorization header"})
+		return
+	}
+
+	var req setupKeysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: "invalid request body"})
+		return
+	}
+
+	isReady, err := h.authClient.SetupKeys(r.Context(), token, req.PublicKey, req.EncryptedPrivateKey)
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		switch grpcStatus.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: grpcStatus.Message()})
+		case codes.AlreadyExists:
+			lib.WriteJSON(w, http.StatusConflict, lib.Response{Success: false, Message: grpcStatus.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
+		}
+		return
+	}
+
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Message: "keys set up successfully",
+		Data:    map[string]bool{"is_e2ee_ready": isReady},
+	})
+}
+
+// GetMyKeys handles GET /keys/me
+// Returns the user's encrypted private key and public key.
+func (h *AuthHandler) GetMyKeys(w http.ResponseWriter, r *http.Request) {
+	token, ok := lib.BearerToken(r)
+	if !ok || token == "" {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "missing or malformed Authorization header"})
+		return
+	}
+
+	encPrivKey, pubKey, isReady, err := h.authClient.GetMyKeys(r.Context(), token)
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		switch grpcStatus.Code() {
+		case codes.Unauthenticated:
+			lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: grpcStatus.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
+		}
+		return
+	}
+
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Data: map[string]any{
+			"encrypted_private_key": encPrivKey,
+			"public_key":            pubKey,
+			"is_e2ee_ready":         isReady,
+		},
+	})
+}
+
+// GetPublicKeys handles POST /keys/batch
+// Returns public keys for the requested user IDs.
+func (h *AuthHandler) GetPublicKeys(w http.ResponseWriter, r *http.Request) {
+	token, ok := lib.BearerToken(r)
+	if !ok || token == "" {
+		lib.WriteJSON(w, http.StatusUnauthorized, lib.Response{Success: false, Message: "missing or malformed Authorization header"})
+		return
+	}
+
+	var req getPublicKeysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: "invalid request body"})
+		return
+	}
+
+	keys, err := h.authClient.GetPublicKeys(r.Context(), token, req.UserIDs)
+	if err != nil {
+		grpcStatus, _ := status.FromError(err)
+		switch grpcStatus.Code() {
+		case codes.InvalidArgument:
+			lib.WriteJSON(w, http.StatusBadRequest, lib.Response{Success: false, Message: grpcStatus.Message()})
+		default:
+			lib.WriteJSON(w, http.StatusInternalServerError, lib.Response{Success: false, Message: grpcStatus.Message()})
+		}
+		return
+	}
+
+	lib.WriteJSON(w, http.StatusOK, lib.Response{
+		Success: true,
+		Data:    keys,
+	})
+}

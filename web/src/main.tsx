@@ -8,6 +8,8 @@ import SetupPage from './pages/SetupPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import CallbackPage from './pages/CallbackPage'
+import KeySetupPage from './pages/KeySetupPage'
+import PinEntryPage from './pages/PinEntryPage'
 import HomePage from './pages/HomePage'
 
 createRoot(document.getElementById('root')!).render(
@@ -21,6 +23,8 @@ createRoot(document.getElementById('root')!).render(
 
       {/* Private routes */}
       <Route element={<PrivateRoute />}>
+        <Route path="/key-setup" element={<KeySetupPage />} />
+        <Route path="/pin-entry" element={<PinEntryPage />} />
         <Route path="/" element={<HomePage />} />
       </Route>
     </Routes>

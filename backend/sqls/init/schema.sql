@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name  VARCHAR(100),
     avatar_url             TEXT,
     encrypted_private_key  TEXT,
+    is_e2ee_ready          BOOLEAN      NOT NULL DEFAULT false,
     last_seen_at           TIMESTAMPTZ,
     created_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW()

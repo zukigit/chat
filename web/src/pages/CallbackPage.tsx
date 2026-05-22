@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { loadConfig } from '../config'
 import { setToken } from '../auth'
+import { getMyKeys } from '../api/keysApi'
 
 export default function CallbackPage() {
   const [searchParams] = useSearchParams()
@@ -40,7 +41,13 @@ export default function CallbackPage() {
         }
         setToken(json.data.token)
         window.history.replaceState({}, '', '/callback')
-        navigate('/')
+
+        const keys = await getMyKeys()
+        if (keys.is_e2ee_ready) {
+          navigate('/pin-entry')
+        } else {
+          navigate('/key-setup')
+        }
       } catch {
         setError('Could not reach server. Check your connection.')
       }

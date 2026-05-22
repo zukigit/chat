@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loadConfig } from '../config'
 import { getToken, setToken } from '../auth'
+import { getMyKeys } from '../api/keysApi'
 import './auth.css'
 
 export default function LoginPage() {
@@ -15,7 +16,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!config) navigate('/setup')
-    else if (getToken()) navigate('/')
+    else if (getToken()) navigate('/pin-entry')
   }, [])
 
   async function handleLogin() {
@@ -38,7 +39,12 @@ export default function LoginPage() {
         return
       }
       setToken(json.data.token)
-      navigate('/')
+      const keys = await getMyKeys()
+      if (keys.is_e2ee_ready) {
+        navigate('/pin-entry')
+      } else {
+        navigate('/key-setup')
+      }
     } catch {
       setError('Could not reach server. Check your connection.')
     } finally {

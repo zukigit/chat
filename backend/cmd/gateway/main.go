@@ -76,6 +76,10 @@ func main() {
 	r.HandleFunc("/oauth/github/callback", authHandler.GithubOAuthCallback).Methods(http.MethodGet)
 	r.HandleFunc("/token/exchange", authHandler.ExchangeToken).Methods(http.MethodPost)
 
+	r.HandleFunc("/keys/setup", authHandler.SetupKeys).Methods(http.MethodPost)
+	r.HandleFunc("/keys/me", authHandler.GetMyKeys).Methods(http.MethodGet)
+	r.HandleFunc("/keys/batch", authHandler.GetPublicKeys).Methods(http.MethodPost)
+
 	r.HandleFunc("/friends/request", friendshipHandler.SendFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/accept", friendshipHandler.AcceptFriendRequest).Methods(http.MethodPost)
 	r.HandleFunc("/friends/reject", friendshipHandler.RejectFriendRequest).Methods(http.MethodPost)

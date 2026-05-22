@@ -2,11 +2,19 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
 import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSent, markSentSeen, markSentFailed, type StoredMessage } from './messageStore'
+import { encrypt, decrypt, hasPrivateKey } from './crypto'
+import { getPublicKeys } from './api/keysApi'
 
 interface ChatResponseEnvelope {
   version: number
   type: string
   data: StoredMessage | { conversation_id: number; message_id: string } | { code: number; message: string }
+}
+
+const AGE_HEADER = '-----BEGIN AGE ENCRYPTED FILE-----'
+
+function looksEncrypted(content: string): boolean {
+  return content.startsWith(AGE_HEADER)
 }
 
 export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onSent?: (conversationId: number, messageId: string) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string, conversationId?: number) => void, onConnect?: () => void) {
@@ -68,7 +76,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
       ws.close()
     }
 
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
       try {
         const envelope: ChatResponseEnvelope = JSON.parse(event.data)
         if (envelope.type === 'message' && envelope.data) {
@@ -86,6 +94,15 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
             addRemoteSentMessage(msg.conversation_id, msg.content)
             onDeliveredRef.current?.(msg.conversation_id, msg.id)
           }
+
+          const ready = hasPrivateKey()
+          if (ready && looksEncrypted(msg.content)) {
+            try {
+              const plaintext = await decrypt(msg.content)
+              msg.content = plaintext
+            } catch { /* store encrypted if decryption fails */ }
+          }
+
           addMessage(msg)
           onMessageRef.current?.(msg)
           if (msg.conversation_id === activeConvIdRef.current) {
@@ -138,11 +155,24 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
   }, [connect])
 
-  const send = useCallback((conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '') => {
+  const send = useCallback(async (conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '', memberUserIds?: string[]) => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
       markSentFailed(conversationId, messageId)
       return
     }
+
+    let encryptedContent = content
+    const ready = hasPrivateKey()
+    if (ready && memberUserIds && memberUserIds.length > 0) {
+      try {
+        const pubKeys = await getPublicKeys(memberUserIds)
+        const recipients = Object.values(pubKeys)
+        if (recipients.length > 0) {
+          encryptedContent = await encrypt(content, recipients)
+        }
+      } catch { /* send plaintext if encryption fails */ }
+    }
+
     const config = loadConfig()
     const payload: Record<string, unknown> = {
       version: config?.chatRequestVersion ?? 1,
@@ -150,7 +180,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
       data: {
         conversation_id: conversationId,
         message_id: messageId,
-        content,
+        content: encryptedContent,
         message_type: messageType,
       },
     }
@@ -182,11 +212,24 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
   }, [markRead])
 
-  const retrySend = useCallback((_tempId: string, conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '') => {
+  const retrySend = useCallback(async (_tempId: string, conversationId: number, messageId: string, content: string, messageType = 'text', replyTo = '', memberUserIds?: string[]) => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
       markSentFailed(conversationId, messageId)
       return
     }
+
+    let encryptedContent = content
+    const ready = hasPrivateKey()
+    if (ready && memberUserIds && memberUserIds.length > 0) {
+      try {
+        const pubKeys = await getPublicKeys(memberUserIds)
+        const recipients = Object.values(pubKeys)
+        if (recipients.length > 0) {
+          encryptedContent = await encrypt(content, recipients)
+        }
+      } catch { /* send plaintext if encryption fails */ }
+    }
+
     const config = loadConfig()
     const payload: Record<string, unknown> = {
       version: config?.chatRequestVersion ?? 1,
@@ -194,7 +237,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
       data: {
         conversation_id: conversationId,
         message_id: messageId,
-        content,
+        content: encryptedContent,
         message_type: messageType,
       },
     }

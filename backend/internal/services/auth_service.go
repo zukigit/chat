@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zukigit/chat/backend/internal/db"
 	"github.com/zukigit/chat/backend/internal/lib"
 	"github.com/zukigit/chat/backend/proto/auth"
@@ -339,6 +340,136 @@ func (s *AuthServer) ExchangeToken(ctx context.Context, req *auth.ExchangeTokenR
 		Token:    longLivedToken,
 		Username: username,
 	}, nil
+}
+
+// SetupKeys stores the user's E2EE public key and encrypted private key.
+func (s *AuthServer) SetupKeys(ctx context.Context, req *auth.SetupKeysRequest) (*auth.SetupKeysResponse, error) {
+	userID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.PublicKey == "" {
+		return nil, status.Error(codes.InvalidArgument, "public_key is required")
+	}
+	if !strings.HasPrefix(req.PublicKey, "age1") {
+		return nil, status.Error(codes.InvalidArgument, "public_key must be a valid age public key starting with age1")
+	}
+	if req.EncryptedPrivateKey == "" {
+		return nil, status.Error(codes.InvalidArgument, "encrypted_private_key is required")
+	}
+
+	queries := db.New(s.sqlDB)
+
+	// Check if keys are already set up
+	existing, err := queries.GetE2EEKeysByUserID(ctx, userID)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, status.Errorf(codes.Internal, "setup keys: check existing: %v", err)
+	}
+	if err == nil && existing.IsE2eeReady {
+		return nil, status.Error(codes.AlreadyExists, "E2EE keys already set up")
+	}
+
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "setup keys: begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	txQueries := db.New(tx)
+
+	// Insert public key
+	_, err = txQueries.CreatePublicKey(ctx, db.CreatePublicKeyParams{
+		UserID: userID,
+		Key:    req.PublicKey,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "setup keys: create public key: %v", err)
+	}
+
+	// Update user with encrypted private key and set is_e2ee_ready
+	err = txQueries.SetE2EEKeys(ctx, db.SetE2EEKeysParams{
+		UserID:              userID,
+		EncryptedPrivateKey: sql.NullString{String: req.EncryptedPrivateKey, Valid: true},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "setup keys: set e2ee keys: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, status.Errorf(codes.Internal, "setup keys: commit: %v", err)
+	}
+
+	return &auth.SetupKeysResponse{IsE2EeReady: true}, nil
+}
+
+// GetMyKeys returns the user's encrypted private key and public key.
+func (s *AuthServer) GetMyKeys(ctx context.Context, req *auth.GetMyKeysRequest) (*auth.GetMyKeysResponse, error) {
+	userID, err := lib.CallerUUID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	queries := db.New(s.sqlDB)
+
+	// Get E2EE key status
+	e2eeKeys, err := queries.GetE2EEKeysByUserID(ctx, userID)
+	if err == sql.ErrNoRows {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get my keys: get e2ee keys: %v", err)
+	}
+
+	// Get latest public key
+	pubKey, err := queries.GetLatestPublicKeyByUserID(ctx, userID)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, status.Errorf(codes.Internal, "get my keys: get public key: %v", err)
+	}
+
+	var publicKey string
+	if err == nil {
+		publicKey = pubKey.Key
+	}
+
+	return &auth.GetMyKeysResponse{
+		EncryptedPrivateKey: e2eeKeys.EncryptedPrivateKey.String,
+		PublicKey:           publicKey,
+		IsE2EeReady:         e2eeKeys.IsE2eeReady,
+	}, nil
+}
+
+// GetPublicKeys returns the latest public key for each requested user.
+func (s *AuthServer) GetPublicKeys(ctx context.Context, req *auth.GetPublicKeysRequest) (*auth.GetPublicKeysResponse, error) {
+	if len(req.UserIds) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "user_ids is required")
+	}
+
+	userIDs := make([]uuid.UUID, 0, len(req.UserIds))
+	for _, id := range req.UserIds {
+		u, err := uuid.Parse(id)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %s", id)
+		}
+		userIDs = append(userIDs, u)
+	}
+
+	queries := db.New(s.sqlDB)
+
+	keys, err := queries.GetPublicKeysByUserIDs(ctx, userIDs)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get public keys: %v", err)
+	}
+
+	var entries []*auth.PublicKeyEntry
+	for _, k := range keys {
+		entries = append(entries, &auth.PublicKeyEntry{
+			UserId:    k.UserID.String(),
+			PublicKey: k.Key,
+		})
+	}
+
+	return &auth.GetPublicKeysResponse{Keys: entries}, nil
 }
 
 // exchangeCodeForToken exchanges the GitHub OAuth code for an access token.

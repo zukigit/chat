@@ -8,7 +8,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -16,7 +15,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (user_name, hashed_passwd, signup_type)
 VALUES ($1, $2, $3)
-RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, encrypted_private_key, is_e2ee_ready, last_seen_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -25,21 +24,9 @@ type CreateUserParams struct {
 	SignupType   SignupType     `json:"signup_type"`
 }
 
-type CreateUserRow struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	UserName     string         `json:"user_name"`
-	HashedPasswd sql.NullString `json:"hashed_passwd"`
-	SignupType   SignupType     `json:"signup_type"`
-	DisplayName  sql.NullString `json:"display_name"`
-	AvatarUrl    sql.NullString `json:"avatar_url"`
-	LastSeenAt   sql.NullTime   `json:"last_seen_at"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser, arg.UserName, arg.HashedPasswd, arg.SignupType)
-	var i CreateUserRow
+	var i User
 	err := row.Scan(
 		&i.UserID,
 		&i.UserName,
@@ -47,6 +34,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.SignupType,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.EncryptedPrivateKey,
+		&i.IsE2eeReady,
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -54,28 +43,34 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const getE2EEKeysByUserID = `-- name: GetE2EEKeysByUserID :one
+SELECT encrypted_private_key, is_e2ee_ready
+FROM users
+WHERE user_id = $1
+`
+
+type GetE2EEKeysByUserIDRow struct {
+	EncryptedPrivateKey sql.NullString `json:"encrypted_private_key"`
+	IsE2eeReady         bool           `json:"is_e2ee_ready"`
+}
+
+func (q *Queries) GetE2EEKeysByUserID(ctx context.Context, userID uuid.UUID) (GetE2EEKeysByUserIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getE2EEKeysByUserID, userID)
+	var i GetE2EEKeysByUserIDRow
+	err := row.Scan(&i.EncryptedPrivateKey, &i.IsE2eeReady)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
-SELECT user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+SELECT user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, encrypted_private_key, is_e2ee_ready, last_seen_at, created_at, updated_at
 FROM users
 WHERE user_id = $1
 LIMIT 1
 `
 
-type GetUserByIDRow struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	UserName     string         `json:"user_name"`
-	HashedPasswd sql.NullString `json:"hashed_passwd"`
-	SignupType   SignupType     `json:"signup_type"`
-	DisplayName  sql.NullString `json:"display_name"`
-	AvatarUrl    sql.NullString `json:"avatar_url"`
-	LastSeenAt   sql.NullTime   `json:"last_seen_at"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (GetUserByIDRow, error) {
+func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, userID)
-	var i GetUserByIDRow
+	var i User
 	err := row.Scan(
 		&i.UserID,
 		&i.UserName,
@@ -83,6 +78,8 @@ func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (GetUserByI
 		&i.SignupType,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.EncryptedPrivateKey,
+		&i.IsE2eeReady,
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -91,27 +88,15 @@ func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (GetUserByI
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+SELECT user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, encrypted_private_key, is_e2ee_ready, last_seen_at, created_at, updated_at
 FROM users
 WHERE user_name = $1
 LIMIT 1
 `
 
-type GetUserByUsernameRow struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	UserName     string         `json:"user_name"`
-	HashedPasswd sql.NullString `json:"hashed_passwd"`
-	SignupType   SignupType     `json:"signup_type"`
-	DisplayName  sql.NullString `json:"display_name"`
-	AvatarUrl    sql.NullString `json:"avatar_url"`
-	LastSeenAt   sql.NullTime   `json:"last_seen_at"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-}
-
-func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (GetUserByUsernameRow, error) {
+func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByUsername, userName)
-	var i GetUserByUsernameRow
+	var i User
 	err := row.Scan(
 		&i.UserID,
 		&i.UserName,
@@ -119,6 +104,8 @@ func (q *Queries) GetUserByUsername(ctx context.Context, userName string) (GetUs
 		&i.SignupType,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.EncryptedPrivateKey,
+		&i.IsE2eeReady,
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -196,6 +183,24 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 	return items, nil
 }
 
+const setE2EEKeys = `-- name: SetE2EEKeys :exec
+UPDATE users
+SET encrypted_private_key = $2,
+    is_e2ee_ready         = true,
+    updated_at            = NOW()
+WHERE user_id = $1
+`
+
+type SetE2EEKeysParams struct {
+	UserID              uuid.UUID      `json:"user_id"`
+	EncryptedPrivateKey sql.NullString `json:"encrypted_private_key"`
+}
+
+func (q *Queries) SetE2EEKeys(ctx context.Context, arg SetE2EEKeysParams) error {
+	_, err := q.db.ExecContext(ctx, setE2EEKeys, arg.UserID, arg.EncryptedPrivateKey)
+	return err
+}
+
 const updateLastSeen = `-- name: UpdateLastSeen :exec
 UPDATE users
 SET last_seen_at = NOW()
@@ -213,7 +218,7 @@ SET display_name = $2,
     avatar_url   = $3,
     updated_at   = NOW()
 WHERE user_name = $1
-RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, last_seen_at, created_at, updated_at
+RETURNING user_id, user_name, hashed_passwd, signup_type, display_name, avatar_url, encrypted_private_key, is_e2ee_ready, last_seen_at, created_at, updated_at
 `
 
 type UpdateUserProfileParams struct {
@@ -222,21 +227,9 @@ type UpdateUserProfileParams struct {
 	AvatarUrl   sql.NullString `json:"avatar_url"`
 }
 
-type UpdateUserProfileRow struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	UserName     string         `json:"user_name"`
-	HashedPasswd sql.NullString `json:"hashed_passwd"`
-	SignupType   SignupType     `json:"signup_type"`
-	DisplayName  sql.NullString `json:"display_name"`
-	AvatarUrl    sql.NullString `json:"avatar_url"`
-	LastSeenAt   sql.NullTime   `json:"last_seen_at"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-}
-
-func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, updateUserProfile, arg.UserName, arg.DisplayName, arg.AvatarUrl)
-	var i UpdateUserProfileRow
+	var i User
 	err := row.Scan(
 		&i.UserID,
 		&i.UserName,
@@ -244,6 +237,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.SignupType,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.EncryptedPrivateKey,
+		&i.IsE2eeReady,
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,

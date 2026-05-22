@@ -61,6 +61,17 @@ type authRequest struct {
 	Token string `json:"token"`
 }
 
+// setupKeysRequest is the request body for POST /keys/setup.
+type setupKeysRequest struct {
+	PublicKey           string `json:"public_key"`
+	EncryptedPrivateKey string `json:"encrypted_private_key"`
+}
+
+// getPublicKeysRequest is the request body for POST /keys/batch.
+type getPublicKeysRequest struct {
+	UserIDs []string `json:"user_ids"`
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,

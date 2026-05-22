@@ -90,3 +90,46 @@ func (a *AuthClient) ExchangeToken(ctx context.Context, shortLivedToken string) 
 	}
 	return resp.Token, resp.Username, nil
 }
+
+// SetupKeys forwards the E2EE key setup request to the backend via gRPC.
+func (a *AuthClient) SetupKeys(ctx context.Context, token, publicKey, encryptedPrivateKey string) (bool, error) {
+	resp, err := a.client.SetupKeys(
+		lib.WithToken(ctx, token),
+		&auth.SetupKeysRequest{
+			PublicKey:           publicKey,
+			EncryptedPrivateKey: encryptedPrivateKey,
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+	return resp.IsE2EeReady, nil
+}
+
+// GetMyKeys retrieves the user's E2EE keys from the backend via gRPC.
+func (a *AuthClient) GetMyKeys(ctx context.Context, token string) (encryptedPrivateKey, publicKey string, isE2eeReady bool, err error) {
+	resp, err := a.client.GetMyKeys(
+		lib.WithToken(ctx, token),
+		&auth.GetMyKeysRequest{},
+	)
+	if err != nil {
+		return "", "", false, err
+	}
+	return resp.EncryptedPrivateKey, resp.PublicKey, resp.IsE2EeReady, nil
+}
+
+// GetPublicKeys retrieves public keys for multiple users from the backend via gRPC.
+func (a *AuthClient) GetPublicKeys(ctx context.Context, token string, userIDs []string) (map[string]string, error) {
+	resp, err := a.client.GetPublicKeys(
+		lib.WithToken(ctx, token),
+		&auth.GetPublicKeysRequest{UserIds: userIDs},
+	)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, len(resp.Keys))
+	for _, k := range resp.Keys {
+		m[k.UserId] = k.PublicKey
+	}
+	return m, nil
+}
