@@ -432,6 +432,10 @@
     height: 48px;
   }
 
+  .fab-above {
+    bottom: 72px;
+  }
+
   .fab svg {
     width: 20px;
     height: 20px;
