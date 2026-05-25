@@ -163,14 +163,19 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
 
     let encryptedContent = content
     const ready = hasPrivateKey()
-    if (ready && memberUserIds && memberUserIds.length > 0) {
+    const hasRecipients = memberUserIds && memberUserIds.length > 0
+    if (ready && hasRecipients) {
       try {
         const pubKeys = await getPublicKeys(memberUserIds)
         const recipients = Object.values(pubKeys)
         if (recipients.length > 0) {
           encryptedContent = await encrypt(content, recipients)
         }
-      } catch { /* send plaintext if encryption fails */ }
+      } catch (err) {
+        markSentFailed(conversationId, messageId)
+        onErrorRef.current?.(-1, `Encryption failed: ${err instanceof Error ? err.message : 'unknown error'}`, conversationId)
+        return
+      }
     }
 
     const config = loadConfig()
@@ -219,15 +224,20 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
     }
 
     let encryptedContent = content
-    const ready = hasPrivateKey()
-    if (ready && memberUserIds && memberUserIds.length > 0) {
+    const retryReady = hasPrivateKey()
+    const retryHasRecipients = memberUserIds && memberUserIds.length > 0
+    if (retryReady && retryHasRecipients) {
       try {
         const pubKeys = await getPublicKeys(memberUserIds)
         const recipients = Object.values(pubKeys)
         if (recipients.length > 0) {
           encryptedContent = await encrypt(content, recipients)
         }
-      } catch { /* send plaintext if encryption fails */ }
+      } catch (err) {
+        markSentFailed(conversationId, messageId)
+        onErrorRef.current?.(-1, `Encryption failed: ${err instanceof Error ? err.message : 'unknown error'}`, conversationId)
+        return
+      }
     }
 
     const config = loadConfig()

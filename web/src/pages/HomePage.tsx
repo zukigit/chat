@@ -184,12 +184,14 @@ export default function HomePage() {
   const currentUsername = getUsername() ?? ''
 
   function handleSendMessage(conversationId: number, content: string, messageId: string) {
-    send(conversationId, messageId, content)
+    const memberUserIds = activeConv?.members.map(m => m.user_id) ?? []
+    send(conversationId, messageId, content, 'text', '', memberUserIds)
     setSentMessages(getSentMessages(conversationId))
   }
 
   function handleRetryMessage(tempId: string, conversationId: number, content: string) {
-    retrySend(tempId, conversationId, tempId, content)
+    const memberUserIds = activeConv?.members.map(m => m.user_id) ?? []
+    retrySend(tempId, conversationId, tempId, content, 'text', '', memberUserIds)
     setSentMessages(getSentMessages(conversationId))
   }
 

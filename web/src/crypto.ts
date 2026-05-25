@@ -117,7 +117,7 @@ export function generateIdentity(): { publicKey: string; privateKey: string } {
 }
 
 export async function encrypt(plaintext: string, recipients: string[]): Promise<string> {
-  const fileKey = randomBytes(16)
+  const fileKey = randomBytes(32)
   const nonce = randomBytes(12)
 
   const headerLines: string[] = []
@@ -130,8 +130,8 @@ export async function encrypt(plaintext: string, recipients: string[]): Promise<
     const sharedSecret = x25519.getSharedSecret(ephemeralSk, recipientPub)
     const wrapKey = hkdf(sha256, sharedSecret, new Uint8Array(0), new TextEncoder().encode(AGE_HKDF_INFO), 32)
 
-    const encryptedFileKey = new Uint8Array(16)
-    for (let i = 0; i < 16; i++) {
+    const encryptedFileKey = new Uint8Array(32)
+    for (let i = 0; i < 32; i++) {
       encryptedFileKey[i] = fileKey[i] ^ wrapKey[i]
     }
 
@@ -189,8 +189,9 @@ export async function decrypt(armor: string): Promise<string> {
     const sharedSecret = x25519.getSharedSecret(sk, ephemeralPub)
     const wrapKey = hkdf(sha256, sharedSecret, new Uint8Array(0), new TextEncoder().encode(AGE_HKDF_INFO), 32)
 
-    const decryptedFileKey = new Uint8Array(16)
-    for (let i = 0; i < 16; i++) {
+    const keyLen = encryptedFileKey.length
+    const decryptedFileKey = new Uint8Array(32)
+    for (let i = 0; i < keyLen; i++) {
       decryptedFileKey[i] = encryptedFileKey[i] ^ wrapKey[i]
     }
 
