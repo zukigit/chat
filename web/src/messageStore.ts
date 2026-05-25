@@ -67,7 +67,13 @@ export function addMessage(msg: StoredMessage): void {
     all[key].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   }
   saveAll(all)
-  const sent = loadSent().filter(s => !(s.conversation_id === msg.conversation_id && s.content === msg.content && !s.tempId.startsWith('sent-remote-')))
+  const ageArmorStart = '-----BEGIN AGE ENCRYPTED FILE-----'
+  const sent = loadSent().filter(s => {
+    if (s.conversation_id !== msg.conversation_id) return true
+    if (s.content === msg.content) return false
+    if (s.content.startsWith(ageArmorStart)) return false
+    return true
+  })
   saveSent(sent)
 }
 

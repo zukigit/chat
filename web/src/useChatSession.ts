@@ -90,10 +90,6 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
               isOwnMessage = msg.sender_id === currentUserId
             } catch { /* ignore */ }
           }
-          if (isOwnMessage) {
-            addRemoteSentMessage(msg.conversation_id, msg.content)
-            onDeliveredRef.current?.(msg.conversation_id, msg.id)
-          }
 
           const hasKey = hasPrivateKey()
           if (hasKey && looksEncrypted(msg.content)) {
@@ -103,6 +99,11 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
             } catch {
               console.error('E2EE: decryption failed for message', msg.id)
             }
+          }
+
+          if (isOwnMessage) {
+            addRemoteSentMessage(msg.conversation_id, msg.content)
+            onDeliveredRef.current?.(msg.conversation_id, msg.id)
           }
 
           addMessage(msg)
