@@ -5,6 +5,8 @@ import { getToken, setToken } from '../auth'
 import { getMyKeys } from '../api/keysApi'
 import './auth.css'
 
+const passwordAuthEnabled = import.meta.env.VITE_ENABLE_PASSWORD_AUTH === 'true'
+
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -60,38 +62,46 @@ export default function LoginPage() {
         <div className="auth-header">
           <h1 className="auth-title">Log In</h1>
         </div>
-        <div className="auth-fields">
-          <div className="auth-input-wrap">
-            <span className="auth-label">Username</span>
-            <input
-              className="auth-input"
-              type="text"
-              placeholder="your_username"
-              value={username}
-              autoComplete="username"
-              onChange={e => setUsername(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !disabled && handleLogin()}
-            />
-          </div>
-          <div className="auth-input-wrap">
-            <span className="auth-label">Password</span>
-            <input
-              className="auth-input"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              autoComplete="current-password"
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !disabled && handleLogin()}
-            />
-          </div>
-        </div>
-        <button className="auth-button" onClick={handleLogin} disabled={disabled}>
-          {loading && <span className="auth-spinner" />}
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
-        {error && <p className="auth-error">{error}</p>}
-        <div className="auth-divider"><span>or</span></div>
+        {passwordAuthEnabled ? (
+          <>
+            <div className="auth-fields">
+              <div className="auth-input-wrap">
+                <span className="auth-label">Username</span>
+                <input
+                  className="auth-input"
+                  type="text"
+                  placeholder="your_username"
+                  value={username}
+                  autoComplete="username"
+                  onChange={e => setUsername(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !disabled && handleLogin()}
+                />
+              </div>
+              <div className="auth-input-wrap">
+                <span className="auth-label">Password</span>
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  autoComplete="current-password"
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !disabled && handleLogin()}
+                />
+              </div>
+            </div>
+            <button className="auth-button" onClick={handleLogin} disabled={disabled}>
+              {loading && <span className="auth-spinner" />}
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+            {error && <p className="auth-error">{error}</p>}
+            <div className="auth-divider"><span>or</span></div>
+          </>
+        ) : (
+          <p className="auth-label" style={{ textAlign: 'center', fontSize: 13, color: '#7d8d9e' }}>
+            Password authentication is disabled.
+          </p>
+        )}
         <button
           className="auth-social-button"
           onClick={async () => {

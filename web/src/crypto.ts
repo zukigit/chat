@@ -120,11 +120,9 @@ export async function encrypt(plaintext: string, recipients: string[]): Promise<
   const fileKey = randomBytes(32)
   const nonce = randomBytes(12)
 
-  console.log(`[E2EE] encrypt: ${recipients.length} recipients`)
   const headerLines: string[] = []
 
   for (const recipient of recipients) {
-    console.log(`[E2EE] encrypt: stanza for recipient ${recipient.substring(0, 20)}...`)
     const recipientPub = decodePublicKey(recipient)
     const ephemeralSk = x25519.utils.randomSecretKey()
     const ephemeralPub = x25519.getPublicKey(ephemeralSk)
@@ -155,11 +153,7 @@ export async function decrypt(armor: string): Promise<string> {
   if (!privateKey) throw new Error('private key not available')
 
   const sk = decodePrivateKey(privateKey)
-  const myPub = encodePublicKey(x25519.getPublicKey(sk))
-  console.log(`[E2EE] decrypt: my public key is ${myPub.substring(0, 20)}...`)
   const { headerText, body } = unwrapArmor(armor)
-  console.log(`[E2EE] decrypt: headerText lines=${headerText.split('\n').length}, body length=${body.length}`)
-  console.log(`[E2EE] decrypt: headerText (first 200 chars): ${headerText.substring(0, 200)}`)
 
   const headerLines = headerText.split('\n')
   const macLine = headerLines[headerLines.length - 1]
@@ -197,25 +191,19 @@ export async function decrypt(armor: string): Promise<string> {
     const wrapKey = hkdf(sha256, sharedSecret, new Uint8Array(0), new TextEncoder().encode(AGE_HKDF_INFO), 32)
 
     const keyLen = encryptedFileKey.length
-    console.log(`[E2EE] decrypt stanza: encryptedFileKey length=${keyLen}`)
     const decryptedFileKey = new Uint8Array(32)
     for (let i = 0; i < keyLen; i++) {
       decryptedFileKey[i] = encryptedFileKey[i] ^ wrapKey[i]
     }
 
     const computedMac = hmac(sha256, decryptedFileKey, new TextEncoder().encode(headerTextWithoutMac)).slice(0, 16)
-    const macMatch = computedMac.every((b: number, i: number) => b === expectedMac[i])
-    console.log(`[E2EE] decrypt stanza: MAC match=${macMatch}`)
-    if (macMatch) {
+    if (computedMac.every((b: number, i: number) => b === expectedMac[i])) {
       fileKey = decryptedFileKey
       break
     }
   }
 
-  if (!fileKey) {
-    console.error('[E2EE] decrypt: no matching recipient found among stanzas')
-    throw new Error('no matching recipient found')
-  }
+  if (!fileKey) throw new Error('no matching recipient found')
 
   const nonce = body.slice(0, 12)
   const ciphertext = body.slice(12)

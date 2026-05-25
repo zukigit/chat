@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { loadConfig } from '../config'
 import './auth.css'
 
+const passwordAuthEnabled = import.meta.env.VITE_ENABLE_PASSWORD_AUTH === 'true'
+
 export default function SignupPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -59,49 +61,57 @@ export default function SignupPage() {
         <div className="auth-header">
           <h1 className="auth-title">Sign Up</h1>
         </div>
-        <div className="auth-fields">
-          <div className="auth-input-wrap">
-            <span className="auth-label">Username</span>
-            <input
-              className="auth-input"
-              type="text"
-              placeholder="your_username"
-              value={username}
-              autoComplete="username"
-              onChange={e => setUsername(e.target.value)}
-            />
-          </div>
-          <div className="auth-input-wrap">
-            <span className="auth-label">Password</span>
-            <input
-              className="auth-input"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              autoComplete="new-password"
-              onChange={e => setPassword(e.target.value)}
-            />
-          </div>
-          <div className="auth-input-wrap">
-            <span className="auth-label">Confirm Password</span>
-            <input
-              className="auth-input"
-              type="password"
-              placeholder="••••••••"
-              value={confirm}
-              autoComplete="new-password"
-              onChange={e => setConfirm(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !disabled && handleSignup()}
-            />
-          </div>
-        </div>
-        <button className="auth-button" onClick={handleSignup} disabled={disabled}>
-          {loading && <span className="auth-spinner" />}
-          {loading ? 'Creating account...' : 'Create Account'}
-        </button>
-        {success && <p className="auth-success">{success}</p>}
-        {error && <p className="auth-error">{error}</p>}
-        <div className="auth-divider"><span>or</span></div>
+        {passwordAuthEnabled ? (
+          <>
+            <div className="auth-fields">
+              <div className="auth-input-wrap">
+                <span className="auth-label">Username</span>
+                <input
+                  className="auth-input"
+                  type="text"
+                  placeholder="your_username"
+                  value={username}
+                  autoComplete="username"
+                  onChange={e => setUsername(e.target.value)}
+                />
+              </div>
+              <div className="auth-input-wrap">
+                <span className="auth-label">Password</span>
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  autoComplete="new-password"
+                  onChange={e => setPassword(e.target.value)}
+                />
+              </div>
+              <div className="auth-input-wrap">
+                <span className="auth-label">Confirm Password</span>
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirm}
+                  autoComplete="new-password"
+                  onChange={e => setConfirm(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !disabled && handleSignup()}
+                />
+              </div>
+            </div>
+            <button className="auth-button" onClick={handleSignup} disabled={disabled}>
+              {loading && <span className="auth-spinner" />}
+              {loading ? 'Creating account...' : 'Create Account'}
+            </button>
+            {success && <p className="auth-success">{success}</p>}
+            {error && <p className="auth-error">{error}</p>}
+            <div className="auth-divider"><span>or</span></div>
+          </>
+        ) : (
+          <p className="auth-label" style={{ textAlign: 'center', fontSize: 13, color: '#7d8d9e' }}>
+            Password authentication is disabled.
+          </p>
+        )}
         <button
           className="auth-social-button"
           onClick={async () => {

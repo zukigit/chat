@@ -100,12 +100,9 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
             try {
               const plaintext = await decrypt(msg.content)
               msg.content = plaintext
-              console.log('[E2EE] decrypted message', msg.id)
-            } catch (err) {
-              console.error('[E2EE] decryption failed for message', msg.id, err)
+            } catch {
+              console.error('E2EE: decryption failed for message', msg.id)
             }
-          } else if (looksEncrypted(msg.content) && !hasKey) {
-            console.warn('[E2EE] received encrypted message but no private key loaded — message', msg.id)
           }
 
           addMessage(msg)
@@ -173,11 +170,8 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
       try {
         const pubKeys = await getPublicKeys(memberUserIds)
         const recipients = Object.values(pubKeys)
-        console.log(`[E2EE] send: fetched ${Object.keys(pubKeys).length} keys for ${memberUserIds.length} member IDs, ${recipients.length} recipients`)
         if (recipients.length > 0) {
           encryptedContent = await encrypt(content, recipients)
-        } else {
-          console.warn('[E2EE] send: no recipient keys found, skipping encryption')
         }
       } catch (err) {
         markSentFailed(conversationId, messageId)
