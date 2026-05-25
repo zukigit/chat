@@ -208,6 +208,26 @@ export default function HomePage() {
     }
   }
 
+  async function handleStartChatByUsername(username: string) {
+    const existing = conversations.find(c =>
+      c.members.some(m => m.username === username)
+    )
+    if (existing) {
+      setActiveConv(existing)
+      setTab('conversations')
+      return
+    }
+
+    const conversationId = await createConversation([username])
+    const updated = await fetchConversations()
+    setConversations(updated)
+    const conv = updated.find(c => c.id === conversationId)
+    if (conv) {
+      setActiveConv(conv)
+      setTab('conversations')
+    }
+  }
+
   const messages = activeConv ? (allMessages[activeConv.id] ?? []) : []
   const currentSent = activeConv ? sentMessages.filter(s => s.conversation_id === activeConv.id) : []
   const currentUsername = getUsername() ?? ''
@@ -306,6 +326,8 @@ export default function HomePage() {
             currentUsername={currentUsername}
             messages={allMessages}
             onSelect={handleSelectConversation}
+            onStartChat={handleStartChatByUsername}
+            onRefreshFriends={() => loadFriends().catch(console.error)}
           />
         ) : tab === 'friends' ? (
           <FriendsList
@@ -314,7 +336,6 @@ export default function HomePage() {
             onStartChat={handleStartChat}
             onAccepted={handleAccepted}
             onDeclined={handleDeclined}
-            onRefreshFriends={() => { loadFriends().catch(console.error) }}
           />
         ) : (
           <ProfilePanel username={currentUsername} />

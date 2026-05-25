@@ -141,6 +141,7 @@
 
 .fab:hover { background: var(--color-accent-hover); transform: scale(1.05); }
 .fab:active { transform: scale(0.95); }
+.fab-above { bottom: 82px; }
 
 /* ── Icon size variants ── */
 .icon-xs { width: 14px; height: 14px; }

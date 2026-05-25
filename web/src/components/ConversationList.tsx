@@ -4,6 +4,7 @@ import { avatarColor, avatarInitials } from './avatarUtils'
 import type { ApiConversation } from '../api/conversationsApi'
 import type { StoredMessage } from '../messageStore'
 import SearchConversationModal from './SearchConversationModal'
+import AddFriendModal from './AddFriendModal'
 
 interface Props {
   conversations: ApiConversation[]
@@ -11,10 +12,13 @@ interface Props {
   currentUsername: string
   messages: Record<number, StoredMessage[]>
   onSelect: (conv: ApiConversation) => void
+  onStartChat: (username: string) => Promise<void>
+  onRefreshFriends?: () => void
 }
 
-export default function ConversationList({ conversations, activeId, currentUsername, messages, onSelect }: Props) {
+export default function ConversationList({ conversations, activeId, currentUsername, messages, onSelect, onStartChat, onRefreshFriends }: Props) {
   const [showSearchModal, setShowSearchModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   const searchIcon = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -24,15 +28,28 @@ export default function ConversationList({ conversations, activeId, currentUsern
     </svg>
   )
 
+  const findFriendsIcon = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <circle cx="18" cy="16" r="3" />
+      <line x1="22" y1="22" x2="20.5" y2="20.5" />
+    </svg>
+  )
+
   if (conversations.length === 0) {
     return (
       <div className="friends-wrapper">
         <div className="sidebar-list-empty">
           No conversations yet
         </div>
+        <button className="fab fab-above" title="Find Friends" onClick={() => setShowAddModal(true)}>
+          {findFriendsIcon}
+        </button>
         <button className="fab" title="Search Conversations" onClick={() => setShowSearchModal(true)}>
           {searchIcon}
         </button>
+        <AddFriendModal open={showAddModal} onClose={() => setShowAddModal(false)} onOpen={() => setShowAddModal(true)} onStartChat={onStartChat} onAccepted={() => onRefreshFriends?.()} onDeclined={() => onRefreshFriends?.()} />
         <SearchConversationModal open={showSearchModal} onClose={() => setShowSearchModal(false)} onSelect={onSelect} />
       </div>
     )
@@ -73,9 +90,13 @@ export default function ConversationList({ conversations, activeId, currentUsern
           )
         })}
       </div>
+      <button className="fab fab-above" title="Find Friends" onClick={() => setShowAddModal(true)}>
+        {findFriendsIcon}
+      </button>
       <button className="fab" title="Search Conversations" onClick={() => setShowSearchModal(true)}>
         {searchIcon}
       </button>
+      <AddFriendModal open={showAddModal} onClose={() => setShowAddModal(false)} onOpen={() => setShowAddModal(true)} onStartChat={onStartChat} onAccepted={() => onRefreshFriends?.()} onDeclined={() => onRefreshFriends?.()} />
       <SearchConversationModal open={showSearchModal} onClose={() => setShowSearchModal(false)} onSelect={onSelect} />
     </div>
   )

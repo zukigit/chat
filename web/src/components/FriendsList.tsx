@@ -3,7 +3,6 @@ import './chat.css'
 import { avatarColor, avatarInitials } from './avatarUtils'
 import { acceptFriendRequest, rejectFriendRequest } from '../api/friendsApi'
 import type { Friend, FriendRequest } from './fakeData'
-import AddFriendModal from './AddFriendModal'
 
 interface Props {
   friends: Friend[]
@@ -11,17 +10,15 @@ interface Props {
   onStartChat: (friend: Friend) => Promise<void>
   onAccepted?: (req: FriendRequest) => void
   onDeclined?: (req: FriendRequest) => void
-  onRefreshFriends?: () => void
 }
 
-export default function FriendsList({ friends, friendRequests, onStartChat, onAccepted, onDeclined, onRefreshFriends }: Props) {
+export default function FriendsList({ friends, friendRequests, onStartChat, onAccepted, onDeclined }: Props) {
   const [requestsOpen, setRequestsOpen] = useState(true)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [chatLoadingId, setChatLoadingId] = useState<string | null>(null)
   const [chatErrors, setChatErrors] = useState<Record<string, string>>({})
-  const [showAddModal, setShowAddModal] = useState(false)
 
   async function handleAction(req: FriendRequest, action: 'accept' | 'decline') {
     if (loadingId) return
@@ -155,26 +152,6 @@ export default function FriendsList({ friends, friendRequests, onStartChat, onAc
           ))}
 
         </div>
-        <button className="fab" title="Search Users" onClick={() => setShowAddModal(true)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="8.5" cy="7" r="4" />
-            <circle cx="18" cy="16" r="3" />
-            <line x1="22" y1="22" x2="20.5" y2="20.5" />
-          </svg>
-        </button>
-        <AddFriendModal open={showAddModal} onClose={() => setShowAddModal(false)} onOpen={() => setShowAddModal(true)} onStartChat={async (username: string) => {
-          const friend = friends.find(f => f.username === username)
-          if (friend) {
-            await onStartChat(friend)
-          } else {
-            await onStartChat({ id: username, username, displayName: username })
-          }
-        }} onAccepted={() => {
-          onRefreshFriends?.()
-        }} onDeclined={() => {
-          onRefreshFriends?.()
-        }} />
       </div>
     </>
   )
