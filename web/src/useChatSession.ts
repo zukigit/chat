@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { getToken } from './auth'
 import { loadConfig } from './config'
-import { addMessage, addRemoteSentMessage, markSentDelivered, markSentSent, markSentSeen, markSentFailed, type StoredMessage } from './messageStore'
-import { encrypt, decrypt, hasPrivateKey } from './crypto'
+import { addMessage, addRemoteSentMessage, hasPendingSent, markSentDelivered, markSentSent, markSentSeen, markSentFailed, type StoredMessage } from './messageStore'
+import { encrypt, decrypt, hasPrivateKey, AGE_ARMOR_BEGIN } from './crypto'
 import { getPublicKeys } from './api/keysApi'
 
 interface ChatResponseEnvelope {
@@ -11,10 +11,8 @@ interface ChatResponseEnvelope {
   data: StoredMessage | { conversation_id: number; message_id: string } | { code: number; message: string }
 }
 
-const AGE_HEADER = '-----BEGIN AGE ENCRYPTED FILE-----'
-
 function looksEncrypted(content: string): boolean {
-  return content.startsWith(AGE_HEADER)
+  return content.startsWith(AGE_ARMOR_BEGIN)
 }
 
 export function useChatSession(activeConversationId: number | null, onMessage?: (msg: StoredMessage) => void, onSent?: (conversationId: number, messageId: string) => void, onDelivered?: (conversationId: number, messageId: string) => void, onError?: (code: number, message: string, conversationId?: number) => void, onConnect?: () => void) {
@@ -91,23 +89,31 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
             } catch { /* ignore */ }
           }
 
+          // Decrypt for display only — msg.content stays encrypted for storage
+          let displayContent = msg.content
           const hasKey = hasPrivateKey()
           if (hasKey && looksEncrypted(msg.content)) {
             try {
-              const plaintext = await decrypt(msg.content)
-              msg.content = plaintext
+              displayContent = await decrypt(msg.content)
             } catch {
               console.error('E2EE: decryption failed for message', msg.id)
             }
           }
 
           if (isOwnMessage) {
-            addRemoteSentMessage(msg.conversation_id, msg.content)
+            // Only add a remote-sent placeholder if this message did NOT
+            // originate locally (i.e. no pending local sent entry exists).
+            if (!hasPendingSent(msg.conversation_id, msg.id)) {
+              addRemoteSentMessage(msg.conversation_id, msg.content)
+            }
             onDeliveredRef.current?.(msg.conversation_id, msg.id)
           }
 
           addMessage(msg)
-          onMessageRef.current?.(msg)
+
+          // Pass decrypted content to React for display
+          const displayMsg: StoredMessage = { ...msg, content: displayContent }
+          onMessageRef.current?.(displayMsg)
           if (msg.conversation_id === activeConvIdRef.current) {
             if (token && !isOwnMessage) {
               try {

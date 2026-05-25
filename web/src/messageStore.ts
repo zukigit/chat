@@ -67,14 +67,33 @@ export function addMessage(msg: StoredMessage): void {
     all[key].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   }
   saveAll(all)
+
+  // Remove sent entries that correspond to this now-received message.
+  // Always runs, even when the message was deduplicated (handles reconnect).
   const ageArmorStart = '-----BEGIN AGE ENCRYPTED FILE-----'
   const sent = loadSent().filter(s => {
     if (s.conversation_id !== msg.conversation_id) return true
-    if (s.content === msg.content) return false
+    // Local sent entry: matched by tempId === server-assigned message ID
+    if (!s.tempId.startsWith('sent-remote-') && s.tempId === msg.id) return false
+    // Remote-sent entry: matched by identical encrypted content
+    if (s.tempId.startsWith('sent-remote-') && s.content === msg.content) return false
+    // Stale age-armor entries from pre-fix data
     if (s.content.startsWith(ageArmorStart)) return false
     return true
   })
   saveSent(sent)
+}
+
+/**
+ * Returns true if a locally-created sent entry exists for this message.
+ * Used to avoid calling addRemoteSentMessage for messages sent locally.
+ */
+export function hasPendingSent(conversationId: number, messageId: string): boolean {
+  return loadSent().some(s =>
+    s.conversation_id === conversationId &&
+    s.tempId === messageId &&
+    !s.tempId.startsWith('sent-remote-')
+  )
 }
 
 function generateUUID(): string {

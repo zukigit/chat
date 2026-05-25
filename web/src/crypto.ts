@@ -11,7 +11,7 @@ import { bech32, bech32m, base64 } from '@scure/base'
 const AGE_PUBLIC_KEY_PREFIX = 'age1'
 const AGE_PRIVATE_KEY_PREFIX = 'AGE-SECRET-KEY-1'
 const AGE_HKDF_INFO = 'age-encryption.org/v1/X25519'
-const AGE_ARMOR_BEGIN = '-----BEGIN AGE ENCRYPTED FILE-----'
+export const AGE_ARMOR_BEGIN = '-----BEGIN AGE ENCRYPTED FILE-----'
 const AGE_ARMOR_END = '-----END AGE ENCRYPTED FILE-----'
 const AGE_ARMOR_SEPARATOR = '---'
 

@@ -16,6 +16,11 @@ import { avatarColor, avatarInitials } from '../components/avatarUtils'
 import { useChatSession } from '../useChatSession'
 import { useNotificationSession } from '../useNotificationSession'
 import { getMessages, getSentMessages, clearMessages, type StoredMessage, type SentMessage } from '../messageStore'
+import { decrypt, hasPrivateKey, AGE_ARMOR_BEGIN } from '../crypto'
+
+function looksEncrypted(content: string): boolean {
+  return content.startsWith(AGE_ARMOR_BEGIN)
+}
 
 type Tab = 'conversations' | 'friends' | 'profile'
 
@@ -51,7 +56,13 @@ export default function HomePage() {
     setAllMessages(prev => {
       const convId = msg.conversation_id
       const existing = prev[convId] ?? []
-      if (existing.some(m => m.id === msg.id)) return prev
+      const idx = existing.findIndex(m => m.id === msg.id)
+      if (idx !== -1) {
+        // Update existing entry — content may have changed (encrypted → decrypted on reconnect)
+        const updated = [...existing]
+        updated[idx] = msg
+        return { ...prev, [convId]: updated }
+      }
       return { ...prev, [convId]: [...existing, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) }
     })
     setSentMessages(getSentMessages(msg.conversation_id))
@@ -100,21 +111,39 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    const restored: Record<number, StoredMessage[]> = {}
-    conversations.forEach(c => {
-      const msgs = getMessages(c.id)
-      if (msgs.length > 0) restored[c.id] = msgs
-    })
-    setAllMessages(restored)
-    if (activeConv) {
-      setSentMessages(getSentMessages(activeConv.id))
-      const username = getUsername() ?? ''
-      const currentUserId = activeConv.members.find(mem => mem.username === username)?.user_id ?? ''
-      const msgs = restored[activeConv.id] ?? []
-      if (msgs.length > 0) {
-        markAllRead(activeConv.id, msgs, currentUserId)
+    async function loadAndDecrypt() {
+      const ready = hasPrivateKey()
+      const restored: Record<number, StoredMessage[]> = {}
+      for (const c of conversations) {
+        const msgs = getMessages(c.id)
+        if (msgs.length === 0) continue
+        if (ready) {
+          const decrypted = await Promise.all(msgs.map(async (m) => {
+            if (looksEncrypted(m.content)) {
+              try {
+                const plaintext = await decrypt(m.content)
+                return { ...m, content: plaintext }
+              } catch { /* keep encrypted */ }
+            }
+            return m
+          }))
+          restored[c.id] = decrypted
+        } else {
+          restored[c.id] = msgs
+        }
+      }
+      setAllMessages(restored)
+      if (activeConv) {
+        setSentMessages(getSentMessages(activeConv.id))
+        const username = getUsername() ?? ''
+        const currentUserId = activeConv.members.find(mem => mem.username === username)?.user_id ?? ''
+        const msgs = restored[activeConv.id] ?? []
+        if (msgs.length > 0) {
+          markAllRead(activeConv.id, msgs, currentUserId)
+        }
       }
     }
+    loadAndDecrypt()
   }, [conversations, activeConv, markAllRead])
 
   useEffect(() => {
