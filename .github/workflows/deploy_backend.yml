@@ -1,4 +1,4 @@
-name: Build and Deploy Web
+name: Deploy Backend
 
 on:
   workflow_dispatch:
@@ -7,10 +7,6 @@ on:
         description: 'Version tag'
         required: true
         default: 'latest'
-      gateway_url:
-        description: 'Gateway URL (VITE_GATEWAY_URL)'
-        required: false
-        default: ''
   workflow_call:
     inputs:
       tag:
@@ -18,11 +14,6 @@ on:
         required: true
         type: string
         default: 'latest'
-      gateway_url:
-        description: 'Gateway URL (VITE_GATEWAY_URL)'
-        required: false
-        type: string
-        default: ''
 
 jobs:
   build:
@@ -37,12 +28,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push web image
+      - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./web/Dockerfile
+          file: ./backend/cmd/backend/Dockerfile
           push: true
-          tags: zukidocker/chat-web:${{ inputs.tag || 'latest' }}
-          build-args: |
-            VITE_GATEWAY_URL=${{ inputs.gateway_url }}
+          tags: zukidocker/chat-backend:${{ inputs.tag || 'latest' }}

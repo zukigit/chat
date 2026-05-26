@@ -1,4 +1,4 @@
-name: Build and Deploy Backend
+name: Deploy Gateway
 
 on:
   workflow_dispatch:
@@ -28,10 +28,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push backend image
+      - name: Build and push gateway image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./backend/cmd/backend/Dockerfile
+          file: ./backend/cmd/gateway/Dockerfile
           push: true
-          tags: zukidocker/chat-backend:${{ inputs.tag || 'latest' }}
+          tags: zukidocker/chat-gateway:${{ inputs.tag || 'latest' }}
