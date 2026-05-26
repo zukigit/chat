@@ -19,10 +19,13 @@ import (
 )
 
 func main() {
+	dbName := lib.Getenv("DB_NAME", "chat")
+	dbUser := lib.Getenv("DB_USER", "chat")
 	dbHost := lib.Getenv("DB_HOST", "localhost")
 	dbPasswd := lib.Getenv("DB_PASSWORD", "")
 	dbSslMode := lib.Getenv("DB_SSLMODE", "disable")
-	dsn := fmt.Sprintf("postgres://chat:%s@%s/chat?sslmode=%s", dbPasswd, dbHost, dbSslMode)
+
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", dbUser, dbPasswd, dbHost, dbName, dbSslMode)
 
 	// database connection
 	sqlDB, err := sql.Open("postgres", dsn)
