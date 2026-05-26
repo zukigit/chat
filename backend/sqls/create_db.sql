@@ -1,2 +1,0 @@
-CREATE ROLE chat WITH LOGIN PASSWORD 'password';
-CREATE DATABASE chat OWNER chat;
