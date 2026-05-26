@@ -32,3 +32,7 @@ jobs:
       gateway_url: ${{ inputs.gateway_url }}
     secrets: inherit
 
+  supabase:
+    uses: ./.github/workflows/deploy_supabase.yml
+    secrets: inherit
+
