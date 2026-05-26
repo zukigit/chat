@@ -23,7 +23,7 @@ import (
 // schemaPath returns the absolute path to sqls/init/schema.sql.
 func schemaPath() string {
 	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..", "sqls", "init", "schema.sql")
+	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "supabase", "migrations", "schema.sql")
 }
 
 // setupTestDB starts a throwaway Postgres container, mounts schema.sql via
