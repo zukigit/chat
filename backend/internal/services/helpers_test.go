@@ -20,13 +20,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// schemaPath returns the absolute path to sqls/init/schema.sql.
+// schemaPath returns the absolute path to sqls/init/20260526000000_init.sql.
 func schemaPath() string {
 	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "supabase", "migrations", "schema.sql")
+	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "supabase", "migrations", "20260526000000_init.sql")
 }
 
-// setupTestDB starts a throwaway Postgres container, mounts schema.sql via
+// setupTestDB starts a throwaway Postgres container, mounts 20260526000000_init.sql via
 // /docker-entrypoint-initdb.d so Postgres runs it automatically, and returns
 // a connected *sql.DB. Container and DB are cleaned up when the test ends.
 func setupTestDB(t *testing.T) *sql.DB {
@@ -44,7 +44,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		Files: []testcontainers.ContainerFile{
 			{
 				HostFilePath:      schemaPath(),
-				ContainerFilePath: "/docker-entrypoint-initdb.d/schema.sql",
+				ContainerFilePath: "/docker-entrypoint-initdb.d/20260526000000_init.sql",
 				FileMode:          0755,
 			},
 		},

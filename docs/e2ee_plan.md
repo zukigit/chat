@@ -88,7 +88,7 @@ sequenceDiagram
 
 ### 1.1 Add `is_e2ee_ready` Column to `users`
 
-**File:** `backend/sqls/init/schema.sql`
+**File:** `backend/sqls/init/20260526000000_init.sql`
 
 ```sql
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_e2ee_ready BOOLEAN NOT NULL DEFAULT false;
@@ -988,7 +988,7 @@ No new Go dependencies are needed. The backend does not perform any encryption o
 
 | File | Change |
 |------|--------|
-| `backend/sqls/init/schema.sql` | Add `is_e2ee_ready BOOLEAN NOT NULL DEFAULT false` to `users` table |
+| `backend/sqls/init/20260526000000_init.sql` | Add `is_e2ee_ready BOOLEAN NOT NULL DEFAULT false` to `users` table |
 | `backend/sqls/queries/users.sql` | Add `encrypted_private_key` and `is_e2ee_ready` to queries; add `SetE2EEKeys` and `GetE2EEKeysByUserID` queries |
 | `backend/sqls/queries/public_keys.sql` | Add `GetPublicKeysByUserIDs` and `GetLatestPublicKeyByUserID` queries |
 | `backend/proto/auth/auth.proto` | Add `SetupKeys`, `GetMyKeys`, `GetPublicKeys` RPCs + messages |

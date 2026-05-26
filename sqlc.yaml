@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    schema: "supabase/migrations/schema.sql"
+    schema: "supabase/migrations/20260526000000_init.sql"
     queries: "supabase/queries"
     gen:
       go:
