@@ -2,6 +2,7 @@
 .chat-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background: var(--bg-base);
   color: var(--color-text);
@@ -439,5 +440,47 @@
   .fab svg {
     width: 20px;
     height: 20px;
+  }
+}
+
+@media (max-height: 500px) {
+  .sidebar-header-bar {
+    padding: 8px 10px;
+  }
+
+  .chat-header {
+    padding: 8px 14px;
+  }
+
+  .messages-scroll {
+    padding: 8px 6px;
+  }
+
+  .msg-bubble {
+    padding: 6px 10px 5px;
+    font-size: 14px;
+  }
+
+  .chat-input-bar {
+    padding: 6px 10px;
+  }
+
+  .chat-input {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  .send-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+
+  .chat-empty-icon {
+    font-size: 40px;
+  }
+
+  .chat-empty-text {
+    font-size: 14px;
   }
 }

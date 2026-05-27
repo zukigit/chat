@@ -510,3 +510,25 @@
   white-space: normal;
   word-break: break-word;
 }
+
+@media (max-height: 500px) {
+  .modal-content {
+    max-height: 95vh;
+  }
+
+  .modal-header {
+    padding: 10px 16px;
+  }
+
+  .modal-search-row {
+    padding: 10px 16px;
+  }
+
+  .modal-user-row {
+    padding: 6px 16px;
+  }
+
+  .modal-empty {
+    padding: 16px 20px;
+  }
+}
