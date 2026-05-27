@@ -1,0 +1,4 @@
+DOMAIN {
+    header Content-Security-Policy "connect-src 'self' wss://DOMAIN"
+    reverse_proxy gateway:8080
+}
