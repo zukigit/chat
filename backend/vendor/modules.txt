@@ -168,8 +168,6 @@ github.com/morikuni/aec
 github.com/nats-io/nats.go
 github.com/nats-io/nats.go/encoders/builtin
 github.com/nats-io/nats.go/internal/parser
-github.com/nats-io/nats.go/internal/syncx
-github.com/nats-io/nats.go/jetstream
 github.com/nats-io/nats.go/util
 # github.com/nats-io/nkeys v0.4.12
 ## explicit; go 1.24.0
