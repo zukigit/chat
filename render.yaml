@@ -42,7 +42,3 @@ projects:
       plan: free
       startCommand: "-js -sd /data"
       region: singapore
-      disk:
-        name: nats-data
-        mountPath: /data
-        sizeGB: 10
