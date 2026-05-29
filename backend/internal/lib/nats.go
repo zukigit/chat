@@ -15,7 +15,10 @@ func GetJetStream(natsURL string) (nats.JetStreamContext, *nats.Conn, error) {
 		return nil, nil, fmt.Errorf("invalid CHAT_MAX_AGE: %v", err)
 	}
 
-	nc, err := nats.Connect(natsURL)
+	nc, err := nats.Connect(natsURL,
+		nats.MaxReconnects(100),
+		nats.ReconnectWait(2*time.Second),
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to NATS: %v", err)
 	}
