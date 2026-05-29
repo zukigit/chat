@@ -10,6 +10,8 @@ projects:
       runtime: docker
       repo: https://github.com/zukigit/chat
       plan: free
+      dependsOn:
+        - nats
       envVars:
       - key: FRONTEND_URL
         sync: false
@@ -29,6 +31,8 @@ projects:
         sync: false
       - key: CHAT_DB_NAME
         sync: false
+      - key: NATS_URL
+        value: nats://nats:4222
       region: singapore
       dockerContext: .
       dockerfilePath: ./backend/cmd/backend/Dockerfile
