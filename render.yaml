@@ -10,8 +10,6 @@ projects:
       runtime: docker
       repo: https://github.com/zukigit/chat
       plan: free
-      dependsOn:
-        - nats
       envVars:
       - key: FRONTEND_URL
         sync: false
