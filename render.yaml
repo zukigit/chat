@@ -5,36 +5,36 @@ projects:
   environments:
   - name: Production
     services:
-    - type: web
-      name: chat-backend
-      runtime: docker
-      repo: https://github.com/zukigit/chat
-      plan: free
-      envVars:
-      - key: FRONTEND_URL
-        sync: false
-      - key: GATEWAY_PUBLIC_URL
-        sync: false
-      - key: GITHUB_OAUTH_CLIENT_SECRET
-        sync: false
-      - key: GITHUB_OAUTH_CLIENT_ID
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: CHAT_DB_HOST
-        sync: false
-      - key: CHAT_DB_PASSWORD
-        sync: false
-      - key: CHAT_DB_USER
-        sync: false
-      - key: CHAT_DB_NAME
-        sync: false
-      - key: NATS_URL
-        value: nats://nats:4222
-      region: singapore
-      dockerContext: .
-      dockerfilePath: ./backend/cmd/backend/Dockerfile
-      autoDeployTrigger: commit
+    # - type: web
+    #   name: chat-backend
+    #   runtime: docker
+    #   repo: https://github.com/zukigit/chat
+    #   plan: free
+    #   envVars:
+    #   - key: FRONTEND_URL
+    #     sync: false
+    #   - key: GATEWAY_PUBLIC_URL
+    #     sync: false
+    #   - key: GITHUB_OAUTH_CLIENT_SECRET
+    #     sync: false
+    #   - key: GITHUB_OAUTH_CLIENT_ID
+    #     sync: false
+    #   - key: JWT_SECRET
+    #     sync: false
+    #   - key: CHAT_DB_HOST
+    #     sync: false
+    #   - key: CHAT_DB_PASSWORD
+    #     sync: false
+    #   - key: CHAT_DB_USER
+    #     sync: false
+    #   - key: CHAT_DB_NAME
+    #     sync: false
+    #   - key: NATS_URL
+    #     value: nats://nats:4222
+    #   region: singapore
+    #   dockerContext: .
+    #   dockerfilePath: ./backend/cmd/backend/Dockerfile
+    #   autoDeployTrigger: commit
 
     - type: pserv
       name: nats
