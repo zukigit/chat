@@ -36,7 +36,7 @@ projects:
     #   dockerfilePath: ./backend/cmd/backend/Dockerfile
     #   autoDeployTrigger: commit
 
-    - type: pserv
+    - type: web
       name: nats
       runtime: image
       image:
