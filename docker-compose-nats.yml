@@ -1,0 +1,8 @@
+services:
+  nats:
+    image: nats:2.12.4-alpine3.22
+    ports:
+      - "4222:4222"
+    command: ["-js", "-sd", "/data"]
+    volumes:
+      - ./nats_data:/data
