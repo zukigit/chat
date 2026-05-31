@@ -1,0 +1,83 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    run.googleapis.com/ingress: internal
+    run.googleapis.com/maxScale: '3'
+  labels:
+    cloud.googleapis.com/location: asia-southeast1
+    managed-by: gcp-cloud-build-deploy-cloud-run
+  name: chat-backend
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '3'
+    spec:
+      containerConcurrency: 80
+      containers:
+      - env:
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-db-name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-db-user
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-db-host
+        - name: GITHUB_OAUTH_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-github-oauth-client-id
+        - name: GATEWAY_PUBLIC_URL
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-gateway-public-url
+        - name: NATS_URL
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-nats-url
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-db-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-jwt-secret
+        - name: GITHUB_OAUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: 'latest'
+              name: chat-github-oauth-client-secret
+        image: gcr.io/cloudrun/placeholder
+        name: chat-backend-1
+        ports:
+        - containerPort: 1234
+          name: http1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 1
+          periodSeconds: 240
+          tcpSocket:
+            port: 1234
+          timeoutSeconds: 240
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
