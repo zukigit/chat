@@ -1,0 +1,51 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    run.googleapis.com/ingress: internal
+    run.googleapis.com/maxScale: '3'
+  labels:
+    cloud.googleapis.com/location: asia-southeast1
+  name: nats
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '3'
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: 'true'
+    spec:
+      containerConcurrency: 80
+      containers:
+      - args:
+        - -js
+        - -sd
+        - /data
+        image: nats:2.12.4-alpine3.22
+        name: nats-1
+        ports:
+        - containerPort: 4222
+          name: http1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 1
+          periodSeconds: 240
+          tcpSocket:
+            port: 4222
+          timeoutSeconds: 240
+        volumeMounts:
+        - mountPath: /data
+          name: gcs-1
+      timeoutSeconds: 300
+      volumes:
+      - csi:
+          driver: gcsfuse.run.googleapis.com
+          volumeAttributes:
+            bucketName: nats_data
+        name: gcs-1
+  traffic:
+  - latestRevision: true
+    percent: 100
