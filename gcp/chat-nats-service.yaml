@@ -6,25 +6,20 @@ metadata:
     run.googleapis.com/maxScale: '3'
   labels:
     cloud.googleapis.com/location: asia-southeast1
-  name: nats
+  name: chat-nats
 spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/maxScale: '3'
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/startup-cpu-boost: 'true'
     spec:
       containerConcurrency: 80
       containers:
-      - args:
-        - -js
-        - -sd
-        - /data
-        image: nats:2.12.4-alpine3.22
-        name: nats-1
+      - image: zukidocker/chat-nats:latest
+        name: chat-nats-1
         ports:
-        - containerPort: 4222
+        - containerPort: 8080
           name: http1
         resources:
           limits:
@@ -34,7 +29,7 @@ spec:
           failureThreshold: 1
           periodSeconds: 240
           tcpSocket:
-            port: 4222
+            port: 8080
           timeoutSeconds: 240
         volumeMounts:
         - mountPath: /data
