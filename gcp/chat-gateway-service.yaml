@@ -1,0 +1,55 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/invoker-iam-disabled: 'true'
+    run.googleapis.com/maxScale: '3'
+  labels:
+    cloud.googleapis.com/location: asia-southeast1
+    managed-by: gcp-cloud-build-deploy-cloud-run
+  name: chat-gateway
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '3'
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: 'true'
+    spec:
+      containerConcurrency: 80
+      containers:
+      - env:
+        - name: BACKEND_LISTEN_ADDRESS
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: chat-backend-listen-address
+        - name: FRONTEND_URL
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: chat-frontend-url
+        - name: NATS_URL
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: chat-nats-url
+        image: gcr.io/cloudrun/placeholder
+        ports:
+        - containerPort: 8080
+          name: http1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 1
+          periodSeconds: 240
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 240
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
