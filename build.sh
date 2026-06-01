@@ -1,5 +1,5 @@
 #!/bin/sh
 
-./backend/cmd/backend/build.sh
-./backend/cmd/gateway/build.sh
+./backend/build-backend.sh
+./backend/build-gateway.sh
 ./web/build.sh
