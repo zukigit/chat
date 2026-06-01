@@ -1,8 +1,7 @@
 services:
   nats:
-    image: nats:2.12.4-alpine3.22
+    image: zukidocker/chat-nats:latest
     ports:
-      - "4222:4222"
-    command: ["-js", "-sd", "/data"]
+      - "8080:8080"
     volumes:
       - ./nats_data:/data
