@@ -34,7 +34,9 @@ func main() {
 	}
 
 	// get JetStream
-	js, nc, err := lib.GetJetStream(lib.Getenv("NATS_URL", nats.DefaultURL))
+	nats_url := lib.Getenv("NATS_URL", nats.DefaultURL)
+	lib.InfoLog.Printf("Connecting to NATS at %s", nats_url)
+	js, nc, err := lib.GetJetStream(nats_url)
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to set up JetStream: %v", err)
 	}
