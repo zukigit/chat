@@ -92,8 +92,11 @@ func main() {
 	r.HandleFunc("/conversations", chatHandler.GetConversations).Methods(http.MethodGet)
 	r.HandleFunc("/conversations/search", chatHandler.GetConversationsByName).Methods(http.MethodGet)
 
+	// setup cors
+	frontendURL := lib.Getenv("FRONTEND_URL", "")
+	lib.InfoLog.Printf("Allowing CORS for frontend URL: %s", frontendURL)
 	cors := gorhandlers.CORS(
-		gorhandlers.AllowedOrigins([]string{lib.Getenv("FRONTEND_URL", "")}),
+		gorhandlers.AllowedOrigins([]string{frontendURL}),
 		gorhandlers.AllowedMethods([]string{"GET", "POST", "OPTIONS"}),
 		gorhandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)
