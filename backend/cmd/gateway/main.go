@@ -15,6 +15,7 @@ func main() {
 	// env variables
 	backendAddr := lib.Getenv("BACKEND_LISTEN_ADDRESS", "localhost:1234")
 	natsURL := lib.Getenv("NATS_URL", nats.DefaultURL)
+	lib.InfoLog.Printf("Connecting to NATS at %s", natsURL)
 
 	// nats connection
 	nc, err := nats.Connect(natsURL)

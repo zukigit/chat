@@ -190,13 +190,12 @@ func (h *AuthHandler) GithubOAuthCallback(w http.ResponseWriter, r *http.Request
 		http.Redirect(w, r, frontendURL+"?error=missing_code", http.StatusFound)
 		return
 	}
-	shortLivedToken, username, err := h.authClient.GithubOAuthCallback(r.Context(), code)
+	shortLivedToken, _, err := h.authClient.GithubOAuthCallback(r.Context(), code)
 	if err != nil {
 		grpcStatus, _ := status.FromError(err)
 		http.Redirect(w, r, frontendURL+"?error="+url.QueryEscape(grpcStatus.Message()), http.StatusFound)
 		return
 	}
-	_ = username
 	http.Redirect(w, r, frontendURL+"/callback?token="+url.QueryEscape(shortLivedToken), http.StatusFound)
 }
 
