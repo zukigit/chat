@@ -2,7 +2,7 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   annotations:
-    run.googleapis.com/ingress: internal
+    run.googleapis.com/ingress: all
     run.googleapis.com/maxScale: '3'
   labels:
     cloud.googleapis.com/location: asia-southeast1
@@ -11,6 +11,7 @@ spec:
   template:
     metadata:
       annotations:
+        autoscaling.knative.dev/maxScale: '3'
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/startup-cpu-boost: 'true'
     spec:
