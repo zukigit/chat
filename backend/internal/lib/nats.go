@@ -16,8 +16,8 @@ func GetJetStream(natsURL string) (nats.JetStreamContext, *nats.Conn, error) {
 	}
 
 	nc, err := nats.Connect(natsURL,
-		nats.MaxReconnects(100),
-		nats.ReconnectWait(2*time.Second),
+		nats.MaxReconnects(1000),
+		nats.ReconnectWait(5*time.Second),
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to NATS: %v", err)
