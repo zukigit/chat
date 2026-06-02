@@ -54,6 +54,7 @@ func main() {
 	}
 	defer notiClient.Close()
 
+	lib.InfoLog.Printf("Connecting to backend: %s", backendAddr)
 	chatClient, err := clients.NewChatClient(backendAddr)
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to connect to backend (chat): %v", err)
