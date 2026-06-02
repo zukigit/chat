@@ -2,7 +2,10 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   annotations:
-    run.googleapis.com/ingress: internal
+    run.googleapis.com/client-name: cloud-console
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/invoker-iam-disabled: 'true'
     run.googleapis.com/maxScale: '3'
   labels:
     cloud.googleapis.com/location: asia-southeast1
