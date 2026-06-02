@@ -33,6 +33,11 @@ func main() {
 		lib.ErrorLog.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	err = sqlDB.Ping()
+	if err != nil {
+		lib.ErrorLog.Fatalf("Failed to ping database: %v", err)
+	}
+
 	// get JetStream
 	nats_url := lib.Getenv("NATS_URL", nats.DefaultURL)
 	lib.InfoLog.Printf("Connecting to NATS at %s", nats_url)
