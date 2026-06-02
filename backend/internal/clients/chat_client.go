@@ -2,12 +2,11 @@ package clients
 
 import (
 	"context"
-	"crypto/tls"
 
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/chat"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // ChatClient wraps the gRPC Chat client.
@@ -19,10 +18,7 @@ type ChatClient struct {
 // NewChatClient dials the backend gRPC server and returns a ChatClient.
 // The caller is responsible for calling Close() when done.
 func NewChatClient(backendAddr string) (*ChatClient, error) {
-	// Use TLS – Cloud Run requires it on port 443
-	creds := credentials.NewTLS(&tls.Config{})
-
-	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
