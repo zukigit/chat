@@ -31,7 +31,7 @@ jobs:
       - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./backend/Dockerfile-backend
+          context: ./backend
+          file: ./Dockerfile-backend
           push: true
           tags: zukidocker/chat-backend:${{ inputs.tag || 'latest' }}

@@ -31,7 +31,7 @@ jobs:
       - name: Build and push gateway image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./backend/Dockerfile-gateway
+          context: ./backend
+          file: ./Dockerfile-gateway
           push: true
           tags: zukidocker/chat-gateway:${{ inputs.tag || 'latest' }}
