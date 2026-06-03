@@ -32,6 +32,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./backend/cmd/gateway/Dockerfile
+          file: ./backend/Dockerfile-gateway
           push: true
           tags: zukidocker/chat-gateway:${{ inputs.tag || 'latest' }}
