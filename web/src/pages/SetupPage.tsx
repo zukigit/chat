@@ -14,6 +14,11 @@ export default function SetupPage() {
     setLoading(true)
     try {
       const url = gatewayUrl.replace(/\/$/, '')
+      if (import.meta.env.VITE_GATEWAY_URL) {
+        saveConfig({ gatewayUrl: url, chatRequestVersion: 1 })
+        navigate('/')
+        return
+      }
       const res = await fetch(`${url}/version`)
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       const json = await res.json()

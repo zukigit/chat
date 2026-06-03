@@ -7,12 +7,22 @@ export interface Config {
 
 export function loadConfig(): Config | null {
   const raw = localStorage.getItem(CONFIG_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as Config
-  } catch {
-    return null
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Config
+    } catch {
+      // fall through to env var check
+    }
   }
+
+  const envUrl = import.meta.env.VITE_GATEWAY_URL
+  if (envUrl) {
+    const config: Config = { gatewayUrl: envUrl, chatRequestVersion: 1 }
+    saveConfig(config)
+    return config
+  }
+
+  return null
 }
 
 export function saveConfig(config: Config): void {
