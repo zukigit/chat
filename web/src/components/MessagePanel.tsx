@@ -43,8 +43,9 @@ export default function MessagePanel({ conversation, messages, sentMessages, cur
   const username = otherMember?.username || ''
   const currentUserId = conversation.members.find(mem => mem.username === currentUsername)?.user_id ?? ''
 
+  const sentIds = new Set(sentMessages.map(s => s.tempId))
   const displayMessages: DisplayMessage[] = [
-    ...messages.map(m => ({ kind: 'received' as const, msg: m })),
+    ...messages.filter(m => !sentIds.has(m.id)).map(m => ({ kind: 'received' as const, msg: m })),
     ...sentMessages.map(s => ({ kind: 'sent' as const, msg: s })),
   ].sort((a, b) => {
     const ta = new Date(a.msg.created_at || 0).getTime()

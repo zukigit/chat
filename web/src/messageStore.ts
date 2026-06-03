@@ -18,6 +18,7 @@ export interface SentMessage {
   content: string
   status: 'sending' | 'sent' | 'delivered' | 'seen' | 'failed'
   created_at?: string
+  remote?: boolean
 }
 
 const STORAGE_KEY = 'chat_messages'
@@ -73,10 +74,10 @@ export function addMessage(msg: StoredMessage): void {
   const ageArmorStart = '-----BEGIN AGE ENCRYPTED FILE-----'
   const sent = loadSent().filter(s => {
     if (s.conversation_id !== msg.conversation_id) return true
+    // Remote entries are kept for cross-device status tracking
+    if (s.remote) return true
     // Local sent entry: matched by tempId === server-assigned message ID
-    if (!s.tempId.startsWith('sent-remote-') && s.tempId === msg.id) return false
-    // Remote-sent entry: matched by identical encrypted content
-    if (s.tempId.startsWith('sent-remote-') && s.content === msg.content) return false
+    if (s.tempId === msg.id) return false
     // Stale age-armor entries from pre-fix data
     if (s.content.startsWith(ageArmorStart)) return false
     return true
@@ -115,11 +116,10 @@ export function addSentMessage(conversationId: number, content: string): SentMes
   return sent
 }
 
-export function addRemoteSentMessage(conversationId: number, content: string): void {
+export function addRemoteSentMessage(conversationId: number, messageId: string, content: string, createdAt?: string): void {
   const all = loadSent()
-  if (all.some(s => s.conversation_id === conversationId && s.content === content && s.tempId.startsWith('sent-remote-'))) return
-  const tempId = `sent-remote-${generateUUID()}`
-  all.push({ tempId, conversation_id: conversationId, content, status: 'sending', created_at: new Date().toISOString() })
+  if (all.some(s => s.conversation_id === conversationId && s.tempId === messageId)) return
+  all.push({ tempId: messageId, conversation_id: conversationId, content, status: 'sent', created_at: createdAt || new Date().toISOString(), remote: true })
   saveSent(all)
 }
 

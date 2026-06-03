@@ -104,7 +104,7 @@ export function useChatSession(activeConversationId: number | null, onMessage?: 
             // Only add a remote-sent placeholder if this message did NOT
             // originate locally (i.e. no pending local sent entry exists).
             if (!hasPendingSent(msg.conversation_id, msg.id)) {
-              addRemoteSentMessage(msg.conversation_id, msg.content)
+              addRemoteSentMessage(msg.conversation_id, msg.id, displayContent, msg.created_at)
             }
             onDeliveredRef.current?.(msg.conversation_id, msg.id)
           }
