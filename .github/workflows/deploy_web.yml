@@ -11,6 +11,10 @@ on:
         description: 'Gateway URL (VITE_GATEWAY_URL)'
         required: false
         default: ''
+      enable_password_auth:
+        description: 'Enable password auth (VITE_ENABLE_PASSWORD_AUTH)'
+        required: false
+        default: 'false'
   workflow_call:
     inputs:
       tag:
@@ -23,6 +27,11 @@ on:
         required: false
         type: string
         default: ''
+      enable_password_auth:
+        description: 'Enable password auth (VITE_ENABLE_PASSWORD_AUTH)'
+        required: false
+        type: string
+        default: 'false'
 
 jobs:
   build:
@@ -46,3 +55,4 @@ jobs:
           tags: zukidocker/chat-web:${{ inputs.tag || 'latest' }}
           build-args: |
             VITE_GATEWAY_URL=${{ inputs.gateway_url }}
+            VITE_ENABLE_PASSWORD_AUTH=${{ inputs.enable_password_auth }}

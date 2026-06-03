@@ -49,6 +49,7 @@ services:
       - BACKEND_LISTEN_ADDRESS=backend:1234
       - FRONTEND_URL=*
       - NATS_URL=ws://nats:8080
+      - GRPC_TLS_MODE=disable
 
   web:
     image: zukidocker/chat-web:latest

@@ -7,6 +7,7 @@ import (
 	"github.com/zukigit/chat/backend/proto/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // AuthClient wraps the gRPC Auth client to communicate with the backend.
@@ -18,10 +19,13 @@ type AuthClient struct {
 // NewAuthClient dials the backend gRPC server and returns an AuthClient.
 // The caller is responsible for calling Close() when done.
 func NewAuthClient(backendAddr string) (*AuthClient, error) {
-	conn, err := grpc.NewClient(
-		backendAddr,
-		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
-	)
+	var opts []grpc.DialOption
+	if lib.Getenv("GRPC_TLS_MODE", "") == "disable" {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	}
+	conn, err := grpc.NewClient(backendAddr, opts...)
 	if err != nil {
 		return nil, err
 	}
