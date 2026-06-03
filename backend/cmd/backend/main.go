@@ -26,6 +26,9 @@ func main() {
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s", dbUser, dbPasswd, dbHost, dbName)
 
+	// TODO: delete this
+	fmt.Printf("DSN: %s\n", dsn)
+
 	// database connection
 	sqlDB, err := sql.Open("postgres", dsn)
 	if err != nil {
