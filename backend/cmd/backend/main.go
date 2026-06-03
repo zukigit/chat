@@ -24,10 +24,7 @@ func main() {
 	dbHost := lib.Getenv("DB_HOST", "localhost")
 	dbPasswd := lib.Getenv("DB_PASSWORD", "")
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s", dbUser, dbPasswd, dbHost, dbName)
-
-	// TODO: delete this
-	fmt.Printf("DSN: %s\n", dsn)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=require", dbHost, dbUser, dbPasswd, dbName)
 
 	// database connection
 	sqlDB, err := sql.Open("postgres", dsn)
