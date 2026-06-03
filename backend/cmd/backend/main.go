@@ -23,8 +23,9 @@ func main() {
 	dbUser := lib.Getenv("DB_USER", "chat")
 	dbHost := lib.Getenv("DB_HOST", "localhost")
 	dbPasswd := lib.Getenv("DB_PASSWORD", "")
+	sslMode := lib.Getenv("SSL_MODE", "require")
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=require", dbHost, dbUser, dbPasswd, dbName)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s", dbHost, dbUser, dbPasswd, dbName, sslMode)
 
 	// database connection
 	sqlDB, err := sql.Open("postgres", dsn)

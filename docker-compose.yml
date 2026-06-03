@@ -33,6 +33,7 @@ services:
       - GATEWAY_PUBLIC_URL=${GATEWAY_PUBLIC_URL}
       - GITHUB_OAUTH_CLIENT_ID=${GITHUB_OAUTH_CLIENT_ID}
       - GITHUB_OAUTH_CLIENT_SECRET=${GITHUB_OAUTH_CLIENT_SECRET}
+      - SSL_MODE=disable
     depends_on:
       - db
       - nats
