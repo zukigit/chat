@@ -6,7 +6,7 @@ import (
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/friendship"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 // FriendshipClient wraps the gRPC Friendship client.
@@ -18,7 +18,7 @@ type FriendshipClient struct {
 // NewFriendshipClient dials the backend gRPC server and returns a FriendshipClient.
 // The caller is responsible for calling Close() when done.
 func NewFriendshipClient(backendAddr string) (*FriendshipClient, error) {
-	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
 	if err != nil {
 		return nil, err
 	}

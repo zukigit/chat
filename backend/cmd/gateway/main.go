@@ -55,13 +55,14 @@ func main() {
 	}
 	defer notiClient.Close()
 
-	lib.InfoLog.Printf("Connecting to backend: %s", backendAddr)
 	chatClient, err := clients.NewChatClient(backendAddr)
 	if err != nil {
 		lib.ErrorLog.Fatalf("Failed to connect to backend (chat): %v", err)
 	}
 	defer chatClient.Close()
 
+	// ping backend
+	lib.InfoLog.Printf("Pinging backend: %s", backendAddr)
 	if err := sessionClient.Ping(context.Background()); err != nil {
 		lib.ErrorLog.Fatalf("Failed to ping backend: %v", err)
 	}

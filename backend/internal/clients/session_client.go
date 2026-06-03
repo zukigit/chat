@@ -6,7 +6,7 @@ import (
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/session"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 // SessionClient wraps the gRPC Session client.
@@ -18,7 +18,7 @@ type SessionClient struct {
 // NewSessionClient dials the backend gRPC server and returns a SessionClient.
 // The caller is responsible for calling Close() when done.
 func NewSessionClient(backendAddr string) (*SessionClient, error) {
-	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
 	if err != nil {
 		return nil, err
 	}

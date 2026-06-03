@@ -6,7 +6,7 @@ import (
 	"github.com/zukigit/chat/backend/internal/lib"
 	pb "github.com/zukigit/chat/backend/proto/notification"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 // NotificationClient wraps the gRPC Notification client.
@@ -18,7 +18,7 @@ type NotificationClient struct {
 // NewNotificationClient dials the backend gRPC server and returns a NotificationClient.
 // The caller is responsible for calling Close() when done.
 func NewNotificationClient(backendAddr string) (*NotificationClient, error) {
-	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(backendAddr, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
 	if err != nil {
 		return nil, err
 	}
