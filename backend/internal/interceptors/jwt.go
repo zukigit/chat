@@ -19,6 +19,7 @@ var publicMethods = map[string]bool{
 	"/auth.Auth/Signup":              true,
 	"/auth.Auth/GetGithubOAuthURL":   true,
 	"/auth.Auth/GithubOAuthCallback": true,
+	"/session.Session/Ping":          true,
 }
 
 // extractBearerToken reads the "authorization" metadata header and returns

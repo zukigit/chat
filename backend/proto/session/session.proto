@@ -13,6 +13,13 @@ message GetListenPathResponse {
   string consumer_name = 2;
 }
 
+message PingRequest {}
+
+message PingResponse {
+  string message = 1;
+}
+
 service Session {
   rpc GetListenPath(GetListenPathRequest) returns (GetListenPathResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
 }

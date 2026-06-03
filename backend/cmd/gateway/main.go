@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	gorhandlers "github.com/gorilla/handlers"
@@ -60,6 +61,10 @@ func main() {
 		lib.ErrorLog.Fatalf("Failed to connect to backend (chat): %v", err)
 	}
 	defer chatClient.Close()
+
+	if err := sessionClient.Ping(context.Background()); err != nil {
+		lib.ErrorLog.Fatalf("Failed to ping backend: %v", err)
+	}
 
 	// handlers preparation
 	authHandler := handlers.NewAuthHandler(authClient)

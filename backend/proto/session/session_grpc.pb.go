@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Session_GetListenPath_FullMethodName = "/session.Session/GetListenPath"
+	Session_Ping_FullMethodName          = "/session.Session/Ping"
 )
 
 // SessionClient is the client API for Session service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SessionClient interface {
 	GetListenPath(ctx context.Context, in *GetListenPathRequest, opts ...grpc.CallOption) (*GetListenPathResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
 type sessionClient struct {
@@ -47,11 +49,22 @@ func (c *sessionClient) GetListenPath(ctx context.Context, in *GetListenPathRequ
 	return out, nil
 }
 
+func (c *sessionClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, Session_Ping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SessionServer is the server API for Session service.
 // All implementations must embed UnimplementedSessionServer
 // for forward compatibility.
 type SessionServer interface {
 	GetListenPath(context.Context, *GetListenPathRequest) (*GetListenPathResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedSessionServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedSessionServer struct{}
 
 func (UnimplementedSessionServer) GetListenPath(context.Context, *GetListenPathRequest) (*GetListenPathResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetListenPath not implemented")
+}
+func (UnimplementedSessionServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedSessionServer) mustEmbedUnimplementedSessionServer() {}
 func (UnimplementedSessionServer) testEmbeddedByValue()                 {}
@@ -104,6 +120,24 @@ func _Session_GetListenPath_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Session_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Session_Ping_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Session_ServiceDesc is the grpc.ServiceDesc for Session service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var Session_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetListenPath",
 			Handler:    _Session_GetListenPath_Handler,
+		},
+		{
+			MethodName: "Ping",
+			Handler:    _Session_Ping_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

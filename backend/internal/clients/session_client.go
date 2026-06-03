@@ -45,3 +45,13 @@ func (c *SessionClient) GetListenPath(ctx context.Context, token, listenType str
 	}
 	return resp.ListenPath, resp.ConsumerName, nil
 }
+
+// Ping sends a ping to the backend and expects a "pong" response.
+func (c *SessionClient) Ping(ctx context.Context) error {
+	resp, err := c.client.Ping(ctx, &pb.PingRequest{})
+	if err != nil {
+		return err
+	}
+	lib.InfoLog.Printf("Backend ping response: %s", resp.GetMessage())
+	return nil
+}

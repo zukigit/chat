@@ -17,6 +17,10 @@ func NewSessionServer() *SessionServer {
 	return &SessionServer{}
 }
 
+func (s *SessionServer) Ping(ctx context.Context, req *session.PingRequest) (*session.PingResponse, error) {
+	return &session.PingResponse{Message: "pong"}, nil
+}
+
 // GetListenPath returns the NATS subject path for the caller based on their JWT claims.
 // The JWT is already validated by the gRPC interceptor.
 // Format: sessions.noti.<user_id> or sessions.chat.<user_id>

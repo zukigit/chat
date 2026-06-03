@@ -117,6 +117,86 @@ func (x *GetListenPathResponse) GetConsumerName() string {
 	return ""
 }
 
+type PingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_proto_session_session_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_session_session_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_proto_session_session_proto_rawDescGZIP(), []int{2}
+}
+
+type PingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_proto_session_session_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_session_session_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_proto_session_session_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PingResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_proto_session_session_proto protoreflect.FileDescriptor
 
 const file_proto_session_session_proto_rawDesc = "" +
@@ -127,9 +207,13 @@ const file_proto_session_session_proto_rawDesc = "" +
 	"\x15GetListenPathResponse\x12\x1f\n" +
 	"\vlisten_path\x18\x01 \x01(\tR\n" +
 	"listenPath\x12#\n" +
-	"\rconsumer_name\x18\x02 \x01(\tR\fconsumerName2Y\n" +
+	"\rconsumer_name\x18\x02 \x01(\tR\fconsumerName\"\r\n" +
+	"\vPingRequest\"(\n" +
+	"\fPingResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\x8e\x01\n" +
 	"\aSession\x12N\n" +
-	"\rGetListenPath\x12\x1d.session.GetListenPathRequest\x1a\x1e.session.GetListenPathResponseB\x10Z\x0eproto/session/b\x06proto3"
+	"\rGetListenPath\x12\x1d.session.GetListenPathRequest\x1a\x1e.session.GetListenPathResponse\x123\n" +
+	"\x04Ping\x12\x14.session.PingRequest\x1a\x15.session.PingResponseB\x10Z\x0eproto/session/b\x06proto3"
 
 var (
 	file_proto_session_session_proto_rawDescOnce sync.Once
@@ -143,16 +227,20 @@ func file_proto_session_session_proto_rawDescGZIP() []byte {
 	return file_proto_session_session_proto_rawDescData
 }
 
-var file_proto_session_session_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_session_session_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_session_session_proto_goTypes = []any{
 	(*GetListenPathRequest)(nil),  // 0: session.GetListenPathRequest
 	(*GetListenPathResponse)(nil), // 1: session.GetListenPathResponse
+	(*PingRequest)(nil),           // 2: session.PingRequest
+	(*PingResponse)(nil),          // 3: session.PingResponse
 }
 var file_proto_session_session_proto_depIdxs = []int32{
 	0, // 0: session.Session.GetListenPath:input_type -> session.GetListenPathRequest
-	1, // 1: session.Session.GetListenPath:output_type -> session.GetListenPathResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: session.Session.Ping:input_type -> session.PingRequest
+	1, // 2: session.Session.GetListenPath:output_type -> session.GetListenPathResponse
+	3, // 3: session.Session.Ping:output_type -> session.PingResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -169,7 +257,7 @@ func file_proto_session_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_session_session_proto_rawDesc), len(file_proto_session_session_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
